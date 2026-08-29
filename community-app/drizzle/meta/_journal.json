@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1780794845303,
+      "tag": "0000_public_doctor_strange",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1780795155370,
+      "tag": "0001_tough_grey_gargoyle",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1780829297261,
+      "tag": "0002_lonely_morbius",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1780830573705,
+      "tag": "0003_friendly_ronan",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1780847698421,
+      "tag": "0004_short_steel_serpent",
+      "breakpoints": true
+    }
+  ]
+}
