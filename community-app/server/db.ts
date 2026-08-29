@@ -1,0 +1,594 @@
+import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/mysql2";
+import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, conversations, messages } from "../drizzle/schema";
+import { ENV } from './_core/env';
+
+let _db: ReturnType<typeof drizzle> | null = null;
+
+// Lazily create the drizzle instance so local tooling can run without a DB.
+export async function getDb() {
+  if (!_db && process.env.DATABASE_URL) {
+    try {
+      _db = drizzle(process.env.DATABASE_URL);
+    } catch (error) {
+      console.warn("[Database] Failed to connect:", error);
+      _db = null;
+    }
+  }
+  return _db;
+}
+
+function isOwnerEmail(email: string | null | undefined): boolean {
+  if (!email || !ENV.ownerEmail) return false;
+  return email.toLowerCase() === ENV.ownerEmail;
+}
+
+export async function getUserByEmail(email: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email.toLowerCase()))
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function getAuthIdentity(
+  provider: "google" | "kakao" | "apple",
+  providerUserId: string
+) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(authIdentities)
+    .where(
+      and(
+        eq(authIdentities.provider, provider),
+        eq(authIdentities.providerUserId, providerUserId)
+      )
+    )
+    .limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * 이메일/비밀번호로 새 계정을 만든다. name은 "학번 이름" 형식이어야 한다 (라우터에서 검증).
+ */
+export async function createUserWithPassword(data: {
+  email: string;
+  passwordHash: string;
+  name: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const role = isOwnerEmail(data.email) ? "admin" : "user";
+
+  const [result] = await db.insert(users).values({
+    email: data.email.toLowerCase(),
+    passwordHash: data.passwordHash,
+    name: data.name,
+    loginMethod: "email",
+    role,
+    lastSignedIn: new Date(),
+  });
+
+  return getUserById(result.insertId);
+}
+
+/**
+ * 소셜 로그인 최초 가입: 사용자 계정을 만들고 authIdentities에 연동 정보를 남긴다.
+ */
+export async function createUserFromOAuth(data: {
+  provider: "google" | "kakao" | "apple";
+  providerUserId: string;
+  email: string | null;
+  name: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const role = isOwnerEmail(data.email) ? "admin" : "user";
+
+  const [result] = await db.insert(users).values({
+    email: data.email ? data.email.toLowerCase() : null,
+    name: data.name,
+    loginMethod: data.provider,
+    role,
+    lastSignedIn: new Date(),
+  });
+
+  await db.insert(authIdentities).values({
+    userId: result.insertId,
+    provider: data.provider,
+    providerUserId: data.providerUserId,
+  });
+
+  return getUserById(result.insertId);
+}
+
+export async function touchLastSignedIn(userId: number, loginMethod?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db
+    .update(users)
+    .set({ lastSignedIn: new Date(), ...(loginMethod ? { loginMethod } : {}) })
+    .where(eq(users.id, userId));
+}
+
+/**
+ * 게시판 관련 쿼리
+ */
+export async function getBoards() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(boards).where(eq(boards.isActive, true)).orderBy(asc(boards.displayOrder));
+}
+
+export async function getBoardBySlug(slug: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(boards).where(eq(boards.slug, slug)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createBoard(data: { name: string; slug: string; description?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(boards).values(data);
+  return result;
+}
+
+export async function updateBoard(id: number, data: Partial<{ name: string; description: string; displayOrder: number; isActive: boolean }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(boards).set(data).where(eq(boards.id, id));
+}
+
+export async function deleteBoard(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(boards).where(eq(boards.id, id));
+}
+
+/**
+ * 게시글 관련 쿼리
+ */
+export async function getPostsByBoard(boardId: number, limit: number = 20, offset: number = 0, sortBy: 'latest' | 'popular' = 'latest', search?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  
+  const orderBy = sortBy === 'popular' ? desc(posts.likeCount) : desc(posts.createdAt);
+  
+  let whereCondition = and(eq(posts.boardId, boardId), isNull(posts.deletedAt));
+  
+  if (search) {
+    whereCondition = and(
+      whereCondition,
+      or(
+        like(posts.title, `%${search}%`),
+        like(posts.content, `%${search}%`)
+      )
+    );
+  }
+  
+  return db.select().from(posts)
+    .where(whereCondition)
+    .orderBy(desc(posts.isNotice), orderBy)
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getPostById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createPost(data: { boardId: number; userId: number; title: string; content: string; isAnonymous: boolean }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(posts).values(data);
+  return result;
+}
+
+export async function updatePost(id: number, data: Partial<{ title: string; content: string }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(posts).set(data).where(eq(posts.id, id));
+}
+
+export async function deletePost(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(posts).set({ deletedAt: new Date() }).where(eq(posts.id, id));
+}
+
+export async function incrementPostViewCount(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, id));
+}
+
+export async function searchPosts(query: string, limit: number = 20, offset: number = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(posts)
+    .where(and(
+      sql`MATCH(${posts.title}, ${posts.content}) AGAINST(${query} IN BOOLEAN MODE)`,
+      isNull(posts.deletedAt)
+    ))
+    .orderBy(desc(posts.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+/**
+ * 댓글 관련 쿼리
+ */
+export async function getCommentsByPost(postId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(comments)
+    .where(and(eq(comments.postId, postId), isNull(comments.deletedAt)))
+    .orderBy(asc(comments.createdAt));
+}
+
+export async function getCommentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(comments).where(eq(comments.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function createComment(data: { postId: number; userId: number; content: string; isAnonymous: boolean; parentCommentId?: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db.insert(comments).values(data);
+  // 게시글의 댓글 수 증가
+  await db.update(posts).set({ commentCount: sql`${posts.commentCount} + 1` }).where(eq(posts.id, data.postId));
+  return result;
+}
+
+export async function deleteComment(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const comment = await getCommentById(id);
+  if (comment) {
+    await db.update(posts).set({ commentCount: sql`${posts.commentCount} - 1` }).where(eq(posts.id, comment.postId));
+  }
+  return db.update(comments).set({ deletedAt: new Date() }).where(eq(comments.id, id));
+}
+
+/**
+ * 추천 관련 쿼리
+ */
+export async function hasUserLikedPost(postId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select().from(postLikes)
+    .where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)))
+    .limit(1);
+  return result.length > 0;
+}
+
+export async function addPostLike(postId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(postLikes).values({ postId, userId });
+  await db.update(posts).set({ likeCount: sql`${posts.likeCount} + 1` }).where(eq(posts.id, postId));
+}
+
+export async function removePostLike(postId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(postLikes).where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+  await db.update(posts).set({ likeCount: sql`${posts.likeCount} - 1` }).where(eq(posts.id, postId));
+}
+
+export async function hasUserLikedComment(commentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.select().from(commentLikes)
+    .where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)))
+    .limit(1);
+  return result.length > 0;
+}
+
+export async function addCommentLike(commentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(commentLikes).values({ commentId, userId });
+  await db.update(comments).set({ likeCount: sql`${comments.likeCount} + 1` }).where(eq(comments.id, commentId));
+}
+
+export async function removeCommentLike(commentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(commentLikes).where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)));
+  await db.update(comments).set({ likeCount: sql`${comments.likeCount} - 1` }).where(eq(comments.id, commentId));
+}
+
+/**
+ * 신고 관련 쿼리
+ */
+export async function createReport(data: { reporterUserId: number; targetType: 'post' | 'comment'; targetId: number; reason: string; description?: string }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(reports).values(data);
+}
+
+export async function getReports(status?: 'pending' | 'resolved' | 'dismissed', limit: number = 20, offset: number = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  const query = status ? db.select().from(reports).where(eq(reports.status, status)) : db.select().from(reports);
+  return query.orderBy(desc(reports.createdAt)).limit(limit).offset(offset);
+}
+
+export async function updateReportStatus(id: number, status: 'pending' | 'resolved' | 'dismissed', adminNotes?: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(reports).set({ status, adminNotes }).where(eq(reports.id, id));
+}
+
+/**
+ * 공지사항 관련 쿼리
+ */
+export async function getAnnouncements(limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(announcements)
+    .where(eq(announcements.isActive, true))
+    .orderBy(desc(announcements.displayOrder), desc(announcements.createdAt))
+    .limit(limit);
+}
+
+export async function createAnnouncement(data: { title: string; content: string; createdBy: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(announcements).values(data);
+}
+
+export async function updateAnnouncement(id: number, data: Partial<{ title: string; content: string; displayOrder: number; isActive: boolean }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(announcements).set(data).where(eq(announcements.id, id));
+}
+
+export async function deleteAnnouncement(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(announcements).where(eq(announcements.id, id));
+}
+
+/**
+ * 사용자 관리 쿼리
+ */
+export async function getAllUsers(limit: number = 20, offset: number = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(users).orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+}
+
+export async function getUserById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
+}
+
+export async function updateUserRole(id: number, role: 'user' | 'admin') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(users).set({ role }).where(eq(users.id, id));
+}
+
+export async function updateUserStatus(id: number, status: 'active' | 'blocked') {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(users).set({ status }).where(eq(users.id, id));
+}
+
+
+export async function updateUserName(id: number, name: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(users).set({ name }).where(eq(users.id, id));
+}
+
+/** newPasswordHash는 이미 bcrypt로 해시된 값이어야 한다 (라우터에서 해시 후 호출). */
+export async function updateUserPasswordHash(id: number, newPasswordHash: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(users).set({ passwordHash: newPasswordHash }).where(eq(users.id, id));
+}
+
+
+// ============ 사용자 검색 ============
+export async function searchUsers(query: string, excludeUserId: number, limit: number = 20) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const q = `%${query}%`;
+  return db
+    .select({
+      id: users.id,
+      name: users.name,
+      role: users.role,
+      status: users.status,
+    })
+    .from(users)
+    .where(
+      and(
+        like(users.name, q),
+        sql`${users.id} <> ${excludeUserId}`,
+        eq(users.status, "active")
+      )
+    )
+    .orderBy(asc(users.name))
+    .limit(limit);
+}
+
+// ============ 채팅: 대화 ============
+/** 두 사용자 간 대화를 가져오거나 없으면 생성한다. */
+export async function getOrCreateConversation(userId1: number, userId2: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const userAId = Math.min(userId1, userId2);
+  const userBId = Math.max(userId1, userId2);
+
+  const existing = await db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.userAId, userAId), eq(conversations.userBId, userBId)))
+    .limit(1);
+  if (existing.length > 0) return existing[0];
+
+  try {
+    await db.insert(conversations).values({ userAId, userBId });
+  } catch (err) {
+    // unique 제약 충돌(동시 생성)만 무시하고 아래에서 재조회한다.
+    // 그 외 DB 오류는 그대로 throw하여 호출자가 인지하도록 한다.
+    const code = (err as { code?: string } | null)?.code;
+    const message = err instanceof Error ? err.message : String(err);
+    const isDuplicate =
+      code === "ER_DUP_ENTRY" ||
+      /duplicate entry/i.test(message) ||
+      /conversations_pair_unique/i.test(message);
+    if (!isDuplicate) throw err;
+  }
+  const created = await db
+    .select()
+    .from(conversations)
+    .where(and(eq(conversations.userAId, userAId), eq(conversations.userBId, userBId)))
+    .limit(1);
+  if (!created[0]) {
+    throw new Error("Failed to create or retrieve conversation");
+  }
+  return created[0];
+}
+
+/** 특정 사용자가 참여한 대화 목록 (상대방 정보 + 최근 메시지 포함) */
+export async function getConversationsForUser(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const rows = await db
+    .select()
+    .from(conversations)
+    .where(or(eq(conversations.userAId, userId), eq(conversations.userBId, userId)))
+    .orderBy(desc(conversations.lastMessageAt));
+
+  // 상대방 정보 채우기
+  const result = [];
+  for (const conv of rows) {
+    const otherId = conv.userAId === userId ? conv.userBId : conv.userAId;
+    const other = await db
+      .select({ id: users.id, name: users.name })
+      .from(users)
+      .where(eq(users.id, otherId))
+      .limit(1);
+    // 읽지 않은 메시지 수 (상대가 보낸 것 중 미읽음)
+    const unread = await db
+      .select({ c: sql<number>`count(*)` })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, conv.id),
+          eq(messages.isRead, false),
+          sql`${messages.senderId} <> ${userId}`
+        )
+      );
+    result.push({
+      id: conv.id,
+      otherUserId: otherId,
+      otherUserName: other[0]?.name ?? "알 수 없음",
+      lastMessage: conv.lastMessage,
+      lastMessageAt: conv.lastMessageAt,
+      unreadCount: Number(unread[0]?.c ?? 0),
+    });
+  }
+  return result;
+}
+
+/** 대화 단건 조회 (권한 확인용) */
+export async function getConversationById(conversationId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const result = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, conversationId))
+    .limit(1);
+  return result[0] ?? null;
+}
+
+// ============ 채팅: 메시지 ============
+export async function getMessages(conversationId: number, limit: number = 100) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db
+    .select()
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(asc(messages.createdAt))
+    .limit(limit);
+}
+
+export async function createMessage(conversationId: number, senderId: number, content: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.insert(messages).values({ conversationId, senderId, content });
+  // 대화의 마지막 메시지 갱신
+  await db
+    .update(conversations)
+    .set({ lastMessage: content.slice(0, 200), lastMessageAt: new Date() })
+    .where(eq(conversations.id, conversationId));
+  const created = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.conversationId, conversationId))
+    .orderBy(desc(messages.id))
+    .limit(1);
+  return created[0];
+}
+
+/** 상대가 보낸 메시지를 읽음 처리 */
+export async function markMessagesRead(conversationId: number, readerId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db
+    .update(messages)
+    .set({ isRead: true })
+    .where(
+      and(
+        eq(messages.conversationId, conversationId),
+        sql`${messages.senderId} <> ${readerId}`,
+        eq(messages.isRead, false)
+      )
+    );
+}
+
+/** 사용자의 전체 미읽음 메시지 수 */
+export async function getTotalUnreadCount(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const convs = await db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(or(eq(conversations.userAId, userId), eq(conversations.userBId, userId)));
+  if (convs.length === 0) return 0;
+  const ids = convs.map((c) => c.id);
+  const res = await db
+    .select({ c: sql<number>`count(*)` })
+    .from(messages)
+    .where(
+      and(
+        inArray(messages.conversationId, ids),
+        eq(messages.isRead, false),
+        sql`${messages.senderId} <> ${userId}`
+      )
+    );
+  return Number(res[0]?.c ?? 0);
+}

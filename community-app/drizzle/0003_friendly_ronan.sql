@@ -1,0 +1,1 @@
+ALTER TABLE `conversations` ADD CONSTRAINT `conversations_pair_unique` UNIQUE(`userAId`,`userBId`);

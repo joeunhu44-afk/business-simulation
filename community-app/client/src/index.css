@@ -1,0 +1,234 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* =========================================================
+   에브리타임 스타일 라이트 테마 (기본 :root)
+   - 연한 회색 배경 + 흰색 카드
+   - 진하고 두꺼운 텍스트
+   - 레드 포인트 컬러
+   ========================================================= */
+:root {
+  --radius: 0.7rem;
+
+  /* 포인트 컬러 (에브리타임 레드) */
+  --primary: #e03a3c;
+  --primary-foreground: #ffffff;
+
+  /* 연한 회색 배경 + 흰색 카드 */
+  --background: #eceef1;
+  --foreground: #1a1c20;
+  --card: #ffffff;
+  --card-foreground: #1a1c20;
+  --popover: #ffffff;
+  --popover-foreground: #1a1c20;
+  --secondary: #f4f5f7;
+  --secondary-foreground: #2d2f36;
+  --muted: #f4f5f7;
+  --muted-foreground: #6b7280;
+  --accent: #f4f5f7;
+  --accent-foreground: #1a1c20;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e2e5ea;
+  --input: #e2e5ea;
+  --ring: #e03a3c;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a1c20;
+  --sidebar-primary: #e03a3c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f4f5f7;
+  --sidebar-accent-foreground: #1a1c20;
+  --sidebar-border: #e2e5ea;
+  --sidebar-ring: #e03a3c;
+
+  --chart-1: #e03a3c;
+  --chart-2: #2563eb;
+  --chart-3: #16a34a;
+  --chart-4: #d97706;
+  --chart-5: #7c3aed;
+
+  /* 커스텀 변수 */
+  --text-strong: #1a1c20;
+  --text-normal: #2d2f36;
+  --text-muted: #6b7280;
+  --bg-base: #eceef1;
+  --bg-surface: #ffffff;
+  --bg-surface-2: #f4f5f7;
+  --bg-hover: #eaecef;
+  --border-color: #e2e5ea;
+  --accent-color: #e03a3c;
+  --accent-soft: rgba(224, 58, 60, 0.10);
+  --glow-color: rgba(120, 140, 200, 0.28);
+}
+
+/* 색상 테마: 라이트 베이스 위에서 포인트색(primary/accent)만 변경 */
+[data-theme-color="blue"] {
+  --primary: #2563eb; --ring: #2563eb; --sidebar-primary: #2563eb; --sidebar-ring: #2563eb;
+  --accent-color: #2563eb; --accent-soft: rgba(37,99,235,0.10); --glow-color: rgba(37,99,235,0.25);
+  --background: #eef2f7; --bg-base: #eef2f7; --secondary: #f1f5fa; --muted: #f1f5fa; --bg-surface-2: #f1f5fa; --bg-hover: #e6edf5;
+}
+[data-theme-color="purple"] {
+  --primary: #7c3aed; --ring: #7c3aed; --sidebar-primary: #7c3aed; --sidebar-ring: #7c3aed;
+  --accent-color: #7c3aed; --accent-soft: rgba(124,58,237,0.10); --glow-color: rgba(124,58,237,0.25);
+  --background: #f1eef7; --bg-base: #f1eef7; --secondary: #f5f1fa; --muted: #f5f1fa; --bg-surface-2: #f5f1fa; --bg-hover: #ede6f5;
+}
+[data-theme-color="green"] {
+  --primary: #16a34a; --ring: #16a34a; --sidebar-primary: #16a34a; --sidebar-ring: #16a34a;
+  --accent-color: #16a34a; --accent-soft: rgba(22,163,74,0.10); --glow-color: rgba(22,163,74,0.22);
+  --background: #ecf3ee; --bg-base: #ecf3ee; --secondary: #eef6f1; --muted: #eef6f1; --bg-surface-2: #eef6f1; --bg-hover: #e3efe8;
+}
+[data-theme-color="red"] {
+  --primary: #dc2626; --ring: #dc2626; --sidebar-primary: #dc2626; --sidebar-ring: #dc2626;
+  --accent-color: #dc2626; --accent-soft: rgba(220,38,38,0.10); --glow-color: rgba(220,38,38,0.22);
+  --background: #f5edee; --bg-base: #f5edee; --secondary: #faf1f2; --muted: #faf1f2; --bg-surface-2: #faf1f2; --bg-hover: #f3e3e4;
+}
+[data-theme-color="amber"] {
+  --primary: #d97706; --ring: #d97706; --sidebar-primary: #d97706; --sidebar-ring: #d97706;
+  --accent-color: #d97706; --accent-soft: rgba(217,119,6,0.10); --glow-color: rgba(217,119,6,0.22);
+  --background: #f5f1e8; --bg-base: #f5f1e8; --secondary: #faf6ec; --muted: #faf6ec; --bg-surface-2: #faf6ec; --bg-hover: #f2ecdd;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+    font-weight: 500; /* 기본을 medium으로 두껍게 */
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 800; /* 제목은 extra bold */
+    letter-spacing: -0.01em;
+  }
+  strong, b { font-weight: 800; }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+  @media (min-width: 640px) {
+    .container { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  @media (min-width: 1024px) {
+    .container { padding-left: 2rem; padding-right: 2rem; max-width: 1280px; }
+  }
+}
+
+/* =========================================================
+   빛의 경계 카드 + 공용 유틸
+   ========================================================= */
+.glow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.glow-md { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.glow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.10); }
+
+/* 빛의 경계 카드: 흰 표면 + 그라데이션 보더 + 부드러운 빛 그림자 */
+.card-elevated,
+.light-border {
+  position: relative;
+  background-color: var(--bg-surface);
+  border-radius: 0.9rem;
+  color: var(--text-normal);
+  border: 1px solid transparent;
+  background-image:
+    linear-gradient(var(--bg-surface), var(--bg-surface)),
+    linear-gradient(135deg, rgba(255,255,255,0.9) 0%, var(--glow-color) 45%, rgba(180,195,235,0.15) 100%);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  box-shadow:
+    0 1px 2px rgba(20, 30, 60, 0.05),
+    0 6px 18px rgba(60, 80, 140, 0.08);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-elevated:hover,
+.light-border:hover {
+  box-shadow:
+    0 2px 6px rgba(20, 30, 60, 0.08),
+    0 10px 28px rgba(60, 80, 140, 0.16),
+    0 0 0 1px var(--glow-color);
+  transform: translateY(-1px);
+}
+
+.search-input {
+  background-color: var(--bg-surface) !important;
+  border: 1px solid var(--border-color) !important;
+  color: var(--text-strong) !important;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  border-radius: 0.6rem;
+}
+
+.accent-text { color: var(--accent-color) !important; }
+
+/* 스크롤바 */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #c7ccd4; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #aab0ba; }
