@@ -36,6 +36,13 @@
       "when": 1780847698421,
       "tag": "0004_short_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1787962644477,
+      "tag": "0005_huge_leopardon",
+      "breakpoints": true
     }
   ]
 }
