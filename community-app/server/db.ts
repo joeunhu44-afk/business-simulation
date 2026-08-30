@@ -1,6 +1,6 @@
 import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, conversations, messages } from "../drizzle/schema";
+import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, conversations, messages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -362,6 +362,42 @@ export async function deleteAnnouncement(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.delete(announcements).where(eq(announcements.id, id));
+}
+
+/**
+ * 오늘의 중요 뉴스 관련 쿼리 (관리자 큐레이션)
+ */
+export async function getActiveNews(limit: number = 10) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(news)
+    .where(eq(news.isActive, true))
+    .orderBy(desc(news.displayOrder), desc(news.createdAt))
+    .limit(limit);
+}
+
+export async function getAllNews() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(news).orderBy(desc(news.displayOrder), desc(news.createdAt));
+}
+
+export async function createNews(data: { title: string; url?: string; createdBy: number }) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(news).values(data);
+}
+
+export async function updateNews(id: number, data: Partial<{ title: string; url: string | null; displayOrder: number; isActive: boolean }>) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(news).set(data).where(eq(news.id, id));
+}
+
+export async function deleteNews(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(news).where(eq(news.id, id));
 }
 
 /**

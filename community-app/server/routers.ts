@@ -433,6 +433,51 @@ export const appRouter = router({
       }),
   }),
 
+  // 오늘의 중요 뉴스 관련 API
+  news: router({
+    list: publicProcedure
+      .input(z.object({ limit: z.number().default(10) }))
+      .query(async ({ input }) => {
+        return db.getActiveNews(input.limit);
+      }),
+
+    listAll: adminProcedure.query(async () => {
+      return db.getAllNews();
+    }),
+
+    create: adminProcedure
+      .input(z.object({
+        title: z.string().min(1).max(255),
+        url: z.string().max(1000).optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createNews({
+          title: input.title,
+          url: input.url || undefined,
+          createdBy: ctx.user.id,
+        });
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).max(255).optional(),
+        url: z.string().max(1000).optional(),
+        displayOrder: z.number().optional(),
+        isActive: z.boolean().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return db.updateNews(id, data);
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteNews(input.id);
+      }),
+  }),
+
   // 관리자 API
   admin: router({
     users: router({

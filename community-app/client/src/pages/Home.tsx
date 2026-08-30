@@ -154,39 +154,89 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="container py-8">
-        {/* Announcements */}
-        <div className="mb-8">
-          <AnnouncementsSection />
-        </div>
+        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+          <div>
+            {/* Announcements */}
+            <div className="mb-8">
+              <AnnouncementsSection />
+            </div>
 
-        {/* Boards Grid */}
-        <div>
-          <h2 className="mb-6 text-2xl font-bold">게시판</h2>
-          {boardsLoading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            {/* Boards Grid */}
+            <div>
+              <h2 className="mb-6 text-2xl font-bold">게시판</h2>
+              {boardsLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : boards && boards.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {boards.map((board) => (
+                    <a
+                      key={board.id}
+                      href={`/board/${board.slug}`}
+                      className="card-elevated block p-6 hover:shadow-md transition-shadow"
+                    >
+                      <h3 className="font-semibold text-lg mb-2">{board.name}</h3>
+                      <p className="text-sm text-gray-600">{board.description}</p>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <Card className="card-elevated p-12 text-center">
+                  <p className="text-gray-600">게시판이 없습니다.</p>
+                </Card>
+              )}
             </div>
-          ) : boards && boards.length > 0 ? (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {boards.map((board) => (
-                <a
-                  key={board.id}
-                  href={`/board/${board.slug}`}
-                  className="card-elevated block p-6 hover:shadow-md transition-shadow"
-                >
-                  <h3 className="font-semibold text-lg mb-2">{board.name}</h3>
-                  <p className="text-sm text-gray-600">{board.description}</p>
-                </a>
-              ))}
-            </div>
-          ) : (
-            <Card className="card-elevated p-12 text-center">
-              <p className="text-gray-600">게시판이 없습니다.</p>
-            </Card>
-          )}
+          </div>
+
+          {/* News Panel (top-right) */}
+          <div>
+            <NewsPanel />
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function NewsPanel() {
+  const { data: newsItems, isLoading } = trpc.news.list.useQuery({ limit: 5 });
+
+  if (isLoading) {
+    return (
+      <Card className="card-elevated p-4">
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-primary" />
+        </div>
+      </Card>
+    );
+  }
+
+  if (!newsItems || newsItems.length === 0) return null;
+
+  return (
+    <Card className="card-elevated p-4">
+      <h3 className="font-semibold text-sm text-gray-600 uppercase tracking-wide mb-3">오늘의 뉴스</h3>
+      <div className="space-y-3">
+        {newsItems.map((item) =>
+          item.url ? (
+            <a
+              key={item.id}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-sm font-medium leading-snug hover:text-primary hover:underline"
+            >
+              {item.title}
+            </a>
+          ) : (
+            <p key={item.id} className="text-sm font-medium leading-snug">
+              {item.title}
+            </p>
+          )
+        )}
+      </div>
+    </Card>
   );
 }
 

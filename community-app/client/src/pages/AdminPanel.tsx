@@ -44,12 +44,13 @@ export default function AdminPanel() {
         <h1 className="text-3xl font-bold mb-8">관리자 패널</h1>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="users">회원 관리</TabsTrigger>
             <TabsTrigger value="boards">게시판 관리</TabsTrigger>
             <TabsTrigger value="posts">게시글 관리</TabsTrigger>
             <TabsTrigger value="reports">신고 관리</TabsTrigger>
             <TabsTrigger value="announcements">공지사항</TabsTrigger>
+            <TabsTrigger value="news">뉴스</TabsTrigger>
           </TabsList>
 
           {/* Users Tab */}
@@ -75,6 +76,11 @@ export default function AdminPanel() {
           {/* Announcements Tab */}
           <TabsContent value="announcements">
             <AnnouncementsTab />
+          </TabsContent>
+
+          {/* News Tab */}
+          <TabsContent value="news">
+            <NewsTab />
           </TabsContent>
         </Tabs>
       </div>
@@ -429,6 +435,140 @@ function AnnouncementsTab() {
               <div className="flex gap-2">
                 <Button variant="outline" size="sm">수정</Button>
                 <Button variant="destructive" size="sm">삭제</Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function NewsTab() {
+  const [newTitle, setNewTitle] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const { data: newsItems, isLoading } = trpc.news.listAll.useQuery();
+  const utils = trpc.useUtils();
+
+  const invalidateNews = () => {
+    utils.news.listAll.invalidate();
+    utils.news.list.invalidate();
+  };
+
+  const createMutation = trpc.news.create.useMutation({
+    onSuccess: () => {
+      toast.success('뉴스가 추가되었습니다');
+      setNewTitle('');
+      setNewUrl('');
+      invalidateNews();
+    },
+    onError: (error) => {
+      toast.error(error.message || '뉴스 추가에 실패했습니다');
+    },
+  });
+
+  const toggleActiveMutation = trpc.news.update.useMutation({
+    onSuccess: invalidateNews,
+    onError: (error) => {
+      toast.error(error.message || '수정에 실패했습니다');
+    },
+  });
+
+  const deleteMutation = trpc.news.delete.useMutation({
+    onSuccess: () => {
+      toast.success('뉴스가 삭제되었습니다');
+      invalidateNews();
+    },
+    onError: (error) => {
+      toast.error(error.message || '삭제에 실패했습니다');
+    },
+  });
+
+  const handleCreate = () => {
+    if (!newTitle.trim()) {
+      toast.error('제목을 입력해주세요');
+      return;
+    }
+    createMutation.mutate({ title: newTitle.trim(), url: newUrl.trim() || undefined });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card className="card-elevated p-6 bg-gray-50">
+        <h3 className="font-semibold mb-4">새 뉴스 추가</h3>
+        <p className="text-sm text-gray-600 mb-3">
+          여기서 추가한 뉴스가 홈 화면 오른쪽 상단 "오늘의 뉴스" 패널에 노출됩니다.
+        </p>
+        <div className="space-y-3">
+          <Input
+            placeholder="제목"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+          />
+          <Input
+            placeholder="링크 (선택사항, https://...)"
+            value={newUrl}
+            onChange={(e) => setNewUrl(e.target.value)}
+          />
+          <Button
+            onClick={handleCreate}
+            disabled={createMutation.isPending}
+            className="w-full"
+          >
+            {createMutation.isPending ? '추가 중...' : '뉴스 추가'}
+          </Button>
+        </div>
+      </Card>
+      <Card className="card-elevated p-6">
+        <div className="space-y-4">
+          {newsItems?.length === 0 && (
+            <p className="text-sm text-gray-600 text-center py-4">등록된 뉴스가 없습니다</p>
+          )}
+          {newsItems?.map((item) => (
+            <div key={item.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div className="min-w-0">
+                <h3 className="font-semibold">
+                  {item.title}
+                  {!item.isActive && (
+                    <span className="ml-2 text-xs font-normal text-gray-500">(숨김)</span>
+                  )}
+                </h3>
+                {item.url && (
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline break-all"
+                  >
+                    {item.url}
+                  </a>
+                )}
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={toggleActiveMutation.isPending}
+                  onClick={() => toggleActiveMutation.mutate({ id: item.id, isActive: !item.isActive })}
+                >
+                  {item.isActive ? '숨기기' : '노출하기'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => deleteMutation.mutate({ id: item.id })}
+                >
+                  삭제
+                </Button>
               </div>
             </div>
           ))}
