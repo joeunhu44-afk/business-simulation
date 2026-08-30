@@ -7,6 +7,7 @@ import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function Home() {
   const { user, loading, isAuthenticated, logout } = useAuth();
@@ -134,9 +135,12 @@ export default function Home() {
       {/* Navigation */}
       <nav className="border-b border-gray-200 bg-white shadow-sm sticky top-0 z-40">
         <div className="container flex items-center justify-between py-4">
-          <a href="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
-            커뮤니티
-          </a>
+          <div className="flex items-center gap-2">
+            <HeaderMenuButton />
+            <a href="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
+              커뮤니티
+            </a>
+          </div>
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-600">{user?.name || "사용자"}</span>
             {user?.role === 'admin' && (
