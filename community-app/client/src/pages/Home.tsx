@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -198,16 +198,34 @@ function BoardPreview({ boardId }: { boardId: number }) {
 
   return (
     <div className="mt-3 pt-3 border-t border-border space-y-1.5">
-      {latest && (
-        <p className="text-xs text-muted-foreground truncate">
-          <span className="font-semibold accent-text">최신</span> · {latest.title}
-        </p>
-      )}
-      {popular && (
-        <p className="text-xs text-muted-foreground truncate">
-          <span className="font-semibold accent-text">인기</span> · {popular.title}
-        </p>
-      )}
+      {latest && <BoardPreviewRow label="최신" post={latest} />}
+      {popular && <BoardPreviewRow label="인기" post={popular} />}
+    </div>
+  );
+}
+
+function BoardPreviewRow({
+  label,
+  post,
+}: {
+  label: string;
+  post: { title: string; likeCount: number; commentCount: number };
+}) {
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span className="font-semibold accent-text shrink-0">{label}</span>
+      <span className="shrink-0">·</span>
+      <span className="truncate min-w-0 flex-1">{post.title}</span>
+      <span className="flex items-center gap-2 shrink-0">
+        <span className="flex items-center gap-0.5">
+          <ThumbsUp className="h-3 w-3" />
+          {post.likeCount}
+        </span>
+        <span className="flex items-center gap-0.5">
+          <MessageCircle className="h-3 w-3" />
+          {post.commentCount}
+        </span>
+      </span>
     </div>
   );
 }
