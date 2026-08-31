@@ -5,6 +5,7 @@
 
 @theme inline {
   --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Gowun Batang', 'Pretendard', serif;
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -44,91 +45,89 @@
 }
 
 /* =========================================================
-   에브리타임 스타일 라이트 테마 (기본 :root)
-   - 연한 회색 배경 + 흰색 카드
-   - 진하고 두꺼운 텍스트
-   - 레드 포인트 컬러
+   기본 테마 — 따뜻한 페이퍼 배경 + 클레이 포인트 컬러
+   커뮤니티 앱 특유의 진회색/새하양/원색 팔레트에서 벗어나,
+   편집숍 웹진 같은 절제된 색감과 세리프 헤드라인을 사용한다.
    ========================================================= */
 :root {
-  --radius: 0.7rem;
+  --radius: 0.65rem;
 
-  /* 포인트 컬러 (에브리타임 레드) */
-  --primary: #e03a3c;
-  --primary-foreground: #ffffff;
+  /* 포인트 컬러 (클레이/테라코타) */
+  --primary: #b5602f;
+  --primary-foreground: #fff8f1;
 
-  /* 연한 회색 배경 + 흰색 카드 */
-  --background: #eceef1;
-  --foreground: #1a1c20;
+  /* 따뜻한 페이퍼 배경 + 흰 카드 */
+  --background: #f6f2ea;
+  --foreground: #241f1a;
   --card: #ffffff;
-  --card-foreground: #1a1c20;
+  --card-foreground: #241f1a;
   --popover: #ffffff;
-  --popover-foreground: #1a1c20;
-  --secondary: #f4f5f7;
-  --secondary-foreground: #2d2f36;
-  --muted: #f4f5f7;
-  --muted-foreground: #6b7280;
-  --accent: #f4f5f7;
-  --accent-foreground: #1a1c20;
-  --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
-  --border: #e2e5ea;
-  --input: #e2e5ea;
-  --ring: #e03a3c;
+  --popover-foreground: #241f1a;
+  --secondary: #ede7db;
+  --secondary-foreground: #3a332b;
+  --muted: #ede7db;
+  --muted-foreground: #8a8175;
+  --accent: #ede7db;
+  --accent-foreground: #241f1a;
+  --destructive: #b3402a;
+  --destructive-foreground: #fff8f1;
+  --border: #e3dcce;
+  --input: #e3dcce;
+  --ring: #b5602f;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #1a1c20;
-  --sidebar-primary: #e03a3c;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f4f5f7;
-  --sidebar-accent-foreground: #1a1c20;
-  --sidebar-border: #e2e5ea;
-  --sidebar-ring: #e03a3c;
+  --sidebar-foreground: #241f1a;
+  --sidebar-primary: #b5602f;
+  --sidebar-primary-foreground: #fff8f1;
+  --sidebar-accent: #ede7db;
+  --sidebar-accent-foreground: #241f1a;
+  --sidebar-border: #e3dcce;
+  --sidebar-ring: #b5602f;
 
-  --chart-1: #e03a3c;
-  --chart-2: #2563eb;
-  --chart-3: #16a34a;
-  --chart-4: #d97706;
-  --chart-5: #7c3aed;
+  --chart-1: #b5602f;
+  --chart-2: #4c6b58;
+  --chart-3: #4a6c8c;
+  --chart-4: #8c5b7a;
+  --chart-5: #b08a3e;
 
   /* 커스텀 변수 */
-  --text-strong: #1a1c20;
-  --text-normal: #2d2f36;
-  --text-muted: #6b7280;
-  --bg-base: #eceef1;
+  --text-strong: #241f1a;
+  --text-normal: #3a332b;
+  --text-muted: #8a8175;
+  --bg-base: #f6f2ea;
   --bg-surface: #ffffff;
-  --bg-surface-2: #f4f5f7;
-  --bg-hover: #eaecef;
-  --border-color: #e2e5ea;
-  --accent-color: #e03a3c;
-  --accent-soft: rgba(224, 58, 60, 0.10);
-  --glow-color: rgba(120, 140, 200, 0.28);
+  --bg-surface-2: #ede7db;
+  --bg-hover: #e7e0d2;
+  --border-color: #e3dcce;
+  --accent-color: #b5602f;
+  --accent-soft: rgba(181, 96, 47, 0.1);
 }
 
-/* 색상 테마: 라이트 베이스 위에서 포인트색(primary/accent)만 변경 */
+/* 색상 테마: 페이퍼 베이스 위에서 포인트색만 절제된 톤으로 변경 */
 [data-theme-color="blue"] {
-  --primary: #2563eb; --ring: #2563eb; --sidebar-primary: #2563eb; --sidebar-ring: #2563eb;
-  --accent-color: #2563eb; --accent-soft: rgba(37,99,235,0.10); --glow-color: rgba(37,99,235,0.25);
-  --background: #eef2f7; --bg-base: #eef2f7; --secondary: #f1f5fa; --muted: #f1f5fa; --bg-surface-2: #f1f5fa; --bg-hover: #e6edf5;
+  --primary: #4a6c8c; --ring: #4a6c8c; --sidebar-primary: #4a6c8c; --sidebar-ring: #4a6c8c;
+  --accent-color: #4a6c8c; --accent-soft: rgba(74, 108, 140, 0.1);
+  --background: #eff2f1; --bg-base: #eff2f1; --secondary: #f1f4f3; --muted: #f1f4f3; --bg-surface-2: #f1f4f3; --bg-hover: #e7edec;
 }
 [data-theme-color="purple"] {
-  --primary: #7c3aed; --ring: #7c3aed; --sidebar-primary: #7c3aed; --sidebar-ring: #7c3aed;
-  --accent-color: #7c3aed; --accent-soft: rgba(124,58,237,0.10); --glow-color: rgba(124,58,237,0.25);
-  --background: #f1eef7; --bg-base: #f1eef7; --secondary: #f5f1fa; --muted: #f5f1fa; --bg-surface-2: #f5f1fa; --bg-hover: #ede6f5;
+  --primary: #8c5b7a; --ring: #8c5b7a; --sidebar-primary: #8c5b7a; --sidebar-ring: #8c5b7a;
+  --accent-color: #8c5b7a; --accent-soft: rgba(140, 91, 122, 0.1);
+  --background: #f3eef1; --bg-base: #f3eef1; --secondary: #f5f0f3; --muted: #f5f0f3; --bg-surface-2: #f5f0f3; --bg-hover: #eee6ec;
 }
 [data-theme-color="green"] {
-  --primary: #16a34a; --ring: #16a34a; --sidebar-primary: #16a34a; --sidebar-ring: #16a34a;
-  --accent-color: #16a34a; --accent-soft: rgba(22,163,74,0.10); --glow-color: rgba(22,163,74,0.22);
-  --background: #ecf3ee; --bg-base: #ecf3ee; --secondary: #eef6f1; --muted: #eef6f1; --bg-surface-2: #eef6f1; --bg-hover: #e3efe8;
+  --primary: #4c6b58; --ring: #4c6b58; --sidebar-primary: #4c6b58; --sidebar-ring: #4c6b58;
+  --accent-color: #4c6b58; --accent-soft: rgba(76, 107, 88, 0.1);
+  --background: #eef1ec; --bg-base: #eef1ec; --secondary: #f0f3ee; --muted: #f0f3ee; --bg-surface-2: #f0f3ee; --bg-hover: #e5ebe2;
 }
 [data-theme-color="red"] {
-  --primary: #dc2626; --ring: #dc2626; --sidebar-primary: #dc2626; --sidebar-ring: #dc2626;
-  --accent-color: #dc2626; --accent-soft: rgba(220,38,38,0.10); --glow-color: rgba(220,38,38,0.22);
-  --background: #f5edee; --bg-base: #f5edee; --secondary: #faf1f2; --muted: #faf1f2; --bg-surface-2: #faf1f2; --bg-hover: #f3e3e4;
+  --primary: #a8432e; --ring: #a8432e; --sidebar-primary: #a8432e; --sidebar-ring: #a8432e;
+  --accent-color: #a8432e; --accent-soft: rgba(168, 67, 46, 0.1);
+  --background: #f5eeea; --bg-base: #f5eeea; --secondary: #f7f1ee; --muted: #f7f1ee; --bg-surface-2: #f7f1ee; --bg-hover: #f0e5df;
 }
 [data-theme-color="amber"] {
-  --primary: #d97706; --ring: #d97706; --sidebar-primary: #d97706; --sidebar-ring: #d97706;
-  --accent-color: #d97706; --accent-soft: rgba(217,119,6,0.10); --glow-color: rgba(217,119,6,0.22);
-  --background: #f5f1e8; --bg-base: #f5f1e8; --secondary: #faf6ec; --muted: #faf6ec; --bg-surface-2: #faf6ec; --bg-hover: #f2ecdd;
+  --primary: #b08a3e; --ring: #b08a3e; --sidebar-primary: #b08a3e; --sidebar-ring: #b08a3e;
+  --accent-color: #b08a3e; --accent-soft: rgba(176, 138, 62, 0.1);
+  --background: #f5f0e4; --bg-base: #f5f0e4; --secondary: #f7f3e9; --muted: #f7f3e9; --bg-surface-2: #f7f3e9; --bg-hover: #f0e9d7;
 }
 
 @layer base {
@@ -138,16 +137,17 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans);
-    font-weight: 500; /* 기본을 medium으로 두껍게 */
+    font-weight: 400;
     font-size: 16px;
-    line-height: 1.55;
+    line-height: 1.6;
     -webkit-font-smoothing: antialiased;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-weight: 800; /* 제목은 extra bold */
+    font-family: var(--font-serif);
+    font-weight: 700;
     letter-spacing: -0.01em;
   }
-  strong, b { font-weight: 800; }
+  strong, b { font-weight: 600; }
 
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -183,37 +183,29 @@
 }
 
 /* =========================================================
-   빛의 경계 카드 + 공용 유틸
+   차분한 카드 + 공용 유틸
+   화려한 그라데이션 테두리/글로우 대신 얇은 헤어라인과
+   은은한 그림자만 사용해 절제된 인상을 준다.
    ========================================================= */
-.glow-sm { box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
-.glow-md { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
-.glow-lg { box-shadow: 0 4px 16px rgba(0,0,0,0.10); }
+.glow-sm { box-shadow: 0 1px 2px rgba(36, 31, 26, 0.04); }
+.glow-md { box-shadow: 0 3px 10px rgba(36, 31, 26, 0.06); }
+.glow-lg { box-shadow: 0 8px 24px rgba(36, 31, 26, 0.08); }
 
-/* 빛의 경계 카드: 흰 표면 + 그라데이션 보더 + 부드러운 빛 그림자 */
 .card-elevated,
 .light-border {
   position: relative;
   background-color: var(--bg-surface);
-  border-radius: 0.9rem;
+  border-radius: 0.85rem;
   color: var(--text-normal);
-  border: 1px solid transparent;
-  background-image:
-    linear-gradient(var(--bg-surface), var(--bg-surface)),
-    linear-gradient(135deg, rgba(255,255,255,0.9) 0%, var(--glow-color) 45%, rgba(180,195,235,0.15) 100%);
-  background-origin: border-box;
-  background-clip: padding-box, border-box;
-  box-shadow:
-    0 1px 2px rgba(20, 30, 60, 0.05),
-    0 6px 18px rgba(60, 80, 140, 0.08);
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 2px rgba(36, 31, 26, 0.04);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .card-elevated:hover,
 .light-border:hover {
-  box-shadow:
-    0 2px 6px rgba(20, 30, 60, 0.08),
-    0 10px 28px rgba(60, 80, 140, 0.16),
-    0 0 0 1px var(--glow-color);
+  box-shadow: 0 10px 28px rgba(36, 31, 26, 0.08);
+  border-color: var(--accent-color);
   transform: translateY(-1px);
 }
 
@@ -221,7 +213,7 @@
   background-color: var(--bg-surface) !important;
   border: 1px solid var(--border-color) !important;
   color: var(--text-strong) !important;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  box-shadow: none;
   border-radius: 0.6rem;
 }
 
@@ -230,5 +222,5 @@
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #c7ccd4; border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: #aab0ba; }
+::-webkit-scrollbar-thumb { background: #d8d0c0; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #c2b8a4; }
