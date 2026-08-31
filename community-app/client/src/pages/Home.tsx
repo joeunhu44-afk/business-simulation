@@ -121,17 +121,17 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Navigation */}
       <nav className="border-b border-border bg-card sticky top-0 z-40">
-        <div className="container flex items-center justify-between py-4">
-          <div className="flex items-center gap-2">
+        <div className="container flex items-center justify-between gap-3 py-4">
+          <div className="flex items-center gap-2 shrink-0">
             <HeaderMenuButton />
             <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
               커뮤니티
             </a>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{user?.name || "사용자"}</span>
+          <div className="flex items-center gap-4 min-w-0">
+            <span className="text-sm text-muted-foreground truncate">{user?.name || "사용자"}</span>
             {user?.role === 'admin' && (
-              <a href="/admin" className="text-sm font-semibold accent-text hover:underline">
+              <a href="/admin" className="text-sm font-semibold accent-text hover:underline shrink-0">
                 관리자
               </a>
             )}

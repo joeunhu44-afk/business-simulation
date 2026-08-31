@@ -164,7 +164,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <SheetContent
           side="left"
-          className="w-[340px] sm:w-[380px] p-0 flex flex-col"
+          className="w-[85vw] max-w-[340px] sm:w-[380px] sm:max-w-[380px] p-0 flex flex-col"
           style={{ backgroundColor: "var(--bg-surface)" }}
         >
           <SheetHeader className="px-5 py-4 border-b" style={{ borderColor: "var(--border-color)" }}>

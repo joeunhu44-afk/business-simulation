@@ -48,14 +48,16 @@ export default function AdminPanel() {
         <h1 className="text-3xl mb-8">관리자 패널</h1>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            <TabsList className="sm:w-full sm:grid sm:grid-cols-6">
             <TabsTrigger value="users">회원 관리</TabsTrigger>
             <TabsTrigger value="boards">게시판 관리</TabsTrigger>
             <TabsTrigger value="posts">게시글 관리</TabsTrigger>
             <TabsTrigger value="reports">신고 관리</TabsTrigger>
             <TabsTrigger value="announcements">공지사항</TabsTrigger>
             <TabsTrigger value="news">뉴스</TabsTrigger>
-          </TabsList>
+            </TabsList>
+          </div>
 
           {/* Users Tab */}
           <TabsContent value="users">
@@ -136,7 +138,7 @@ function UsersTab() {
       ) : (
       <Card className="card-elevated overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm whitespace-nowrap">
             <thead className="border-b border-border bg-muted/50">
               <tr>
                 <th className="px-6 py-3 text-left font-semibold">사용자</th>
@@ -322,7 +324,7 @@ function PostsTab() {
       ) : (
         <Card className="card-elevated overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm whitespace-nowrap">
               <thead className="border-b border-border bg-muted/50">
                 <tr>
                   <th className="px-6 py-3 text-left font-semibold">제목</th>
@@ -377,7 +379,7 @@ function ReportsTab() {
   return (
     <Card className="card-elevated overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm whitespace-nowrap">
           <thead className="border-b border-border bg-muted/50">
             <tr>
               <th className="px-6 py-3 text-left font-semibold">대상</th>

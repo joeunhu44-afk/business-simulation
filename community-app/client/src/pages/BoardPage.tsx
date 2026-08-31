@@ -141,9 +141,9 @@ export default function BoardPage() {
               <a key={post.id} href={`/post/${post.id}`} className="card-elevated block p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 min-w-0">
                         {post.isNotice && (
-                          <span className="inline-block px-2 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded">
+                          <span className="inline-block px-2 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded shrink-0">
                             공지
                           </span>
                         )}
