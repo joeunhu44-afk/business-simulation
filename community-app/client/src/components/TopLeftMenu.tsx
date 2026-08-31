@@ -25,12 +25,12 @@ import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
-  { color: "dark", label: "기본", swatch: "#e03a3c" },
-  { color: "blue", label: "파랑", swatch: "#2563eb" },
-  { color: "purple", label: "보라", swatch: "#7c3aed" },
-  { color: "green", label: "초록", swatch: "#16a34a" },
-  { color: "red", label: "빨강", swatch: "#dc2626" },
-  { color: "amber", label: "주황", swatch: "#d97706" },
+  { color: "dark", label: "클레이", swatch: "#b5602f" },
+  { color: "blue", label: "더스티 블루", swatch: "#4a6c8c" },
+  { color: "purple", label: "플럼", swatch: "#8c5b7a" },
+  { color: "green", label: "세이지", swatch: "#4c6b58" },
+  { color: "red", label: "브릭", swatch: "#a8432e" },
+  { color: "amber", label: "오커", swatch: "#b08a3e" },
 ];
 
 type MenuView = "root" | "profile" | "chat" | "search" | "settings";

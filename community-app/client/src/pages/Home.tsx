@@ -144,7 +144,7 @@ export default function Home() {
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
           <div>
             {/* Announcements */}
-            <div className="mb-8">
+            <div className="mb-8 pb-8 border-b border-border">
               <AnnouncementsSection />
             </div>
 
