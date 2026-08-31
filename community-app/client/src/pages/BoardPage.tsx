@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -37,7 +38,7 @@ export default function BoardPage() {
   if (boardsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -46,21 +47,24 @@ export default function BoardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">게시판을 찾을 수 없습니다</h1>
-          <a href="/" className="text-blue-400 hover:underline">홈으로 돌아가기</a>
+          <h1 className="text-2xl mb-4">게시판을 찾을 수 없습니다</h1>
+          <a href="/" className="accent-text hover:underline">홈으로 돌아가기</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white shadow-sm sticky top-0 z-40">
+      <nav className="border-b border-border bg-card sticky top-0 z-40">
         <div className="container flex items-center justify-between py-4">
-          <a href="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
-            커뮤니티
-          </a>
+          <div className="flex items-center gap-2">
+            <HeaderMenuButton />
+            <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
+              커뮤니티
+            </a>
+          </div>
           <div className="flex items-center gap-4">
             {isAuthenticated && (
               <a href={`/board/${slug}/write`} className="inline-flex items-center gap-2">
@@ -77,13 +81,13 @@ export default function BoardPage() {
       <div className="container py-8">
         {/* Announcements */}
         {announcements && announcements.length > 0 && (
-          <div className="mb-8 space-y-3">
-            <h3 className="font-semibold text-sm text-gray-600 uppercase tracking-wide">공지사항</h3>
+          <div className="mb-8 pb-8 border-b border-border space-y-3">
+            <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">공지사항</h3>
             <div className="space-y-2">
               {announcements.map((announcement) => (
                 <Card key={announcement.id} className="card-elevated p-4 border-l-4 border-l-accent">
                   <h4 className="font-semibold text-sm">{announcement.title}</h4>
-                  <p className="text-xs text-gray-600 line-clamp-2 mt-1">{announcement.content}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{announcement.content}</p>
                 </Card>
               ))}
             </div>
@@ -92,16 +96,16 @@ export default function BoardPage() {
 
         {/* Board Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">{board.name}</h1>
+          <h1 className="text-3xl mb-2">{board.name}</h1>
           {board.description && (
-            <p className="text-gray-600">{board.description}</p>
+            <p className="text-muted-foreground">{board.description}</p>
           )}
         </div>
 
         {/* Filters and Search */}
         <div className="mb-6 flex gap-4 flex-col sm:flex-row">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="게시글 검색..."
               value={searchQuery}
@@ -134,7 +138,7 @@ export default function BoardPage() {
             </div>
           ) : posts && posts.length > 0 ? (
             posts.map((post) => (
-              <a key={post.id} href={`/post/${post.id}`} className="card-elevated block p-4 hover:shadow-md transition-shadow">
+              <a key={post.id} href={`/post/${post.id}`} className="card-elevated block p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
@@ -143,17 +147,17 @@ export default function BoardPage() {
                             공지
                           </span>
                         )}
-                        <h3 className="font-semibold text-gray-900 truncate">{post.title}</h3>
+                        <h3 className="font-semibold text-foreground truncate">{post.title}</h3>
                       </div>
-                      <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
                         {post.content.substring(0, 100)}...
                       </p>
-                      <div className="flex items-center gap-4 text-xs text-gray-600">
+                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
                         <span>{post.isAnonymous ? '익명' : '사용자'}</span>
                         <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600 whitespace-nowrap">
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground whitespace-nowrap">
                       <div className="flex items-center gap-1">
                         <Eye className="h-4 w-4" />
                         <span>{post.viewCount}</span>
@@ -172,7 +176,7 @@ export default function BoardPage() {
             ))
           ) : (
             <Card className="card-elevated p-12 text-center">
-              <p className="text-gray-600">게시글이 없습니다.</p>
+              <p className="text-muted-foreground">게시글이 없습니다.</p>
             </Card>
           )}
         </div>

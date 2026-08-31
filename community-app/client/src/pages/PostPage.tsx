@@ -10,6 +10,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
@@ -106,17 +107,17 @@ export default function PostPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">게시글을 찾을 수 없습니다</h1>
-          <a href="/" className="text-primary hover:underline">홈으로 돌아가기</a>
+          <h1 className="text-2xl mb-4">게시글을 찾을 수 없습니다</h1>
+          <a href="/" className="accent-text hover:underline">홈으로 돌아가기</a>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b bg-card/80 backdrop-blur shadow-sm sticky top-0 z-40" style={{ borderColor: 'var(--border-color)' }}>
+      <nav className="border-b border-border bg-card/80 backdrop-blur sticky top-0 z-40">
         <div className="container flex items-center gap-2 py-4">
           <Button
             variant="ghost"
@@ -127,8 +128,9 @@ export default function PostPage() {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <a href="/" className="text-2xl font-extrabold text-primary hover:opacity-80 transition-opacity">
-            commus
+          <HeaderMenuButton />
+          <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
+            커뮤니티
           </a>
         </div>
       </nav>
@@ -138,7 +140,7 @@ export default function PostPage() {
         <Card className="card-elevated p-8 mb-8">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <h1 className="text-3xl font-bold mb-4">{post.title}</h1>
+              <h1 className="text-3xl mb-4">{post.title}</h1>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
                 <span>{post.isAnonymous ? '익명' : '사용자'}</span>
                 <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
@@ -170,7 +172,7 @@ export default function PostPage() {
             <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
           </div>
 
-          <div className="flex items-center gap-4 pt-6 border-t" style={{ borderColor: 'var(--border-color)' }}>
+          <div className="flex items-center gap-4 pt-6 border-t border-border">
             {isAuthenticated ? (
               <>
                 <Button
@@ -195,7 +197,7 @@ export default function PostPage() {
 
         {/* Comments Section */}
         <div className="space-y-6">
-          <h2 className="text-2xl font-bold">댓글 {post.commentCount}</h2>
+          <h2 className="text-2xl">댓글 {post.commentCount}</h2>
 
           {/* Comment Form */}
           {isAuthenticated && (

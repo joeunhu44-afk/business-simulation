@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function ChatRoom() {
   const { id } = useParams<{ id: string }>();
@@ -55,7 +56,7 @@ export default function ChatRoom() {
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -72,23 +73,27 @@ export default function ChatRoom() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <nav className="border-b border-slate-700 sticky top-0 z-40 backdrop-blur-sm">
-        <div className="container flex items-center gap-3 py-4">
+    <div className="min-h-screen flex flex-col bg-background">
+      <nav className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container flex items-center gap-2 py-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chat")} className="shrink-0">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <div className="h-9 w-9 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-300 font-semibold shrink-0">
+          <HeaderMenuButton />
+          <div
+            className="h-9 w-9 rounded-full flex items-center justify-center font-semibold shrink-0"
+            style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }}
+          >
             {(data?.otherUserName || "?").charAt(0)}
           </div>
-          <h1 className="text-lg font-bold truncate">{data?.otherUserName || "대화"}</h1>
+          <h1 className="text-lg truncate">{data?.otherUserName || "대화"}</h1>
         </div>
       </nav>
 
       <div className="flex-1 container max-w-2xl py-6 overflow-y-auto">
         {isLoading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : !data || data.messages.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
@@ -103,12 +108,12 @@ export default function ChatRoom() {
                   <div
                     className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm ${
                       mine
-                        ? "bg-blue-600 text-white rounded-br-sm"
-                        : "bg-slate-800 text-slate-100 rounded-bl-sm border border-slate-700"
+                        ? "bg-primary text-primary-foreground rounded-br-sm"
+                        : "bg-card text-foreground rounded-bl-sm border border-border"
                     }`}
                   >
                     <p className="whitespace-pre-wrap break-words">{m.content}</p>
-                    <p className={`text-[10px] mt-1 ${mine ? "text-blue-100/70" : "text-slate-400"}`}>
+                    <p className={`text-[10px] mt-1 ${mine ? "text-primary-foreground/70" : "text-muted-foreground"}`}>
                       {new Date(m.createdAt).toLocaleTimeString("ko-KR", {
                         hour: "2-digit",
                         minute: "2-digit",
@@ -123,7 +128,7 @@ export default function ChatRoom() {
         )}
       </div>
 
-      <div className="border-t border-slate-700 sticky bottom-0 backdrop-blur-sm">
+      <div className="border-t border-border bg-card sticky bottom-0">
         <div className="container max-w-2xl py-3 flex items-center gap-2">
           <Input
             value={draft}
@@ -140,7 +145,7 @@ export default function ChatRoom() {
           <Button
             onClick={handleSend}
             disabled={sendMutation.isPending || !draft.trim()}
-            className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+            className="shrink-0"
           >
             <Send className="h-4 w-4" />
           </Button>

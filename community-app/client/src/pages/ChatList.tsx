@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 export default function ChatList() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, navigate] = useLocation();
@@ -18,31 +19,32 @@ export default function ChatList() {
   if (authLoading || !user) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      <nav className="border-b border-slate-700 sticky top-0 z-40 backdrop-blur-sm">
-        <div className="container flex items-center gap-3 py-4">
+    <div className="min-h-screen bg-background">
+      <nav className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container flex items-center gap-2 py-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/")} className="shrink-0">
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-bold">메시지</h1>
+          <HeaderMenuButton />
+          <h1 className="text-xl">메시지</h1>
         </div>
       </nav>
 
       <div className="container max-w-2xl py-6">
         {isLoading ? (
           <div className="flex justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : error ? (
           <div className="text-center py-20 space-y-3">
-            <p className="text-red-400">대화 목록을 불러오지 못했습니다</p>
-            <Button variant="outline" onClick={() => refetch()} className="bg-slate-800">
+            <p className="text-destructive">대화 목록을 불러오지 못했습니다</p>
+            <Button variant="outline" onClick={() => refetch()}>
               다시 시도
             </Button>
           </div>
@@ -58,8 +60,11 @@ export default function ChatList() {
           <div className="space-y-2">
             {conversations.map((conv) => (
               <Link key={conv.id} href={`/chat/${conv.id}`}>
-                <Card className="p-4 flex items-center gap-3 cursor-pointer hover:border-blue-500 transition-colors">
-                  <div className="h-11 w-11 rounded-full bg-blue-600/30 flex items-center justify-center text-blue-300 font-semibold shrink-0">
+                <Card className="card-elevated p-4 flex items-center gap-3 cursor-pointer">
+                  <div
+                    className="h-11 w-11 rounded-full flex items-center justify-center font-semibold shrink-0"
+                    style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }}
+                  >
                     {(conv.otherUserName || "?").charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -79,7 +84,7 @@ export default function ChatList() {
                     </p>
                   </div>
                   {conv.unreadCount > 0 && (
-                    <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center">
+                    <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
                       {conv.unreadCount}
                     </span>
                   )}

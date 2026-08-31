@@ -219,6 +219,12 @@
 
 .accent-text { color: var(--accent-color) !important; }
 
+.divider-elegant {
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-color) 0%, var(--border-color) 100%);
+  border: none;
+}
+
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }

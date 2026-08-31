@@ -8,6 +8,7 @@ import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function WritePostPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -56,7 +57,7 @@ export default function WritePostPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">로그인이 필요합니다</h1>
+          <h1 className="text-2xl mb-4">로그인이 필요합니다</h1>
           <a href="/" className="inline-block">
             <Button>홈으로 돌아가기</Button>
           </a>
@@ -69,7 +70,7 @@ export default function WritePostPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">게시판을 찾을 수 없습니다</h1>
+          <h1 className="text-2xl mb-4">게시판을 찾을 수 없습니다</h1>
           <a href="/" className="inline-block">
             <Button>홈으로 돌아가기</Button>
           </a>
@@ -79,11 +80,12 @@ export default function WritePostPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white shadow-sm sticky top-0 z-40">
-        <div className="container flex items-center justify-between py-4">
-          <a href="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
+      <nav className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container flex items-center gap-2 py-4">
+          <HeaderMenuButton />
+          <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
             커뮤니티
           </a>
         </div>
@@ -91,8 +93,8 @@ export default function WritePostPage() {
 
       <div className="container py-8 max-w-3xl">
         <Card className="card-elevated p-8">
-          <h1 className="text-3xl font-bold mb-2">새 게시글 작성</h1>
-          <p className="text-gray-600 mb-8">{board.name}</p>
+          <h1 className="text-3xl mb-2">새 게시글 작성</h1>
+          <p className="text-muted-foreground mb-8">{board.name}</p>
 
           <div className="space-y-6">
             <div>
@@ -121,7 +123,7 @@ export default function WritePostPage() {
                 id="anonymous"
                 checked={isAnonymous}
                 onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="rounded border-gray-200"
+                className="rounded border-border"
               />
               <label htmlFor="anonymous" className="text-sm cursor-pointer">
                 익명으로 작성

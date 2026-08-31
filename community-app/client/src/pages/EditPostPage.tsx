@@ -8,6 +8,7 @@ import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function EditPostPage() {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +58,7 @@ export default function EditPostPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">로그인이 필요합니다</h1>
+          <h1 className="text-2xl mb-4">로그인이 필요합니다</h1>
           <a href="/" className="text-primary hover:underline">
             홈으로 돌아가기
           </a>
@@ -70,7 +71,7 @@ export default function EditPostPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">게시글을 찾을 수 없습니다</h1>
+          <h1 className="text-2xl mb-4">게시글을 찾을 수 없습니다</h1>
           <a href="/" className="text-primary hover:underline">
             홈으로 돌아가기
           </a>
@@ -83,7 +84,7 @@ export default function EditPostPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">수정 권한이 없습니다</h1>
+          <h1 className="text-2xl mb-4">수정 권한이 없습니다</h1>
           <a href="/" className="text-primary hover:underline">
             홈으로 돌아가기
           </a>
@@ -106,13 +107,14 @@ export default function EditPostPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       <div className="container max-w-2xl mx-auto px-4 py-8">
         <div className="mb-6 flex items-center gap-4">
-          <a href={`/post/${postId}`} className="text-primary hover:underline">
+          <a href={`/post/${postId}`} className="accent-text hover:underline">
             <ArrowLeft className="h-5 w-5" />
           </a>
-          <h1 className="text-3xl font-bold">게시글 수정</h1>
+          <HeaderMenuButton />
+          <h1 className="text-3xl">게시글 수정</h1>
         </div>
 
         <Card className="card-elevated p-6">

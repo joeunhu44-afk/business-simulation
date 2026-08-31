@@ -10,6 +10,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
+import HeaderMenuButton from "@/components/HeaderMenuButton";
 
 export default function SearchPage() {
   const [, navigate] = useLocation();
@@ -33,11 +34,12 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white shadow-sm sticky top-0 z-40">
-        <div className="container flex items-center justify-between py-4">
-          <a href="/" className="text-2xl font-bold text-primary hover:opacity-80 transition-opacity">
+      <nav className="border-b border-border bg-card sticky top-0 z-40">
+        <div className="container flex items-center gap-2 py-4">
+          <HeaderMenuButton />
+          <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
             커뮤니티
           </a>
         </div>
@@ -45,10 +47,10 @@ export default function SearchPage() {
 
       <div className="container max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-6">검색</h1>
+          <h1 className="text-3xl mb-6">검색</h1>
           <form onSubmit={handleSearch} className="flex gap-2">
             <div className="flex-1 relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-600" />
+              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="게시글, 댓글, 사용자 검색..."
                 value={searchQuery}
@@ -73,14 +75,14 @@ export default function SearchPage() {
 
             <TabsContent value="comments">
               <div className="text-center py-12">
-                <p className="text-gray-600">댓글 검색은 준비 중입니다</p>
+                <p className="text-muted-foreground">댓글 검색은 준비 중입니다</p>
               </div>
             </TabsContent>
           </Tabs>
         ) : (
           <Card className="card-elevated p-12 text-center">
-            <SearchIcon className="h-12 w-12 mx-auto mb-4 text-gray-600" />
-            <p className="text-gray-600">검색어를 입력하세요</p>
+            <SearchIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-muted-foreground">검색어를 입력하세요</p>
           </Card>
         )}
       </div>
@@ -114,7 +116,7 @@ function SearchPostsResults({ query }: { query: string }) {
   if (!posts || posts.length === 0) {
     return (
       <Card className="card-elevated p-12 text-center">
-        <p className="text-gray-600">검색 결과가 없습니다</p>
+        <p className="text-muted-foreground">검색 결과가 없습니다</p>
       </Card>
     );
   }
@@ -122,14 +124,14 @@ function SearchPostsResults({ query }: { query: string }) {
   return (
     <div className="space-y-4">
       {posts.map((post: any) => (
-        <Card key={post.id} className="card-elevated p-6 hover:shadow-md transition-shadow">
+        <Card key={post.id} className="card-elevated p-6">
           <a href={`/post/${post.id}`} className="block">
-            <h3 className="text-lg font-semibold mb-2 text-primary hover:underline">
+            <h3 className="text-lg font-semibold mb-2 accent-text hover:underline">
               {post.title}
             </h3>
           </a>
-          <p className="text-sm text-gray-600 mb-3 line-clamp-2">{post.content}</p>
-          <div className="flex items-center gap-4 text-xs text-gray-600">
+          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.content}</p>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span>{post.isAnonymous ? "익명" : "사용자"}</span>
             <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
             <div className="flex items-center gap-4 ml-auto">
