@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { toneClass } from "@/lib/tone";
 export default function ChatList() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, navigate] = useLocation();
@@ -60,13 +61,10 @@ export default function ChatList() {
           <div className="space-y-2">
             {conversations.map((conv) => (
               <Link key={conv.id} href={`/chat/${conv.id}`}>
-                <Card className="card-elevated p-4 flex items-center gap-3 cursor-pointer">
-                  <div
-                    className="h-11 w-11 rounded-full flex items-center justify-center font-semibold shrink-0"
-                    style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }}
-                  >
+                <Card className={`card-elevated p-4 flex items-center gap-3 cursor-pointer ${toneClass(conv.id)}`}>
+                  <span className="tone-badge h-11 w-11 text-base">
                     {(conv.otherUserName || "?").charAt(0)}
-                  </div>
+                  </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-semibold truncate">{conv.otherUserName}</p>

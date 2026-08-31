@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft } from "lucide-react";
+import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, User } from "lucide-react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -11,6 +11,7 @@ import { ko } from "date-fns/locale";
 import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { toneClass } from "@/lib/tone";
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,6 +25,8 @@ export default function PostPage() {
   const { data: post, isLoading: postLoading } = trpc.posts.get.useQuery({ id: postId });
   const { data: comments, refetch: refetchComments } = trpc.comments.listByPost.useQuery({ postId });
   const { data: isLiked } = trpc.likes.isPostLiked.useQuery({ postId }, { enabled: isAuthenticated });
+  const { data: boards } = trpc.boards.list.useQuery();
+  const board = boards?.find((b) => b.id === post?.boardId);
 
   const createCommentMutation = trpc.comments.create.useMutation({
     onSuccess: () => {
@@ -137,13 +140,21 @@ export default function PostPage() {
 
       <div className="container py-8 max-w-3xl">
         {/* Post */}
-        <Card className="card-elevated p-8 mb-8">
+        <Card className={`card-elevated p-8 mb-8 ${board ? toneClass(board.id) : ''}`}>
           <div className="flex items-start justify-between mb-4">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
+              {board && (
+                <a href={`/board/${board.slug}`} className="tag-pill mb-3 inline-flex">
+                  {board.name}
+                </a>
+              )}
               <h1 className="text-3xl mb-4">{post.title}</h1>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="tone-badge h-6 w-6"><User className="h-3.5 w-3.5" /></span>
                 <span>{post.isAnonymous ? '익명' : '사용자'}</span>
+                <span>·</span>
                 <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
+                <span>·</span>
                 <span>조회 {post.viewCount}</span>
               </div>
             </div>
@@ -197,7 +208,7 @@ export default function PostPage() {
 
         {/* Comments Section */}
         <div className="space-y-6">
-          <h2 className="text-2xl">댓글 {post.commentCount}</h2>
+          <h2 className="section-heading text-2xl">댓글 {post.commentCount}</h2>
 
           {/* Comment Form */}
           {isAuthenticated && (
@@ -322,13 +333,16 @@ function CommentItem({
 
   return (
     <div className="space-y-3">
-      <Card className="card-elevated p-4">
+      <Card className={`card-elevated p-4 ${toneClass(comment.id)}`}>
         <div className="flex items-start justify-between mb-2">
-          <div>
-            <p className="text-sm font-semibold">{comment.isAnonymous ? '익명' : '사용자'}</p>
-            <p className="text-xs text-muted-foreground">
-              {formatDistanceToNow(new Date(comment.createdAt), { locale: ko, addSuffix: true })}
-            </p>
+          <div className="flex items-center gap-2">
+            <span className="tone-badge h-7 w-7"><User className="h-3.5 w-3.5" /></span>
+            <div>
+              <p className="text-sm font-semibold">{comment.isAnonymous ? '익명' : '사용자'}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatDistanceToNow(new Date(comment.createdAt), { locale: ko, addSuffix: true })}
+              </p>
+            </div>
           </div>
           {isAuthenticated && user?.id === comment.userId && (
             <Button
@@ -419,13 +433,16 @@ function ReplyItem({
   });
 
   return (
-    <Card className="card-elevated p-4 bg-black/[0.02]">
+    <Card className={`card-elevated p-4 bg-black/[0.02] ${toneClass(reply.id)}`}>
       <div className="flex items-start justify-between mb-2">
-        <div>
-          <p className="text-sm font-semibold">{reply.isAnonymous ? '익명' : '사용자'}</p>
-          <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(reply.createdAt), { locale: ko, addSuffix: true })}
-          </p>
+        <div className="flex items-center gap-2">
+          <span className="tone-badge h-7 w-7"><User className="h-3.5 w-3.5" /></span>
+          <div>
+            <p className="text-sm font-semibold">{reply.isAnonymous ? '익명' : '사용자'}</p>
+            <p className="text-xs text-muted-foreground">
+              {formatDistanceToNow(new Date(reply.createdAt), { locale: ko, addSuffix: true })}
+            </p>
+          </div>
         </div>
       </div>
       <p className="text-sm text-foreground mb-3 whitespace-pre-wrap">{reply.content}</p>

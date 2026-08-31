@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, Phone, MessageSquareText } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, Phone, MessageSquareText, Newspaper, Compass, Megaphone } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -10,6 +10,7 @@ import { useState } from "react";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
 import { toast } from "sonner";
+import { toneClass } from "@/lib/tone";
 
 const FEATURES = [
   { title: "게시판", desc: "관심사에 맞는 게시판을 찾아 이야기를 나눠요" },
@@ -158,7 +159,7 @@ export default function Home() {
 
             {/* Boards Grid */}
             <div>
-              <h2 className="mb-6 text-xl">게시판</h2>
+              <h2 className="section-heading mb-6 text-xl">게시판</h2>
               {boardsLoading ? (
                 <div className="flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -169,10 +170,15 @@ export default function Home() {
                     <Reveal key={board.id} delay={Math.min(idx, 5) * 0.05}>
                       <a
                         href={`/board/${board.slug}`}
-                        className="card-elevated block p-6"
+                        className={`card-elevated board-card ${toneClass(board.id)} block p-6`}
                       >
-                        <h3 className="font-semibold text-base mb-1.5">{board.name}</h3>
-                        <p className="text-sm text-muted-foreground leading-relaxed">{board.description}</p>
+                        <div className="flex items-start gap-3">
+                          <span className="tone-badge h-11 w-11 text-lg">{board.name.charAt(0)}</span>
+                          <div className="min-w-0 flex-1 pt-0.5">
+                            <h3 className="font-semibold text-base leading-tight">{board.name}</h3>
+                            <p className="text-sm text-muted-foreground leading-relaxed mt-1">{board.description}</p>
+                          </div>
+                        </div>
                         <BoardPreview boardId={board.id} />
                       </a>
                     </Reveal>
@@ -200,7 +206,10 @@ export default function Home() {
 function QuickLinksPanel() {
   return (
     <Card className="card-elevated p-4">
-      <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">바로가기</h3>
+      <h3 className="panel-header font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">
+        <span className="panel-icon"><Compass className="h-3.5 w-3.5" /></span>
+        바로가기
+      </h3>
       <div className="space-y-1">
         <a
           href="/inquiries"
@@ -232,7 +241,7 @@ function BoardPreview({ boardId }: { boardId: number }) {
   if (!latest && !popular) return null;
 
   return (
-    <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+    <div className="mt-3.5 pt-3 border-t border-border space-y-2">
       {latest && <BoardPreviewRow label="최신" post={latest} />}
       {popular && <BoardPreviewRow label="인기" post={popular} />}
     </div>
@@ -247,11 +256,10 @@ function BoardPreviewRow({
   post: { title: string; likeCount: number; commentCount: number };
 }) {
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-      <span className="font-semibold accent-text shrink-0">{label}</span>
-      <span className="shrink-0">·</span>
-      <span className="truncate min-w-0 flex-1">{post.title}</span>
-      <span className="flex items-center gap-2 shrink-0">
+    <div className="flex items-center gap-2 text-xs">
+      <span className="tag-pill shrink-0">{label}</span>
+      <span className="truncate min-w-0 flex-1 font-medium text-foreground/80">{post.title}</span>
+      <span className="flex items-center gap-2 shrink-0 text-muted-foreground">
         <span className="flex items-center gap-0.5">
           <ThumbsUp className="h-3 w-3" />
           {post.likeCount}
@@ -282,7 +290,10 @@ function NewsPanel() {
 
   return (
     <Card className="card-elevated p-4">
-      <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">오늘의 뉴스</h3>
+      <h3 className="panel-header font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">
+        <span className="panel-icon"><Newspaper className="h-3.5 w-3.5" /></span>
+        오늘의 뉴스
+      </h3>
       <div className="space-y-3">
         {newsItems.map((item) =>
           item.url ? (
@@ -314,11 +325,17 @@ function AnnouncementsSection() {
 
   return (
     <div className="space-y-3">
-      <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">공지사항</h3>
+      <h3 className="panel-header font-semibold text-xs text-muted-foreground uppercase tracking-wide">
+        <span className="panel-icon"><Megaphone className="h-3.5 w-3.5" /></span>
+        공지사항
+      </h3>
       <div className="space-y-2">
         {announcements.map((announcement) => (
-          <Card key={announcement.id} className="card-elevated p-4 border-l-4 border-l-accent">
-            <h4 className="font-semibold text-sm mb-1">{announcement.title}</h4>
+          <Card key={announcement.id} className="card-elevated p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className="tag-pill">공지</span>
+              <h4 className="font-semibold text-sm">{announcement.title}</h4>
+            </div>
             <p className="text-xs text-muted-foreground line-clamp-2">{announcement.content}</p>
           </Card>
         ))}

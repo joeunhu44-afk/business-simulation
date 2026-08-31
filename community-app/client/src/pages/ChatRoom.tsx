@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { toneClass } from "@/lib/tone";
 
 export default function ChatRoom() {
   const { id } = useParams<{ id: string }>();
@@ -80,12 +81,9 @@ export default function ChatRoom() {
             <ChevronLeft className="h-5 w-5" />
           </Button>
           <HeaderMenuButton />
-          <div
-            className="h-9 w-9 rounded-full flex items-center justify-center font-semibold shrink-0"
-            style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }}
-          >
+          <span className={`tone-badge h-9 w-9 text-sm ${toneClass(conversationId)}`}>
             {(data?.otherUserName || "?").charAt(0)}
-          </div>
+          </span>
           <h1 className="text-lg truncate">{data?.otherUserName || "대화"}</h1>
         </div>
       </nav>

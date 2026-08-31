@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Search as SearchIcon, Eye, MessageCircle, ThumbsUp } from "lucide-react";
+import { Loader2, Search as SearchIcon, Eye, MessageCircle, ThumbsUp, User } from "lucide-react";
 import { useLocation } from "wouter";
 import React from "react";
 import { trpc } from "@/lib/trpc";
@@ -11,6 +11,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { toneClass } from "@/lib/tone";
 
 export default function SearchPage() {
   const [, navigate] = useLocation();
@@ -122,34 +123,31 @@ function SearchPostsResults({ query }: { query: string }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {posts.map((post: any) => (
-        <Card key={post.id} className="card-elevated p-6">
-          <a href={`/post/${post.id}`} className="block">
-            <h3 className="text-lg font-semibold mb-2 accent-text hover:underline">
-              {post.title}
-            </h3>
-          </a>
-          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{post.content}</p>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span>{post.isAnonymous ? "익명" : "사용자"}</span>
-            <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
-            <div className="flex items-center gap-4 ml-auto">
-              <span className="flex items-center gap-1">
-                <Eye className="h-3 w-3" />
-                {post.viewCount}
-              </span>
-              <span className="flex items-center gap-1">
-                <MessageCircle className="h-3 w-3" />
-                {post.commentCount || 0}
-              </span>
-              <span className="flex items-center gap-1">
-                <ThumbsUp className="h-3 w-3" />
-                {post.likeCount || 0}
-              </span>
+        <a key={post.id} href={`/post/${post.id}`} className={`card-elevated block p-4 ${toneClass(post.id)}`}>
+          <div className="flex items-start gap-3">
+            <span className="tone-badge h-9 w-9 shrink-0 mt-0.5">
+              <User className="h-4 w-4" />
+            </span>
+            <div className="flex-1 min-w-0">
+              <h3 className="font-semibold text-base text-foreground truncate mb-1.5">{post.title}</h3>
+              <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">{post.content}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs text-muted-foreground">{post.isAnonymous ? "익명" : "사용자"}</span>
+                <span className="text-xs text-muted-foreground">·</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
+                </span>
+                <span className="flex items-center gap-1.5 ml-auto">
+                  <span className="stat-pill"><Eye className="h-3 w-3" />{post.viewCount}</span>
+                  <span className="stat-pill"><MessageCircle className="h-3 w-3" />{post.commentCount || 0}</span>
+                  <span className="stat-pill"><ThumbsUp className="h-3 w-3" />{post.likeCount || 0}</span>
+                </span>
+              </div>
             </div>
           </div>
-        </Card>
+        </a>
       ))}
     </div>
   );

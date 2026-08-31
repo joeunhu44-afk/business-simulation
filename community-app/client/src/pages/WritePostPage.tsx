@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { toneClass } from "@/lib/tone";
 
 export default function WritePostPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -92,9 +93,9 @@ export default function WritePostPage() {
       </nav>
 
       <div className="container py-8 max-w-3xl">
-        <Card className="card-elevated p-8">
-          <h1 className="text-3xl mb-2">새 게시글 작성</h1>
-          <p className="text-muted-foreground mb-8">{board.name}</p>
+        <Card className={`card-elevated p-8 ${toneClass(board.id)}`}>
+          <span className="tag-pill mb-3 inline-flex">{board.name}</span>
+          <h1 className="text-3xl mb-8">새 게시글 작성</h1>
 
           <div className="space-y-6">
             <div>

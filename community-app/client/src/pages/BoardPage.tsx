@@ -3,13 +3,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, Eye, MessageCircle, ThumbsUp } from "lucide-react";
+import { Loader2, Plus, Search, Eye, MessageCircle, ThumbsUp, User } from "lucide-react";
 import { Link, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { toneClass } from "@/lib/tone";
 
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -54,6 +55,8 @@ export default function BoardPage() {
     );
   }
 
+  const boardTone = toneClass(board.id);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -85,9 +88,12 @@ export default function BoardPage() {
             <h3 className="font-semibold text-xs text-muted-foreground uppercase tracking-wide">공지사항</h3>
             <div className="space-y-2">
               {announcements.map((announcement) => (
-                <Card key={announcement.id} className="card-elevated p-4 border-l-4 border-l-accent">
-                  <h4 className="font-semibold text-sm">{announcement.title}</h4>
-                  <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{announcement.content}</p>
+                <Card key={announcement.id} className="card-elevated p-4">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="tag-pill">공지</span>
+                    <h4 className="font-semibold text-sm">{announcement.title}</h4>
+                  </div>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{announcement.content}</p>
                 </Card>
               ))}
             </div>
@@ -95,11 +101,14 @@ export default function BoardPage() {
         )}
 
         {/* Board Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl mb-2">{board.name}</h1>
-          {board.description && (
-            <p className="text-muted-foreground">{board.description}</p>
-          )}
+        <div className={`${boardTone} mb-8 flex items-center gap-4`}>
+          <span className="tone-badge h-14 w-14 text-2xl">{board.name.charAt(0)}</span>
+          <div className="min-w-0">
+            <h1 className="text-3xl leading-tight">{board.name}</h1>
+            {board.description && (
+              <p className="text-muted-foreground mt-1">{board.description}</p>
+            )}
+          </div>
         </div>
 
         {/* Filters and Search */}
@@ -138,37 +147,34 @@ export default function BoardPage() {
             </div>
           ) : posts && posts.length > 0 ? (
             posts.map((post) => (
-              <a key={post.id} href={`/post/${post.id}`} className="card-elevated block p-4">
-                  <div className="flex items-start justify-between gap-4">
+              <a
+                key={post.id}
+                href={`/post/${post.id}`}
+                className={`card-elevated block p-4 ${post.isNotice ? boardTone : toneClass(post.id)}`}
+              >
+                  <div className="flex items-start gap-3">
+                    <span className="tone-badge h-9 w-9 shrink-0 mt-0.5">
+                      <User className="h-4 w-4" />
+                    </span>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2 min-w-0">
-                        {post.isNotice && (
-                          <span className="inline-block px-2 py-1 bg-accent text-accent-foreground text-xs font-semibold rounded shrink-0">
-                            공지
-                          </span>
-                        )}
-                        <h3 className="font-semibold text-foreground truncate">{post.title}</h3>
+                      <div className="flex items-center gap-2 mb-1.5 min-w-0">
+                        {post.isNotice && <span className="tag-pill shrink-0">공지</span>}
+                        <h3 className="font-semibold text-base text-foreground truncate">{post.title}</h3>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                      <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">
                         {post.content.substring(0, 100)}...
                       </p>
-                      <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                        <span>{post.isAnonymous ? '익명' : '사용자'}</span>
-                        <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground whitespace-nowrap">
-                      <div className="flex items-center gap-1">
-                        <Eye className="h-4 w-4" />
-                        <span>{post.viewCount}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MessageCircle className="h-4 w-4" />
-                        <span>{post.commentCount}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <ThumbsUp className="h-4 w-4" />
-                        <span>{post.likeCount}</span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted-foreground">{post.isAnonymous ? '익명' : '사용자'}</span>
+                        <span className="text-xs text-muted-foreground">·</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
+                        </span>
+                        <span className="flex items-center gap-1.5 ml-auto">
+                          <span className="stat-pill"><Eye className="h-3 w-3" />{post.viewCount}</span>
+                          <span className="stat-pill"><MessageCircle className="h-3 w-3" />{post.commentCount}</span>
+                          <span className="stat-pill"><ThumbsUp className="h-3 w-3" />{post.likeCount}</span>
+                        </span>
                       </div>
                     </div>
                   </div>
