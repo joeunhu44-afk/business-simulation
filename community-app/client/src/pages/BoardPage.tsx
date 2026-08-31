@@ -161,6 +161,7 @@ export default function BoardPage() {
                       isAnonymous={post.isAnonymous}
                       name={post.authorName}
                       avatarEmoji={post.authorAvatarEmoji}
+                      avatarImageUrl={post.authorAvatarImageUrl}
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 min-w-0">

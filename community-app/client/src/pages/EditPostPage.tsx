@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import ImagePicker from "@/components/ImagePicker";
 
 export default function EditPostPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,6 +19,7 @@ export default function EditPostPage() {
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [images, setImages] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // 수정 페이지에서는 조회수를 증가시키지 않기 위해 직접 API 호출 대신 다른 방식 사용
@@ -40,6 +42,7 @@ export default function EditPostPage() {
     if (post) {
       setTitle(post.title);
       setContent(post.content);
+      setImages(post.images ?? []);
       setIsLoading(false);
     } else if (postLoading) {
       setIsLoading(true);
@@ -103,6 +106,7 @@ export default function EditPostPage() {
       id: postId,
       title: title.trim(),
       content: content.trim(),
+      images,
     });
   };
 
@@ -138,6 +142,11 @@ export default function EditPostPage() {
                 rows={10}
                 disabled={updateMutation.isPending}
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">사진 첨부</label>
+              <ImagePicker images={images} onChange={setImages} />
             </div>
 
             <div className="flex gap-3 pt-4">

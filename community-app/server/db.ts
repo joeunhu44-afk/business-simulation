@@ -160,23 +160,48 @@ export async function deleteBoard(id: number) {
  */
 async function attachAuthors<T extends { userId: number; isAnonymous: boolean }>(
   rows: T[]
-): Promise<(T & { authorName: string | null; authorAvatarEmoji: string | null })[]> {
+): Promise<(T & { authorName: string | null; authorAvatarEmoji: string | null; authorAvatarImageUrl: string | null })[]> {
   if (rows.length === 0) return [];
   const db = await getDb();
-  if (!db) return rows.map((r) => ({ ...r, authorName: null, authorAvatarEmoji: null }));
+  if (!db) return rows.map((r) => ({ ...r, authorName: null, authorAvatarEmoji: null, authorAvatarImageUrl: null }));
 
   const ids = Array.from(new Set(rows.map((r) => r.userId)));
   const authors = await db
-    .select({ id: users.id, name: users.name, avatarEmoji: users.avatarEmoji })
+    .select({ id: users.id, name: users.name, avatarEmoji: users.avatarEmoji, avatarImageUrl: users.avatarImageUrl })
     .from(users)
     .where(inArray(users.id, ids));
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
   return rows.map((row) => {
-    if (row.isAnonymous) return { ...row, authorName: null, authorAvatarEmoji: null };
+    if (row.isAnonymous) return { ...row, authorName: null, authorAvatarEmoji: null, authorAvatarImageUrl: null };
     const author = authorMap.get(row.userId);
-    return { ...row, authorName: author?.name ?? null, authorAvatarEmoji: author?.avatarEmoji ?? null };
+    return {
+      ...row,
+      authorName: author?.name ?? null,
+      authorAvatarEmoji: author?.avatarEmoji ?? null,
+      authorAvatarImageUrl: author?.avatarImageUrl ?? null,
+    };
   });
+}
+
+/**
+ * MariaDB(로컬 개발 DB)는 MySQL의 네이티브 JSON 타입이 없어서 JSON 컬럼을 프로토콜
+ * 레벨에서 그냥 문자열로 내려준다 — drizzle의 json() 컬럼이 기대하는 자동 파싱이
+ * 이 경우 동작하지 않아 select 결과의 `images`가 배열이 아니라 "[]" 같은 문자열로
+ * 온다. MySQL/MariaDB 어느 쪽에서 읽어도 항상 배열이 되도록 여기서 직접 정규화한다.
+ */
+function normalizePostImages<T extends { images?: unknown }>(row: T): T {
+  if (typeof (row as any).images === "string") {
+    try {
+      return { ...row, images: JSON.parse((row as any).images) };
+    } catch {
+      return { ...row, images: [] };
+    }
+  }
+  if (!Array.isArray((row as any).images)) {
+    return { ...row, images: [] };
+  }
+  return row;
 }
 
 /**
@@ -207,7 +232,7 @@ export async function getPostsByBoard(boardId: number, limit: number = 20, offse
     .orderBy(desc(posts.isNotice), orderBy, desc(posts.id))
     .limit(limit)
     .offset(offset);
-  return attachAuthors(rows);
+  return attachAuthors(rows.map(normalizePostImages));
 }
 
 export async function getPostById(id: number) {
@@ -215,18 +240,18 @@ export async function getPostById(id: number) {
   if (!db) return undefined;
   const result = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
   if (result.length === 0) return undefined;
-  const [withAuthor] = await attachAuthors(result);
+  const [withAuthor] = await attachAuthors(result.map(normalizePostImages));
   return withAuthor;
 }
 
-export async function createPost(data: { boardId: number; userId: number; title: string; content: string; isAnonymous: boolean }) {
+export async function createPost(data: { boardId: number; userId: number; title: string; content: string; isAnonymous: boolean; images?: string[] }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   const result = await db.insert(posts).values(data);
   return result;
 }
 
-export async function updatePost(id: number, data: Partial<{ title: string; content: string }>) {
+export async function updatePost(id: number, data: Partial<{ title: string; content: string; images: string[] }>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.update(posts).set(data).where(eq(posts.id, id));
@@ -263,7 +288,7 @@ export async function searchPosts(query: string, limit: number = 20, offset: num
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit)
     .offset(offset);
-  return attachAuthors(rows);
+  return attachAuthors(rows.map(normalizePostImages));
 }
 
 /**
@@ -513,11 +538,19 @@ export async function updateUserName(id: number, name: string) {
   return db.update(users).set({ name }).where(eq(users.id, id));
 }
 
-/** avatarEmoji가 null이면 기본(이니셜) 아바타로 되돌린다. */
+/** avatarEmoji가 null이면 기본(이니셜) 아바타로 되돌린다. 이모지와 사진은 동시에 쓰지 않으므로 사진은 지운다. */
 export async function updateUserAvatar(id: number, avatarEmoji: string | null) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  return db.update(users).set({ avatarEmoji }).where(eq(users.id, id));
+  return db.update(users).set({ avatarEmoji, avatarImageUrl: null }).where(eq(users.id, id));
+}
+
+/** avatarImageUrl이 null이면 사진을 지운다. 사진을 설정할 땐 이모지 선택을 함께 지운다(사진이 우선). */
+export async function updateUserAvatarImage(id: number, avatarImageUrl: string | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const set = avatarImageUrl ? { avatarImageUrl, avatarEmoji: null } : { avatarImageUrl: null };
+  return db.update(users).set(set).where(eq(users.id, id));
 }
 
 /** newPasswordHash는 이미 bcrypt로 해시된 값이어야 한다 (라우터에서 해시 후 호출). */

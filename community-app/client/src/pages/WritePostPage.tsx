@@ -10,6 +10,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import { toneClass } from "@/lib/tone";
+import ImagePicker from "@/components/ImagePicker";
 
 export default function WritePostPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -17,6 +18,7 @@ export default function WritePostPage() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [images, setImages] = useState<string[]>([]);
 
   const { data: boards } = trpc.boards.list.useQuery();
   const board = boards?.find((b) => b.slug === slug);
@@ -51,6 +53,7 @@ export default function WritePostPage() {
       title,
       content,
       isAnonymous,
+      images,
     });
   };
 
@@ -116,6 +119,11 @@ export default function WritePostPage() {
                 onChange={(e) => setContent(e.target.value)}
                 className="w-full min-h-64"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold mb-2">사진 첨부</label>
+              <ImagePicker images={images} onChange={setImages} />
             </div>
 
             <div className="flex items-center gap-2">

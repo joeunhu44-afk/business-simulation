@@ -126,6 +126,7 @@ function SearchPostsResults({ query }: { query: string }) {
               isAnonymous={post.isAnonymous}
               name={post.authorName}
               avatarEmoji={post.authorAvatarEmoji}
+              avatarImageUrl={post.authorAvatarImageUrl}
             />
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-base text-foreground truncate mb-1.5">{post.title}</h3>

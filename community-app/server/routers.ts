@@ -7,9 +7,36 @@ import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { hashPassword, verifyPassword } from "./_core/auth/password";
 import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/session";
+import { storagePut } from "./storage";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
+
+const IMAGE_DATA_URL_REGEX = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/;
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+
+/** "data:image/png;base64,...." 형식의 문자열을 검증하고 오브젝트 스토리지에 올린 뒤 공개 URL을 돌려준다. */
+async function uploadImageDataUrl(dataUrl: string, keyPrefix: string): Promise<string> {
+  const match = dataUrl.match(IMAGE_DATA_URL_REGEX);
+  if (!match) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "지원하지 않는 이미지 형식입니다 (PNG/JPEG/WEBP/GIF만 가능)" });
+  }
+  const [, ext, base64] = match;
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.length > MAX_IMAGE_BYTES) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: "이미지는 8MB 이하만 업로드할 수 있어요" });
+  }
+  try {
+    const { url } = await storagePut(`${keyPrefix}/${Date.now()}.${ext}`, buffer, `image/${ext}`);
+    return url;
+  } catch (error) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "이미지 업로드에 실패했습니다. 잠시 후 다시 시도해주세요",
+      cause: error,
+    });
+  }
+}
 
 function issueSession(ctx: { req: any; res: any }, sessionToken: string) {
   const cookieOptions = getSessionCookieOptions(ctx.req);
@@ -139,6 +166,19 @@ export const appRouter = router({
         return db.updateUserAvatar(ctx.user.id, input.avatarEmoji);
       }),
 
+    /** 프로필 사진을 직접 업로드한다. 설정되면 이모지 아바타보다 우선 표시된다. */
+    updateAvatarPhoto: protectedProcedure
+      .input(z.object({ dataUrl: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const url = await uploadImageDataUrl(input.dataUrl, `avatars/${ctx.user.id}`);
+        return db.updateUserAvatarImage(ctx.user.id, url);
+      }),
+
+    /** 프로필 사진을 지우고 이모지/이니셜 기본 아바타로 되돌린다. */
+    removeAvatarPhoto: protectedProcedure.mutation(async ({ ctx }) => {
+      return db.updateUserAvatarImage(ctx.user.id, null);
+    }),
+
     updatePassword: protectedProcedure
       .input(z.object({
         currentPassword: z.string().optional(),
@@ -228,6 +268,7 @@ export const appRouter = router({
         title: z.string().min(1).max(255),
         content: z.string().min(1),
         isAnonymous: z.boolean().default(false),
+        images: z.array(z.string().url()).max(4).default([]),
       }))
       .mutation(async ({ input, ctx }) => {
         return db.createPost({
@@ -236,14 +277,16 @@ export const appRouter = router({
           title: input.title,
           content: input.content,
           isAnonymous: input.isAnonymous,
+          images: input.images,
         });
       }),
-    
+
     update: protectedProcedure
       .input(z.object({
         id: z.number(),
         title: z.string().min(1).max(255).optional(),
         content: z.string().min(1).optional(),
+        images: z.array(z.string().url()).max(4).optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const post = await db.getPostById(input.id);
@@ -520,6 +563,16 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         return db.answerInquiry(input.id, input.adminReply, ctx.user.id);
+      }),
+  }),
+
+  // 이미지 업로드 (게시글 첨부 등, 프로필 사진은 auth.updateAvatarPhoto 사용)
+  media: router({
+    uploadPostImage: protectedProcedure
+      .input(z.object({ dataUrl: z.string() }))
+      .mutation(async ({ input, ctx }) => {
+        const url = await uploadImageDataUrl(input.dataUrl, `posts/${ctx.user.id}`);
+        return { url };
       }),
   }),
 

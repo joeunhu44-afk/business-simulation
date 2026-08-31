@@ -156,6 +156,7 @@ export default function PostPage() {
                   isAnonymous={post.isAnonymous}
                   name={post.authorName}
                   avatarEmoji={post.authorAvatarEmoji}
+                  avatarImageUrl={post.authorAvatarImageUrl}
                   size="h-6 w-6"
                   textSize="text-xs"
                 />
@@ -190,6 +191,16 @@ export default function PostPage() {
           <div className="prose prose-sm max-w-none mb-8">
             <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
           </div>
+
+          {post.images && post.images.length > 0 && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-8">
+              {post.images.map((url) => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-border aspect-square">
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                </a>
+              ))}
+            </div>
+          )}
 
           <div className="flex items-center gap-4 pt-6 border-t border-border">
             {isAuthenticated ? (
@@ -349,6 +360,7 @@ function CommentItem({
               isAnonymous={comment.isAnonymous}
               name={comment.authorName}
               avatarEmoji={comment.authorAvatarEmoji}
+              avatarImageUrl={comment.authorAvatarImageUrl}
               size="h-7 w-7"
               textSize="text-sm"
             />
@@ -456,6 +468,7 @@ function ReplyItem({
             isAnonymous={reply.isAnonymous}
             name={reply.authorName}
             avatarEmoji={reply.authorAvatarEmoji}
+            avatarImageUrl={reply.authorAvatarImageUrl}
             size="h-7 w-7"
             textSize="text-sm"
           />

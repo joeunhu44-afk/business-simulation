@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, bigint, unique } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar, boolean, bigint, unique, json } from "drizzle-orm/mysql-core";
 import { relations } from "drizzle-orm";
 
 /**
@@ -20,8 +20,10 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   /** 가장 최근에 사용한 로그인 수단 (google | kakao | apple | email) — 표시용. */
   loginMethod: varchar("loginMethod", { length: 64 }),
-  /** 프로필 아바타로 쓰는 이모지 한 글자. 설정하지 않으면 이름 이니셜을 대신 보여준다. */
+  /** 프로필 아바타로 쓰는 이모지 한 글자. avatarImageUrl이 있으면 그쪽이 우선한다. */
   avatarEmoji: varchar("avatarEmoji", { length: 8 }),
+  /** 직접 업로드한 프로필 사진 URL. 설정되어 있으면 이모지보다 우선 표시된다. */
+  avatarImageUrl: varchar("avatarImageUrl", { length: 1024 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   status: mysqlEnum("status", ["active", "blocked"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -84,6 +86,8 @@ export const posts = mysqlTable("posts", {
   likeCount: int("likeCount").default(0).notNull(),
   commentCount: int("commentCount").default(0).notNull(),
   isNotice: boolean("isNotice").default(false).notNull(),
+  /** 첨부 이미지 URL 목록 (최대 4장). 없으면 빈 배열. */
+  images: json("images").$type<string[]>().default([]).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   deletedAt: timestamp("deletedAt"),

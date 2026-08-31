@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +27,7 @@ import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
 import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
 import { toneClass } from "@/lib/tone";
+import Avatar from "@/components/Avatar";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
   { color: "dark", label: "크림슨", swatch: "#d6304c" },
@@ -82,6 +83,39 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
     },
     onError: (error) => toast.error(error.message || "프로필 변경 실패"),
   });
+
+  const avatarFileInputRef = useRef<HTMLInputElement>(null);
+
+  const updateAvatarPhotoMutation = trpc.auth.updateAvatarPhoto.useMutation({
+    onSuccess: () => {
+      toast.success("프로필 사진이 변경되었습니다");
+      refresh();
+    },
+    onError: (error) => toast.error(error.message || "프로필 사진 변경 실패"),
+  });
+
+  const removeAvatarPhotoMutation = trpc.auth.removeAvatarPhoto.useMutation({
+    onSuccess: () => refresh(),
+    onError: (error) => toast.error(error.message || "프로필 사진 삭제 실패"),
+  });
+
+  const handleAvatarPhotoChange = (file: File | null) => {
+    if (!file) return;
+    if (avatarFileInputRef.current) avatarFileInputRef.current.value = "";
+    if (!file.type.startsWith("image/")) {
+      toast.error("이미지 파일만 업로드할 수 있어요");
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("이미지는 8MB 이하만 업로드할 수 있어요");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateAvatarPhotoMutation.mutate({ dataUrl: reader.result as string });
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleNameChange = () => {
     const match = nameInput.match(/^(\d{5})\s+(.+)$/);
@@ -202,9 +236,15 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
               <div className="p-3">
                 {/* 사용자 요약 */}
                 <div className="flex items-center gap-3 px-3 py-4 mb-2">
-                  <span className={`tone-badge ${toneClass(user.id)} h-11 w-11 text-lg`}>
-                    {user.avatarEmoji || (user.name || "?").charAt(0)}
-                  </span>
+                  <Avatar
+                    userId={user.id}
+                    isAnonymous={false}
+                    name={user.name}
+                    avatarEmoji={user.avatarEmoji}
+                    avatarImageUrl={user.avatarImageUrl}
+                    size="h-11 w-11"
+                    textSize="text-lg"
+                  />
                   <div className="min-w-0">
                     <p className="font-extrabold truncate" style={{ color: "var(--text-strong)" }}>
                       {user.name || "익명"}
@@ -282,16 +322,54 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
               <div className="p-5 space-y-4">
                 <div className="light-border p-4 space-y-3">
                   <div className="flex items-center gap-3">
-                    <span className={`tone-badge ${toneClass(user.id)} h-14 w-14 text-2xl`}>
-                      {user.avatarEmoji || (user.name || "?").charAt(0)}
-                    </span>
-                    <div>
-                      <p className="font-extrabold" style={{ color: "var(--text-strong)" }}>{user.name || "익명"}</p>
+                    <Avatar
+                      userId={user.id}
+                      isAnonymous={false}
+                      name={user.name}
+                      avatarEmoji={user.avatarEmoji}
+                      avatarImageUrl={user.avatarImageUrl}
+                      size="h-14 w-14"
+                      textSize="text-2xl"
+                    />
+                    <div className="min-w-0">
+                      <p className="font-extrabold truncate" style={{ color: "var(--text-strong)" }}>{user.name || "익명"}</p>
                       <p className="text-xs" style={{ color: "var(--text-muted)" }}>
                         게시글·댓글에 실명으로 쓸 때 이 아이콘이 보여요
                       </p>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      ref={avatarFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => handleAvatarPhotoChange(e.target.files?.[0] ?? null)}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      disabled={updateAvatarPhotoMutation.isPending}
+                    >
+                      {updateAvatarPhotoMutation.isPending ? "업로드 중..." : "사진으로 설정"}
+                    </Button>
+                    {user.avatarImageUrl && (
+                      <button
+                        type="button"
+                        onClick={() => removeAvatarPhotoMutation.mutate()}
+                        disabled={removeAvatarPhotoMutation.isPending}
+                        className="text-xs font-semibold underline"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        사진 삭제
+                      </button>
+                    )}
+                  </div>
+
+                  <p className="text-xs" style={{ color: "var(--text-muted)" }}>또는 아이콘을 골라보세요</p>
                   <div className="grid grid-cols-8 gap-1.5 pt-1">
                     {AVATAR_EMOJI_OPTIONS.map((emoji) => (
                       <button
@@ -310,11 +388,14 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                       </button>
                     ))}
                   </div>
-                  {user.avatarEmoji && (
+                  {(user.avatarEmoji || user.avatarImageUrl) && (
                     <button
                       type="button"
-                      onClick={() => updateAvatarMutation.mutate({ avatarEmoji: null })}
-                      disabled={updateAvatarMutation.isPending}
+                      onClick={() => {
+                        updateAvatarMutation.mutate({ avatarEmoji: null });
+                        if (user.avatarImageUrl) removeAvatarPhotoMutation.mutate();
+                      }}
+                      disabled={updateAvatarMutation.isPending || removeAvatarPhotoMutation.isPending}
                       className="text-xs font-semibold underline"
                       style={{ color: "var(--text-muted)" }}
                     >
