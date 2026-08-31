@@ -45,89 +45,92 @@
 }
 
 /* =========================================================
-   기본 테마 — 따뜻한 페이퍼 배경 + 클레이 포인트 컬러
-   커뮤니티 앱 특유의 진회색/새하양/원색 팔레트에서 벗어나,
-   편집숍 웹진 같은 절제된 색감과 세리프 헤드라인을 사용한다.
+   기본 테마 — 크림슨 레드 포인트 컬러 + 깔끔한 화이트 배경
+   레퍼런스 사이트(진한 레드 히어로 + 유리질 플로팅 네비 +
+   블랙 UI)의 톤을 커뮤니티 앱에 맞게 옮겨왔다: 본문은 읽기
+   편한 화이트/블랙 기본기를 유지하고, 히어로·네비 등 포인트가
+   되는 곳에 크림슨 레드와 글래스모피즘을 사용한다.
    ========================================================= */
 :root {
-  --radius: 0.65rem;
+  --radius: 0.75rem;
 
-  /* 포인트 컬러 (클레이/테라코타) */
-  --primary: #b5602f;
-  --primary-foreground: #fff8f1;
+  /* 포인트 컬러 (크림슨) */
+  --primary: #d6304c;
+  --primary-foreground: #ffffff;
 
-  /* 따뜻한 페이퍼 배경 + 흰 카드 */
-  --background: #f6f2ea;
-  --foreground: #241f1a;
+  --background: #fafafa;
+  --foreground: #141414;
   --card: #ffffff;
-  --card-foreground: #241f1a;
+  --card-foreground: #141414;
   --popover: #ffffff;
-  --popover-foreground: #241f1a;
-  --secondary: #ede7db;
-  --secondary-foreground: #3a332b;
-  --muted: #ede7db;
-  --muted-foreground: #8a8175;
-  --accent: #ede7db;
-  --accent-foreground: #241f1a;
-  --destructive: #b3402a;
-  --destructive-foreground: #fff8f1;
-  --border: #e3dcce;
-  --input: #e3dcce;
-  --ring: #b5602f;
+  --popover-foreground: #141414;
+  --secondary: #f2f2f3;
+  --secondary-foreground: #2b2b2e;
+  --muted: #f2f2f3;
+  --muted-foreground: #6b6b70;
+  --accent: #f2f2f3;
+  --accent-foreground: #141414;
+  --destructive: #c81e3a;
+  --destructive-foreground: #ffffff;
+  --border: #e5e5e8;
+  --input: #e5e5e8;
+  --ring: #d6304c;
 
   --sidebar: #ffffff;
-  --sidebar-foreground: #241f1a;
-  --sidebar-primary: #b5602f;
-  --sidebar-primary-foreground: #fff8f1;
-  --sidebar-accent: #ede7db;
-  --sidebar-accent-foreground: #241f1a;
-  --sidebar-border: #e3dcce;
-  --sidebar-ring: #b5602f;
+  --sidebar-foreground: #141414;
+  --sidebar-primary: #d6304c;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f2f3;
+  --sidebar-accent-foreground: #141414;
+  --sidebar-border: #e5e5e8;
+  --sidebar-ring: #d6304c;
 
-  --chart-1: #b5602f;
-  --chart-2: #4c6b58;
-  --chart-3: #4a6c8c;
+  --chart-1: #d6304c;
+  --chart-2: #4a6c8c;
+  --chart-3: #4c6b58;
   --chart-4: #8c5b7a;
   --chart-5: #b08a3e;
 
   /* 커스텀 변수 */
-  --text-strong: #241f1a;
-  --text-normal: #3a332b;
-  --text-muted: #8a8175;
-  --bg-base: #f6f2ea;
+  --text-strong: #141414;
+  --text-normal: #2b2b2e;
+  --text-muted: #6b6b70;
+  --bg-base: #fafafa;
   --bg-surface: #ffffff;
-  --bg-surface-2: #ede7db;
-  --bg-hover: #e7e0d2;
-  --border-color: #e3dcce;
-  --accent-color: #b5602f;
-  --accent-soft: rgba(181, 96, 47, 0.1);
+  --bg-surface-2: #f2f2f3;
+  --bg-hover: #ececee;
+  --border-color: #e5e5e8;
+  --accent-color: #d6304c;
+  --accent-soft: rgba(214, 48, 76, 0.1);
+
+  /* 히어로 / 글래스 전용 변수 */
+  --hero-dark-1: #2b0509;
+  --hero-dark-2: #55101c;
+  --hero-dark-3: #8f1c2e;
+  --glass-bg: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.18);
 }
 
-/* 색상 테마: 페이퍼 베이스 위에서 포인트색만 절제된 톤으로 변경 */
+/* 색상 테마: 화이트 베이스 위에서 포인트색만 바뀐다 */
 [data-theme-color="blue"] {
   --primary: #4a6c8c; --ring: #4a6c8c; --sidebar-primary: #4a6c8c; --sidebar-ring: #4a6c8c;
   --accent-color: #4a6c8c; --accent-soft: rgba(74, 108, 140, 0.1);
-  --background: #eff2f1; --bg-base: #eff2f1; --secondary: #f1f4f3; --muted: #f1f4f3; --bg-surface-2: #f1f4f3; --bg-hover: #e7edec;
 }
 [data-theme-color="purple"] {
   --primary: #8c5b7a; --ring: #8c5b7a; --sidebar-primary: #8c5b7a; --sidebar-ring: #8c5b7a;
   --accent-color: #8c5b7a; --accent-soft: rgba(140, 91, 122, 0.1);
-  --background: #f3eef1; --bg-base: #f3eef1; --secondary: #f5f0f3; --muted: #f5f0f3; --bg-surface-2: #f5f0f3; --bg-hover: #eee6ec;
 }
 [data-theme-color="green"] {
   --primary: #4c6b58; --ring: #4c6b58; --sidebar-primary: #4c6b58; --sidebar-ring: #4c6b58;
   --accent-color: #4c6b58; --accent-soft: rgba(76, 107, 88, 0.1);
-  --background: #eef1ec; --bg-base: #eef1ec; --secondary: #f0f3ee; --muted: #f0f3ee; --bg-surface-2: #f0f3ee; --bg-hover: #e5ebe2;
 }
 [data-theme-color="red"] {
-  --primary: #a8432e; --ring: #a8432e; --sidebar-primary: #a8432e; --sidebar-ring: #a8432e;
-  --accent-color: #a8432e; --accent-soft: rgba(168, 67, 46, 0.1);
-  --background: #f5eeea; --bg-base: #f5eeea; --secondary: #f7f1ee; --muted: #f7f1ee; --bg-surface-2: #f7f1ee; --bg-hover: #f0e5df;
+  --primary: #1a1a1c; --ring: #1a1a1c; --sidebar-primary: #1a1a1c; --sidebar-ring: #1a1a1c;
+  --accent-color: #1a1a1c; --accent-soft: rgba(26, 26, 28, 0.08);
 }
 [data-theme-color="amber"] {
   --primary: #b08a3e; --ring: #b08a3e; --sidebar-primary: #b08a3e; --sidebar-ring: #b08a3e;
   --accent-color: #b08a3e; --accent-soft: rgba(176, 138, 62, 0.1);
-  --background: #f5f0e4; --bg-base: #f5f0e4; --secondary: #f7f3e9; --muted: #f7f3e9; --bg-surface-2: #f7f3e9; --bg-hover: #f0e9d7;
 }
 
 @layer base {
@@ -202,12 +205,10 @@
 
 /* =========================================================
    차분한 카드 + 공용 유틸
-   화려한 그라데이션 테두리/글로우 대신 얇은 헤어라인과
-   은은한 그림자만 사용해 절제된 인상을 준다.
    ========================================================= */
-.glow-sm { box-shadow: 0 1px 2px rgba(36, 31, 26, 0.04); }
-.glow-md { box-shadow: 0 3px 10px rgba(36, 31, 26, 0.06); }
-.glow-lg { box-shadow: 0 8px 24px rgba(36, 31, 26, 0.08); }
+.glow-sm { box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04); }
+.glow-md { box-shadow: 0 3px 10px rgba(20, 20, 20, 0.06); }
+.glow-lg { box-shadow: 0 8px 24px rgba(20, 20, 20, 0.08); }
 
 .card-elevated,
 .light-border {
@@ -216,13 +217,13 @@
   border-radius: 0.85rem;
   color: var(--text-normal);
   border: 1px solid var(--border-color);
-  box-shadow: 0 1px 2px rgba(36, 31, 26, 0.04);
+  box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04);
   transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 
 .card-elevated:hover,
 .light-border:hover {
-  box-shadow: 0 10px 28px rgba(36, 31, 26, 0.08);
+  box-shadow: 0 10px 28px rgba(20, 20, 20, 0.08);
   border-color: var(--accent-color);
   transform: translateY(-1px);
 }
@@ -251,8 +252,31 @@
   border: none;
 }
 
+/* =========================================================
+   히어로 / 글래스모피즘 네비게이션
+   레퍼런스 사이트의 "진한 레드 배경 위에 떠 있는 반투명 알약형
+   네비게이션"을 재현한다. 어두운 배경 위에서 쓰는 용도라 라이트
+   페이지의 .card-elevated 계열과는 별도 톤을 사용한다.
+   ========================================================= */
+.hero-panel {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.75rem;
+  background:
+    radial-gradient(120% 140% at 85% 15%, var(--hero-dark-3) 0%, transparent 55%),
+    linear-gradient(160deg, var(--hero-dark-2) 0%, var(--hero-dark-1) 70%);
+  color: #ffffff;
+}
+
+.glass-nav-dark {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
 /* 스크롤바 */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d8d0c0; border-radius: 5px; }
-::-webkit-scrollbar-thumb:hover { background: #c2b8a4; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: #b8b8be; }

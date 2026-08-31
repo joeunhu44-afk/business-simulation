@@ -74,7 +74,7 @@ export default function ChatRoom() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <nav className="border-b border-border bg-card sticky top-0 z-40">
+      <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center gap-2 py-4">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chat")} className="shrink-0">
             <ChevronLeft className="h-5 w-5" />

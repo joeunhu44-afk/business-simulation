@@ -36,7 +36,7 @@ export default function SearchPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-border bg-card sticky top-0 z-40">
+      <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center gap-2 py-4">
           <HeaderMenuButton />
           <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">

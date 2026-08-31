@@ -14,6 +14,8 @@ import {
   Settings,
   Search,
   MessageCircle,
+  MessageSquareText,
+  GraduationCap,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
@@ -25,11 +27,11 @@ import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
-  { color: "dark", label: "클레이", swatch: "#b5602f" },
+  { color: "dark", label: "크림슨", swatch: "#d6304c" },
   { color: "blue", label: "더스티 블루", swatch: "#4a6c8c" },
   { color: "purple", label: "플럼", swatch: "#8c5b7a" },
   { color: "green", label: "세이지", swatch: "#4c6b58" },
-  { color: "red", label: "브릭", swatch: "#a8432e" },
+  { color: "red", label: "차콜", swatch: "#1a1a1c" },
   { color: "amber", label: "오커", swatch: "#b08a3e" },
 ];
 
@@ -230,7 +232,29 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                   ))}
                 </nav>
 
-                <div className="mt-3 pt-3 border-t px-1" style={{ borderColor: "var(--border-color)" }}>
+                <div className="mt-2 pt-2 border-t flex flex-col gap-1" style={{ borderColor: "var(--border-color)" }}>
+                  <button
+                    onClick={() => {
+                      setIsOpen(false);
+                      navigate("/inquiries");
+                    }}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-black/5 transition-colors"
+                  >
+                    <MessageSquareText className="h-5 w-5 shrink-0" style={{ color: "var(--accent-color)" }} />
+                    <span className="flex-1 font-semibold" style={{ color: "var(--text-strong)" }}>문의하기</span>
+                    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "var(--text-muted)" }} />
+                  </button>
+                  <button
+                    onClick={() => toast.info("학교 홈페이지 연동은 준비 중이에요")}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-black/5 transition-colors"
+                  >
+                    <GraduationCap className="h-5 w-5 shrink-0" style={{ color: "var(--text-muted)" }} />
+                    <span className="flex-1 font-semibold" style={{ color: "var(--text-strong)" }}>학교 홈페이지</span>
+                    <span className="text-xs shrink-0" style={{ color: "var(--text-muted)" }}>준비중</span>
+                  </button>
+                </div>
+
+                <div className="mt-2 pt-2 border-t px-1" style={{ borderColor: "var(--border-color)" }}>
                   <Button
                     onClick={() => logoutMutation.mutate()}
                     disabled={logoutMutation.isPending}
