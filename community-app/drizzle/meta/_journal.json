@@ -50,6 +50,13 @@
       "when": 1788179729019,
       "tag": "0006_yellow_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "5",
+      "when": 1788182246379,
+      "tag": "0007_acoustic_master_mold",
+      "breakpoints": true
     }
   ]
 }

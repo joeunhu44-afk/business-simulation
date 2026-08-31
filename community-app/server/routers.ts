@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS, AVATAR_EMOJI_OPTIONS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
@@ -129,6 +129,14 @@ export const appRouter = router({
       }))
       .mutation(async ({ input, ctx }) => {
         return db.updateUserName(ctx.user.id, input.name);
+      }),
+
+    updateAvatar: protectedProcedure
+      .input(z.object({
+        avatarEmoji: z.enum(AVATAR_EMOJI_OPTIONS).nullable(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.updateUserAvatar(ctx.user.id, input.avatarEmoji);
       }),
 
     updatePassword: protectedProcedure

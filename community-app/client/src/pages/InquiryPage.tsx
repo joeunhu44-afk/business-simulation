@@ -131,7 +131,7 @@ export default function InquiryPage() {
         </Card>
 
         <div>
-          <h2 className="text-lg mb-4">내가 보낸 문의</h2>
+          <h2 className="section-heading text-lg mb-4">내가 보낸 문의</h2>
           {isLoading ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -141,10 +141,7 @@ export default function InquiryPage() {
               {myInquiries.map((inquiry) => (
                 <Card key={inquiry.id} className="card-elevated p-5">
                   <div className="flex items-center gap-2 mb-1.5 min-w-0">
-                    <span
-                      className="text-xs font-semibold px-2 py-0.5 rounded shrink-0"
-                      style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }}
-                    >
+                    <span className="tag-pill shrink-0">
                       {CATEGORY_LABELS[inquiry.category] || inquiry.category}
                     </span>
                     <span

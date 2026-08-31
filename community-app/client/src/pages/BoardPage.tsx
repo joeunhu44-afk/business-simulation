@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, Eye, MessageCircle, ThumbsUp, User } from "lucide-react";
+import { Loader2, Plus, Search, Eye, MessageCircle, ThumbsUp, Hash } from "lucide-react";
 import { Link, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import { toneClass } from "@/lib/tone";
+import Avatar from "@/components/Avatar";
 
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -102,7 +103,9 @@ export default function BoardPage() {
 
         {/* Board Header */}
         <div className={`${boardTone} mb-8 flex items-center gap-4`}>
-          <span className="tone-badge h-14 w-14 text-2xl">{board.name.charAt(0)}</span>
+          <span className="category-icon h-12 w-12">
+            <Hash className="h-5 w-5" />
+          </span>
           <div className="min-w-0">
             <h1 className="text-3xl leading-tight">{board.name}</h1>
             {board.description && (
@@ -150,22 +153,25 @@ export default function BoardPage() {
               <a
                 key={post.id}
                 href={`/post/${post.id}`}
-                className={`card-elevated block p-4 ${post.isNotice ? boardTone : toneClass(post.id)}`}
+                className={`card-elevated block p-4 ${post.isNotice ? boardTone : ''}`}
               >
-                  <div className="flex items-start gap-3">
-                    <span className="tone-badge h-9 w-9 shrink-0 mt-0.5">
-                      <User className="h-4 w-4" />
-                    </span>
+                  <div className="flex items-start gap-3 mt-0.5">
+                    <Avatar
+                      userId={post.userId}
+                      isAnonymous={post.isAnonymous}
+                      name={post.authorName}
+                      avatarEmoji={post.authorAvatarEmoji}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 min-w-0">
-                        {post.isNotice && <span className="tag-pill shrink-0">공지</span>}
+                        {post.isNotice && <span className={`tag-pill shrink-0 ${boardTone}`}>공지</span>}
                         <h3 className="font-semibold text-base text-foreground truncate">{post.title}</h3>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">
                         {post.content.substring(0, 100)}...
                       </p>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{post.isAnonymous ? '익명' : '사용자'}</span>
+                        <span className="text-xs text-muted-foreground">{post.isAnonymous ? '익명' : post.authorName || '사용자'}</span>
                         <span className="text-xs text-muted-foreground">·</span>
                         <span className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}

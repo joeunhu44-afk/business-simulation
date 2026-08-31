@@ -302,6 +302,8 @@
   background: var(--tone, var(--accent-color));
 }
 
+/* 사용자 아바타(원형) — 게시글/댓글 작성자 전용. 게시판은 사람이 아니므로
+   category-icon(둥근 사각형)을 대신 쓴다. */
 .tone-badge {
   display: inline-flex;
   align-items: center;
@@ -310,6 +312,23 @@
   border-radius: 999px;
   font-family: var(--font-serif);
   font-weight: 700;
+  color: #ffffff;
+  background: var(--tone, var(--accent-color));
+}
+
+.avatar-default {
+  background: var(--bg-surface-2) !important;
+  color: var(--text-muted) !important;
+}
+
+/* 게시판/카테고리 마커 — 사람이 아니라 카테고리를 나타내므로 원형이 아닌
+   둥근 사각형을 쓴다 (사용자 아바타와 시각적으로 확실히 구분). */
+.category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 0.65rem;
   color: #ffffff;
   background: var(--tone, var(--accent-color));
 }

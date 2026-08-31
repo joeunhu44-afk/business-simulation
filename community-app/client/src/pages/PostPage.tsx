@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, User } from "lucide-react";
+import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft } from "lucide-react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import { toneClass } from "@/lib/tone";
+import Avatar from "@/components/Avatar";
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
@@ -150,8 +151,15 @@ export default function PostPage() {
               )}
               <h1 className="text-3xl mb-4">{post.title}</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span className="tone-badge h-6 w-6"><User className="h-3.5 w-3.5" /></span>
-                <span>{post.isAnonymous ? '익명' : '사용자'}</span>
+                <Avatar
+                  userId={post.userId}
+                  isAnonymous={post.isAnonymous}
+                  name={post.authorName}
+                  avatarEmoji={post.authorAvatarEmoji}
+                  size="h-6 w-6"
+                  textSize="text-xs"
+                />
+                <span>{post.isAnonymous ? '익명' : post.authorName || '사용자'}</span>
                 <span>·</span>
                 <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
                 <span>·</span>
@@ -333,12 +341,19 @@ function CommentItem({
 
   return (
     <div className="space-y-3">
-      <Card className={`card-elevated p-4 ${toneClass(comment.id)}`}>
+      <Card className="card-elevated p-4">
         <div className="flex items-start justify-between mb-2">
           <div className="flex items-center gap-2">
-            <span className="tone-badge h-7 w-7"><User className="h-3.5 w-3.5" /></span>
+            <Avatar
+              userId={comment.userId}
+              isAnonymous={comment.isAnonymous}
+              name={comment.authorName}
+              avatarEmoji={comment.authorAvatarEmoji}
+              size="h-7 w-7"
+              textSize="text-sm"
+            />
             <div>
-              <p className="text-sm font-semibold">{comment.isAnonymous ? '익명' : '사용자'}</p>
+              <p className="text-sm font-semibold">{comment.isAnonymous ? '익명' : comment.authorName || '사용자'}</p>
               <p className="text-xs text-muted-foreground">
                 {formatDistanceToNow(new Date(comment.createdAt), { locale: ko, addSuffix: true })}
               </p>
@@ -433,12 +448,19 @@ function ReplyItem({
   });
 
   return (
-    <Card className={`card-elevated p-4 bg-black/[0.02] ${toneClass(reply.id)}`}>
+    <Card className="card-elevated p-4 bg-black/[0.02]">
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="tone-badge h-7 w-7"><User className="h-3.5 w-3.5" /></span>
+          <Avatar
+            userId={reply.userId}
+            isAnonymous={reply.isAnonymous}
+            name={reply.authorName}
+            avatarEmoji={reply.authorAvatarEmoji}
+            size="h-7 w-7"
+            textSize="text-sm"
+          />
           <div>
-            <p className="text-sm font-semibold">{reply.isAnonymous ? '익명' : '사용자'}</p>
+            <p className="text-sm font-semibold">{reply.isAnonymous ? '익명' : reply.authorName || '사용자'}</p>
             <p className="text-xs text-muted-foreground">
               {formatDistanceToNow(new Date(reply.createdAt), { locale: ko, addSuffix: true })}
             </p>

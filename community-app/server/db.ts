@@ -154,12 +154,38 @@ export async function deleteBoard(id: number) {
 }
 
 /**
+ * 게시글/댓글 목록에 작성자 이름·아바타를 붙여준다. 익명 글은 서버에서부터
+ * 작성자 정보를 null로 지워서, 응답 페이로드 자체에 익명 작성자 신원이
+ * 노출되지 않도록 한다 (프론트에서 숨기는 게 아니라 애초에 안 보낸다).
+ */
+async function attachAuthors<T extends { userId: number; isAnonymous: boolean }>(
+  rows: T[]
+): Promise<(T & { authorName: string | null; authorAvatarEmoji: string | null })[]> {
+  if (rows.length === 0) return [];
+  const db = await getDb();
+  if (!db) return rows.map((r) => ({ ...r, authorName: null, authorAvatarEmoji: null }));
+
+  const ids = Array.from(new Set(rows.map((r) => r.userId)));
+  const authors = await db
+    .select({ id: users.id, name: users.name, avatarEmoji: users.avatarEmoji })
+    .from(users)
+    .where(inArray(users.id, ids));
+  const authorMap = new Map(authors.map((a) => [a.id, a]));
+
+  return rows.map((row) => {
+    if (row.isAnonymous) return { ...row, authorName: null, authorAvatarEmoji: null };
+    const author = authorMap.get(row.userId);
+    return { ...row, authorName: author?.name ?? null, authorAvatarEmoji: author?.avatarEmoji ?? null };
+  });
+}
+
+/**
  * 게시글 관련 쿼리
  */
 export async function getPostsByBoard(boardId: number, limit: number = 20, offset: number = 0, sortBy: 'latest' | 'popular' = 'latest', search?: string) {
   const db = await getDb();
   if (!db) return [];
-  
+
   const orderBy = sortBy === 'popular' ? desc(posts.likeCount) : desc(posts.createdAt);
 
   let whereCondition = and(eq(posts.boardId, boardId), isNull(posts.deletedAt));
@@ -176,18 +202,21 @@ export async function getPostsByBoard(boardId: number, limit: number = 20, offse
 
   // createdAt/likeCount만으로는 동점(같은 초에 작성되거나 좋아요 수가 같은 경우) 순서가
   // 불안정해지므로 id를 2차 정렬 기준으로 추가해 항상 같은 순서가 나오게 한다.
-  return db.select().from(posts)
+  const rows = await db.select().from(posts)
     .where(whereCondition)
     .orderBy(desc(posts.isNotice), orderBy, desc(posts.id))
     .limit(limit)
     .offset(offset);
+  return attachAuthors(rows);
 }
 
 export async function getPostById(id: number) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
-  return result.length > 0 ? result[0] : undefined;
+  if (result.length === 0) return undefined;
+  const [withAuthor] = await attachAuthors(result);
+  return withAuthor;
 }
 
 export async function createPost(data: { boardId: number; userId: number; title: string; content: string; isAnonymous: boolean }) {
@@ -215,17 +244,26 @@ export async function incrementPostViewCount(id: number) {
   return db.update(posts).set({ viewCount: sql`${posts.viewCount} + 1` }).where(eq(posts.id, id));
 }
 
+/**
+ * 게시판 전체를 대상으로 한 검색. FULLTEXT 인덱스 없이도 동작해야 하고
+ * 한글은 MySQL 기본 파서로 토큰화가 잘 안 되므로(공백 기준), MATCH AGAINST
+ * 대신 LIKE 부분일치를 쓴다 — 게시판별 검색(getPostsByBoard)과 동일한 방식.
+ */
 export async function searchPosts(query: string, limit: number = 20, offset: number = 0) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(posts)
+  const rows = await db.select().from(posts)
     .where(and(
-      sql`MATCH(${posts.title}, ${posts.content}) AGAINST(${query} IN BOOLEAN MODE)`,
+      or(
+        like(posts.title, `%${query}%`),
+        like(posts.content, `%${query}%`)
+      ),
       isNull(posts.deletedAt)
     ))
-    .orderBy(desc(posts.createdAt))
+    .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit)
     .offset(offset);
+  return attachAuthors(rows);
 }
 
 /**
@@ -234,9 +272,10 @@ export async function searchPosts(query: string, limit: number = 20, offset: num
 export async function getCommentsByPost(postId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(comments)
+  const rows = await db.select().from(comments)
     .where(and(eq(comments.postId, postId), isNull(comments.deletedAt)))
     .orderBy(asc(comments.createdAt));
+  return attachAuthors(rows);
 }
 
 export async function getCommentById(id: number) {
@@ -472,6 +511,13 @@ export async function updateUserName(id: number, name: string) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.update(users).set({ name }).where(eq(users.id, id));
+}
+
+/** avatarEmoji가 null이면 기본(이니셜) 아바타로 되돌린다. */
+export async function updateUserAvatar(id: number, avatarEmoji: string | null) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(users).set({ avatarEmoji }).where(eq(users.id, id));
 }
 
 /** newPasswordHash는 이미 bcrypt로 해시된 값이어야 한다 (라우터에서 해시 후 호출). */

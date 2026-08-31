@@ -1,0 +1,1 @@
+ALTER TABLE `users` ADD `avatarEmoji` varchar(8);

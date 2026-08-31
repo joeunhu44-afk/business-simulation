@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Search as SearchIcon, Eye, MessageCircle, ThumbsUp, User } from "lucide-react";
+import { Loader2, Search as SearchIcon, Eye, MessageCircle, ThumbsUp } from "lucide-react";
 import { useLocation } from "wouter";
 import React from "react";
 import { trpc } from "@/lib/trpc";
@@ -11,7 +11,7 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
-import { toneClass } from "@/lib/tone";
+import Avatar from "@/components/Avatar";
 
 export default function SearchPage() {
   const [, navigate] = useLocation();
@@ -95,14 +95,8 @@ function SearchPostsResults({ query }: { query: string }) {
   const [page, setPage] = useState(0);
   const limit = 20;
 
-  // 모든 게시판에서 검색 (boardId: 0)
-  const { data: posts, isLoading } = trpc.posts.listByBoard.useQuery(
-    {
-      boardId: 0,
-      limit,
-      offset: page * limit,
-      search: query,
-    },
+  const { data: posts, isLoading } = trpc.posts.search.useQuery(
+    { query, limit, offset: page * limit },
     { enabled: !!query }
   );
 
@@ -125,16 +119,19 @@ function SearchPostsResults({ query }: { query: string }) {
   return (
     <div className="space-y-3">
       {posts.map((post: any) => (
-        <a key={post.id} href={`/post/${post.id}`} className={`card-elevated block p-4 ${toneClass(post.id)}`}>
+        <a key={post.id} href={`/post/${post.id}`} className="card-elevated block p-4">
           <div className="flex items-start gap-3">
-            <span className="tone-badge h-9 w-9 shrink-0 mt-0.5">
-              <User className="h-4 w-4" />
-            </span>
+            <Avatar
+              userId={post.userId}
+              isAnonymous={post.isAnonymous}
+              name={post.authorName}
+              avatarEmoji={post.authorAvatarEmoji}
+            />
             <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-base text-foreground truncate mb-1.5">{post.title}</h3>
               <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">{post.content}</p>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground">{post.isAnonymous ? "익명" : "사용자"}</span>
+                <span className="text-xs text-muted-foreground">{post.isAnonymous ? "익명" : post.authorName || "사용자"}</span>
                 <span className="text-xs text-muted-foreground">·</span>
                 <span className="text-xs text-muted-foreground">
                   {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}

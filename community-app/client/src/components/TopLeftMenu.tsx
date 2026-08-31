@@ -25,6 +25,8 @@ import { Input } from "@/components/ui/input";
 import { useThemeColor, type ThemeColor } from "@/contexts/ThemeColorContext";
 import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
+import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
+import { toneClass } from "@/lib/tone";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
   { color: "dark", label: "크림슨", swatch: "#d6304c" },
@@ -38,7 +40,7 @@ const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
 type MenuView = "root" | "profile" | "chat" | "search" | "settings";
 
 export default function TopLeftMenu({ showFloatingButton = true }: { showFloatingButton?: boolean }) {
-  const { user, logout } = useAuth();
+  const { user, logout, refresh } = useAuth();
   const { themeColor, setThemeColor } = useThemeColor();
   const { isOpen, setOpen: setIsOpen, openMenu: openMenuCtx } = useMenu();
   const [, navigate] = useLocation();
@@ -71,6 +73,14 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
       setPasswordInputs({ current: "", new: "" });
     },
     onError: (error) => toast.error(error.message || "비밀번호 변경 실패"),
+  });
+
+  const updateAvatarMutation = trpc.auth.updateAvatar.useMutation({
+    onSuccess: (_data, variables) => {
+      toast.success(variables.avatarEmoji ? "프로필 아이콘이 변경되었습니다" : "기본 프로필로 되돌렸습니다");
+      refresh();
+    },
+    onError: (error) => toast.error(error.message || "프로필 변경 실패"),
   });
 
   const handleNameChange = () => {
@@ -192,12 +202,9 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
               <div className="p-3">
                 {/* 사용자 요약 */}
                 <div className="flex items-center gap-3 px-3 py-4 mb-2">
-                  <div
-                    className="h-11 w-11 rounded-full flex items-center justify-center font-extrabold text-white shrink-0"
-                    style={{ backgroundColor: "var(--accent-color)" }}
-                  >
-                    {(user.name || "?").charAt(0)}
-                  </div>
+                  <span className={`tone-badge ${toneClass(user.id)} h-11 w-11 text-lg`}>
+                    {user.avatarEmoji || (user.name || "?").charAt(0)}
+                  </span>
                   <div className="min-w-0">
                     <p className="font-extrabold truncate" style={{ color: "var(--text-strong)" }}>
                       {user.name || "익명"}
@@ -273,6 +280,48 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
             {/* 마이페이지 */}
             {view === "profile" && (
               <div className="p-5 space-y-4">
+                <div className="light-border p-4 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className={`tone-badge ${toneClass(user.id)} h-14 w-14 text-2xl`}>
+                      {user.avatarEmoji || (user.name || "?").charAt(0)}
+                    </span>
+                    <div>
+                      <p className="font-extrabold" style={{ color: "var(--text-strong)" }}>{user.name || "익명"}</p>
+                      <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                        게시글·댓글에 실명으로 쓸 때 이 아이콘이 보여요
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-8 gap-1.5 pt-1">
+                    {AVATAR_EMOJI_OPTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => updateAvatarMutation.mutate({ avatarEmoji: emoji })}
+                        disabled={updateAvatarMutation.isPending}
+                        aria-label={`아바타 ${emoji} 선택`}
+                        className="aspect-square rounded-lg flex items-center justify-center text-lg hover:bg-black/5 transition-colors"
+                        style={{
+                          outline: user.avatarEmoji === emoji ? `2px solid var(--accent-color)` : "none",
+                          outlineOffset: "-2px",
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  {user.avatarEmoji && (
+                    <button
+                      type="button"
+                      onClick={() => updateAvatarMutation.mutate({ avatarEmoji: null })}
+                      disabled={updateAvatarMutation.isPending}
+                      className="text-xs font-semibold underline"
+                      style={{ color: "var(--text-muted)" }}
+                    >
+                      기본 아이콘으로 되돌리기
+                    </button>
+                  )}
+                </div>
                 <div className="light-border p-4 space-y-1">
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>이름</p>
                   <p className="font-extrabold" style={{ color: "var(--text-strong)" }}>{user.name || "익명"}</p>
@@ -364,12 +413,9 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                         }}
                         className="w-full light-border p-3 flex items-center gap-3 text-left"
                       >
-                        <div
-                          className="h-10 w-10 rounded-full flex items-center justify-center font-bold text-white shrink-0"
-                          style={{ backgroundColor: "var(--accent-color)" }}
-                        >
+                        <span className={`tone-badge ${toneClass(c.otherUserId)} h-10 w-10 text-sm`}>
                           {(c.otherUserName || "?").charAt(0)}
-                        </div>
+                        </span>
                         <div className="min-w-0 flex-1">
                           <p className="font-bold truncate" style={{ color: "var(--text-strong)" }}>
                             {c.otherUserName || "익명"}

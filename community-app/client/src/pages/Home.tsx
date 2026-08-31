@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, Phone, MessageSquareText, Newspaper, Compass, Megaphone } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, Phone, MessageSquareText, Newspaper, Compass, Megaphone, Hash } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -173,7 +173,9 @@ export default function Home() {
                         className={`card-elevated board-card ${toneClass(board.id)} block p-6`}
                       >
                         <div className="flex items-start gap-3">
-                          <span className="tone-badge h-11 w-11 text-lg">{board.name.charAt(0)}</span>
+                          <span className="category-icon h-9 w-9">
+                            <Hash className="h-4 w-4" />
+                          </span>
                           <div className="min-w-0 flex-1 pt-0.5">
                             <h3 className="font-semibold text-base leading-tight">{board.name}</h3>
                             <p className="text-sm text-muted-foreground leading-relaxed mt-1">{board.description}</p>

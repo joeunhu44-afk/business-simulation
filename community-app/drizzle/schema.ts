@@ -20,6 +20,8 @@ export const users = mysqlTable("users", {
   passwordHash: varchar("passwordHash", { length: 255 }),
   /** 가장 최근에 사용한 로그인 수단 (google | kakao | apple | email) — 표시용. */
   loginMethod: varchar("loginMethod", { length: 64 }),
+  /** 프로필 아바타로 쓰는 이모지 한 글자. 설정하지 않으면 이름 이니셜을 대신 보여준다. */
+  avatarEmoji: varchar("avatarEmoji", { length: 8 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   status: mysqlEnum("status", ["active", "blocked"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),

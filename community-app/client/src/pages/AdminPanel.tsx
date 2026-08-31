@@ -56,7 +56,7 @@ export default function AdminPanel() {
       </nav>
 
       <div className="container py-8">
-        <h1 className="text-3xl mb-8">관리자 패널</h1>
+        <h1 className="section-heading text-3xl mb-8">관리자 패널</h1>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
