@@ -1,6 +1,6 @@
 import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, conversations, messages } from "../drizzle/schema";
+import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -334,6 +334,43 @@ export async function updateReportStatus(id: number, status: 'pending' | 'resolv
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.update(reports).set({ status, adminNotes }).where(eq(reports.id, id));
+}
+
+/**
+ * 문의함 관련 쿼리
+ */
+export async function createInquiry(data: {
+  userId: number;
+  category: 'general' | 'bug' | 'suggestion' | 'report_abuse' | 'account';
+  title: string;
+  content: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(inquiries).values(data);
+}
+
+export async function getInquiriesByUser(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(inquiries).where(eq(inquiries.userId, userId)).orderBy(desc(inquiries.createdAt));
+}
+
+export async function getAllInquiries(status?: 'pending' | 'answered') {
+  const db = await getDb();
+  if (!db) return [];
+  const query = status
+    ? db.select().from(inquiries).where(eq(inquiries.status, status))
+    : db.select().from(inquiries);
+  return query.orderBy(desc(inquiries.createdAt));
+}
+
+export async function answerInquiry(id: number, adminReply: string, repliedBy: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(inquiries)
+    .set({ adminReply, repliedBy, repliedAt: new Date(), status: 'answered' })
+    .where(eq(inquiries.id, id));
 }
 
 /**

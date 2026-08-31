@@ -478,6 +478,43 @@ export const appRouter = router({
       }),
   }),
 
+  // 문의함 API
+  inquiries: router({
+    create: protectedProcedure
+      .input(z.object({
+        category: z.enum(['general', 'bug', 'suggestion', 'report_abuse', 'account']).default('general'),
+        title: z.string().min(1).max(255),
+        content: z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createInquiry({
+          userId: ctx.user.id,
+          category: input.category,
+          title: input.title,
+          content: input.content,
+        });
+      }),
+
+    listMine: protectedProcedure.query(async ({ ctx }) => {
+      return db.getInquiriesByUser(ctx.user.id);
+    }),
+
+    listAll: adminProcedure
+      .input(z.object({ status: z.enum(['pending', 'answered']).optional() }))
+      .query(async ({ input }) => {
+        return db.getAllInquiries(input.status);
+      }),
+
+    answer: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        adminReply: z.string().min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.answerInquiry(input.id, input.adminReply, ctx.user.id);
+      }),
+  }),
+
   // 관리자 API
   admin: router({
     users: router({

@@ -194,6 +194,32 @@ export type News = typeof news.$inferSelect;
 export type InsertNews = typeof news.$inferInsert;
 
 /**
+ * 문의함: 학생이 관리자에게 보내는 문의/건의.
+ * 관리자 패널에서 확인 후 답변을 남기면 status가 answered로 바뀐다.
+ */
+export const inquiries = mysqlTable("inquiries", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  category: mysqlEnum("category", ["general", "bug", "suggestion", "report_abuse", "account"]).default("general").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  content: text("content").notNull(),
+  status: mysqlEnum("status", ["pending", "answered"]).default("pending").notNull(),
+  adminReply: text("adminReply"),
+  repliedBy: int("repliedBy"),
+  repliedAt: timestamp("repliedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export const inquiriesRelations = relations(inquiries, ({ one }) => ({
+  user: one(users, {
+    fields: [inquiries.userId],
+    references: [users.id],
+  }),
+}));
+export type Inquiry = typeof inquiries.$inferSelect;
+export type InsertInquiry = typeof inquiries.$inferInsert;
+
+/**
  * 1:1 개인 채팅 대화 테이블
  * 두 사용자 간의 대화를 나타낸다. userAId < userBId 규칙으로 중복 방지.
  */

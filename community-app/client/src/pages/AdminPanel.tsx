@@ -9,6 +9,17 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import { Textarea } from "@/components/ui/textarea";
+import { formatDistanceToNow } from "date-fns";
+import { ko } from "date-fns/locale";
+
+const INQUIRY_CATEGORY_LABELS: Record<string, string> = {
+  general: "일반 문의",
+  bug: "버그 신고",
+  suggestion: "건의사항",
+  report_abuse: "신고 관련",
+  account: "계정 문의",
+};
 
 export default function AdminPanel() {
   const { user, isAuthenticated } = useAuth();
@@ -30,7 +41,7 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b border-border bg-card sticky top-0 z-40">
+      <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
             <HeaderMenuButton />
@@ -49,13 +60,14 @@ export default function AdminPanel() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="sm:w-full sm:grid sm:grid-cols-6">
+            <TabsList className="sm:w-full sm:grid sm:grid-cols-7">
             <TabsTrigger value="users">회원 관리</TabsTrigger>
             <TabsTrigger value="boards">게시판 관리</TabsTrigger>
             <TabsTrigger value="posts">게시글 관리</TabsTrigger>
             <TabsTrigger value="reports">신고 관리</TabsTrigger>
             <TabsTrigger value="announcements">공지사항</TabsTrigger>
             <TabsTrigger value="news">뉴스</TabsTrigger>
+            <TabsTrigger value="inquiries">문의함</TabsTrigger>
             </TabsList>
           </div>
 
@@ -82,6 +94,11 @@ export default function AdminPanel() {
           {/* Announcements Tab */}
           <TabsContent value="announcements">
             <AnnouncementsTab />
+          </TabsContent>
+
+          {/* Inquiries Tab */}
+          <TabsContent value="inquiries">
+            <InquiriesTab />
           </TabsContent>
 
           {/* News Tab */}
@@ -580,6 +597,113 @@ function NewsTab() {
           ))}
         </div>
       </Card>
+    </div>
+  );
+}
+
+function InquiriesTab() {
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'answered'>('pending');
+  const [replyDrafts, setReplyDrafts] = useState<Record<number, string>>({});
+  const { data: inquiries, isLoading } = trpc.inquiries.listAll.useQuery({
+    status: statusFilter === 'all' ? undefined : statusFilter,
+  });
+  const utils = trpc.useUtils();
+
+  const answerMutation = trpc.inquiries.answer.useMutation({
+    onSuccess: () => {
+      toast.success('답변이 등록되었습니다');
+      utils.inquiries.listAll.invalidate();
+    },
+    onError: (error) => {
+      toast.error(error.message || '답변 등록에 실패했습니다');
+    },
+  });
+
+  const handleAnswer = (id: number) => {
+    const reply = (replyDrafts[id] || '').trim();
+    if (!reply) {
+      toast.error('답변 내용을 입력해주세요');
+      return;
+    }
+    answerMutation.mutate({ id, adminReply: reply });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        {(['pending', 'answered', 'all'] as const).map((s) => (
+          <Button
+            key={s}
+            size="sm"
+            variant={statusFilter === s ? 'default' : 'outline'}
+            onClick={() => setStatusFilter(s)}
+          >
+            {s === 'pending' ? '답변 대기중' : s === 'answered' ? '답변 완료' : '전체'}
+          </Button>
+        ))}
+      </div>
+
+      {!inquiries || inquiries.length === 0 ? (
+        <Card className="card-elevated p-12 text-center">
+          <p className="text-muted-foreground">문의가 없습니다</p>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {inquiries.map((inquiry) => (
+            <Card key={inquiry.id} className="card-elevated p-6">
+              <div className="flex items-center gap-2 mb-2 min-w-0">
+                <span
+                  className="text-xs font-semibold px-2 py-0.5 rounded shrink-0"
+                  style={{ backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }}
+                >
+                  {INQUIRY_CATEGORY_LABELS[inquiry.category] || inquiry.category}
+                </span>
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {formatDistanceToNow(new Date(inquiry.createdAt), { locale: ko, addSuffix: true })}
+                </span>
+                {inquiry.status === 'answered' && (
+                  <span className="text-xs font-semibold shrink-0 ml-auto" style={{ color: "var(--accent-color)" }}>
+                    답변 완료
+                  </span>
+                )}
+              </div>
+              <h3 className="font-semibold mb-1">{inquiry.title}</h3>
+              <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-4">{inquiry.content}</p>
+
+              {inquiry.status === 'answered' ? (
+                <div className="pt-3 border-t border-border">
+                  <p className="text-xs font-semibold accent-text mb-1">관리자 답변</p>
+                  <p className="text-sm whitespace-pre-wrap">{inquiry.adminReply}</p>
+                </div>
+              ) : (
+                <div className="pt-3 border-t border-border space-y-2">
+                  <Textarea
+                    placeholder="답변을 입력해주세요"
+                    value={replyDrafts[inquiry.id] || ''}
+                    onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [inquiry.id]: e.target.value }))}
+                    className="min-h-20"
+                  />
+                  <Button
+                    size="sm"
+                    disabled={answerMutation.isPending}
+                    onClick={() => handleAnswer(inquiry.id)}
+                  >
+                    답변 등록
+                  </Button>
+                </div>
+              )}
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -12,6 +12,7 @@ import ChatList from "@/pages/ChatList";
 import ChatRoom from "@/pages/ChatRoom";
 import LoginPage from "@/pages/LoginPage";
 import CompleteSignupPage from "@/pages/CompleteSignupPage";
+import InquiryPage from "@/pages/InquiryPage";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
@@ -34,6 +35,7 @@ function Router() {
       <Route path={"/chat"} component={ChatList} />
       <Route path={"/chat/:id"} component={ChatRoom} />
       <Route path={"/admin"} component={AdminPanel} />
+      <Route path={"/inquiries"} component={InquiryPage} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
