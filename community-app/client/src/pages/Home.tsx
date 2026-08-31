@@ -165,6 +165,7 @@ export default function Home() {
                     >
                       <h3 className="font-semibold text-base mb-1.5">{board.name}</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed">{board.description}</p>
+                      <BoardPreview boardId={board.id} />
                     </a>
                   ))}
                 </div>
@@ -182,6 +183,31 @@ export default function Home() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function BoardPreview({ boardId }: { boardId: number }) {
+  const { data: latestPosts } = trpc.posts.listByBoard.useQuery({ boardId, limit: 1, sortBy: 'latest' });
+  const { data: popularPosts } = trpc.posts.listByBoard.useQuery({ boardId, limit: 1, sortBy: 'popular' });
+
+  const latest = latestPosts?.[0];
+  const popular = popularPosts?.[0] && popularPosts[0].id !== latest?.id ? popularPosts[0] : undefined;
+
+  if (!latest && !popular) return null;
+
+  return (
+    <div className="mt-3 pt-3 border-t border-border space-y-1.5">
+      {latest && (
+        <p className="text-xs text-muted-foreground truncate">
+          <span className="font-semibold accent-text">최신</span> · {latest.title}
+        </p>
+      )}
+      {popular && (
+        <p className="text-xs text-muted-foreground truncate">
+          <span className="font-semibold accent-text">인기</span> · {popular.title}
+        </p>
+      )}
     </div>
   );
 }

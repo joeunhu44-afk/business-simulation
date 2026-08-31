@@ -161,9 +161,9 @@ export async function getPostsByBoard(boardId: number, limit: number = 20, offse
   if (!db) return [];
   
   const orderBy = sortBy === 'popular' ? desc(posts.likeCount) : desc(posts.createdAt);
-  
+
   let whereCondition = and(eq(posts.boardId, boardId), isNull(posts.deletedAt));
-  
+
   if (search) {
     whereCondition = and(
       whereCondition,
@@ -173,10 +173,12 @@ export async function getPostsByBoard(boardId: number, limit: number = 20, offse
       )
     );
   }
-  
+
+  // createdAt/likeCount만으로는 동점(같은 초에 작성되거나 좋아요 수가 같은 경우) 순서가
+  // 불안정해지므로 id를 2차 정렬 기준으로 추가해 항상 같은 순서가 나오게 한다.
   return db.select().from(posts)
     .where(whereCondition)
-    .orderBy(desc(posts.isNotice), orderBy)
+    .orderBy(desc(posts.isNotice), orderBy, desc(posts.id))
     .limit(limit)
     .offset(offset);
 }
