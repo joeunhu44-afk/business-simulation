@@ -131,12 +131,26 @@ export async function createUserFromOAuth(data: {
   return getUserById(result.insertId);
 }
 
+/**
+ * 로그인할 때마다 호출된다. OWNER_EMAIL이 계정 생성 이후에 설정되거나 바뀐
+ * 경우에도 다음 로그인 시 자동으로 admin 권한이 반영되도록, 여기서도 한 번 더
+ * 확인한다 (계정 생성 시점에만 확인하면 이미 만들어진 계정은 영영 못 올라간다).
+ * 이메일이 일치하지 않으면 아무 영향 없고, admin을 내리는 로직은 없다.
+ */
 export async function touchLastSignedIn(userId: number, loginMethod?: string) {
   const db = await getDb();
   if (!db) return;
+
+  const existing = await getUserById(userId);
+  const shouldPromote = existing && existing.role !== "admin" && isOwnerEmail(existing.email);
+
   await db
     .update(users)
-    .set({ lastSignedIn: new Date(), ...(loginMethod ? { loginMethod } : {}) })
+    .set({
+      lastSignedIn: new Date(),
+      ...(loginMethod ? { loginMethod } : {}),
+      ...(shouldPromote ? { role: "admin" as const } : {}),
+    })
     .where(eq(users.id, userId));
 }
 
