@@ -165,24 +165,30 @@ export default function Home() {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : boards && boards.length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="space-y-4">
                   {boards.map((board, idx) => (
                     <Reveal key={board.id} delay={Math.min(idx, 5) * 0.05}>
-                      <a
-                        href={`/board/${board.slug}`}
-                        className={`card-elevated board-card ${toneClass(board.id)} block p-6`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <span className="category-icon h-9 w-9">
-                            <Hash className="h-4 w-4" />
-                          </span>
-                          <div className="min-w-0 flex-1 pt-0.5">
-                            <h3 className="font-semibold text-base leading-tight">{board.name}</h3>
-                            <p className="text-sm text-muted-foreground leading-relaxed mt-1">{board.description}</p>
+                      <div className={`card-elevated board-card ${toneClass(board.id)} overflow-hidden`}>
+                        <div className="flex flex-col sm:flex-row">
+                          <a
+                            href={`/board/${board.slug}`}
+                            className="flex sm:w-56 shrink-0 items-start gap-3 p-5 hover:bg-secondary/50 transition-colors"
+                          >
+                            <span className="category-icon h-9 w-9 shrink-0">
+                              <Hash className="h-4 w-4" />
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-base leading-tight">{board.name}</h3>
+                              <p className="text-sm text-muted-foreground leading-relaxed mt-1">{board.description}</p>
+                            </div>
+                          </a>
+                          <div className="hidden sm:block w-px shrink-0 self-stretch my-4" style={{ background: "var(--border-color)" }} />
+                          <div className="block sm:hidden h-px w-full" style={{ background: "var(--border-color)" }} />
+                          <div className="flex-1 min-w-0 p-5">
+                            <BoardPostList boardId={board.id} />
                           </div>
                         </div>
-                        <BoardPreview boardId={board.id} />
-                      </a>
+                      </div>
                     </Reveal>
                   ))}
                 </div>
@@ -233,44 +239,42 @@ function QuickLinksPanel() {
   );
 }
 
-function BoardPreview({ boardId }: { boardId: number }) {
-  const { data: latestPosts } = trpc.posts.listByBoard.useQuery({ boardId, limit: 1, sortBy: 'latest' });
-  const { data: popularPosts } = trpc.posts.listByBoard.useQuery({ boardId, limit: 1, sortBy: 'popular' });
+function BoardPostList({ boardId }: { boardId: number }) {
+  const { data: posts, isLoading } = trpc.posts.listByBoard.useQuery({ boardId, limit: 5, sortBy: 'latest' });
 
-  const latest = latestPosts?.[0];
-  const popular = popularPosts?.[0] && popularPosts[0].id !== latest?.id ? popularPosts[0] : undefined;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-4">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-  if (!latest && !popular) return null;
+  if (!posts || posts.length === 0) {
+    return <p className="text-sm text-muted-foreground py-2">아직 게시글이 없어요</p>;
+  }
 
   return (
-    <div className="mt-3.5 pt-3 border-t border-border space-y-2">
-      {latest && <BoardPreviewRow label="최신" post={latest} />}
-      {popular && <BoardPreviewRow label="인기" post={popular} />}
-    </div>
-  );
-}
-
-function BoardPreviewRow({
-  label,
-  post,
-}: {
-  label: string;
-  post: { title: string; likeCount: number; commentCount: number };
-}) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="tag-pill shrink-0">{label}</span>
-      <span className="truncate min-w-0 flex-1 font-medium text-foreground/80">{post.title}</span>
-      <span className="flex items-center gap-2 shrink-0 text-muted-foreground">
-        <span className="flex items-center gap-0.5">
-          <ThumbsUp className="h-3 w-3" />
-          {post.likeCount}
-        </span>
-        <span className="flex items-center gap-0.5">
-          <MessageCircle className="h-3 w-3" />
-          {post.commentCount}
-        </span>
-      </span>
+    <div className="space-y-1.5">
+      {posts.map((post) => (
+        <a
+          key={post.id}
+          href={`/post/${post.id}`}
+          className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 -mx-2 hover:bg-secondary transition-colors"
+        >
+          <span className="truncate min-w-0 flex-1 font-medium text-foreground/85">{post.title}</span>
+          <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+            <span className="flex items-center gap-0.5">
+              <ThumbsUp className="h-3 w-3" />
+              {post.likeCount}
+            </span>
+            <span className="flex items-center gap-0.5">
+              <MessageCircle className="h-3 w-3" />
+              {post.commentCount}
+            </span>
+          </span>
+        </a>
+      ))}
     </div>
   );
 }
