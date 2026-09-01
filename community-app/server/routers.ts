@@ -7,7 +7,7 @@ import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { hashPassword, verifyPassword } from "./_core/auth/password";
 import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/session";
-import { storagePut } from "./storage";
+import { putUpload } from "./media";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -27,7 +27,7 @@ async function uploadImageDataUrl(dataUrl: string, keyPrefix: string): Promise<s
     throw new TRPCError({ code: "BAD_REQUEST", message: "이미지는 8MB 이하만 업로드할 수 있어요" });
   }
   try {
-    const { url } = await storagePut(`${keyPrefix}/${Date.now()}.${ext}`, buffer, `image/${ext}`);
+    const { url } = await putUpload(`${keyPrefix}/${Date.now()}.${ext}`, buffer, `image/${ext}`);
     return url;
   } catch (error) {
     throw new TRPCError({

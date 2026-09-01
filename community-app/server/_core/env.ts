@@ -39,7 +39,7 @@ export const ENV = {
     privateKey: (process.env.APPLE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
   },
 
-  /** S3 호환 오브젝트 스토리지 (Cloudflare R2, AWS S3 등) 설정 */
+  /** S3 호환 오브젝트 스토리지 (Cloudflare R2, AWS S3 등) 설정. 설정돼 있으면 로컬 디스크보다 우선 사용된다. */
   s3: {
     endpoint: process.env.S3_ENDPOINT ?? "",
     region: process.env.S3_REGION ?? "auto",
@@ -49,4 +49,11 @@ export const ENV = {
     /** 업로드된 파일에 접근할 때 사용할 공개 URL prefix (예: https://cdn.mydomain.com) */
     publicUrl: process.env.S3_PUBLIC_URL ?? "",
   },
+
+  /**
+   * 업로드 파일을 저장할 로컬 디스크 경로 (S3를 설정하지 않았을 때 사용).
+   * Railway에서는 Volume을 이 경로에 마운트해야 재배포/재시작 후에도 파일이 남는다.
+   * 로컬 개발에서는 프로젝트 루트의 uploads/ 폴더를 기본값으로 쓴다.
+   */
+  uploadDir: process.env.UPLOAD_DIR ?? "uploads",
 };

@@ -7,6 +7,9 @@ dist/
 build/
 *.dist
 
+# Local file uploads (S3/R2 미설정 시 로컬 디스크에 저장되는 업로드 파일)
+/uploads/
+
 # Environment variables
 .env
 .env.local
