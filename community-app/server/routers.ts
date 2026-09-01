@@ -45,7 +45,7 @@ function issueSession(ctx: { req: any; res: any }, sessionToken: string) {
 
 // Admin procedure - only admin users can access
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== 'admin') {
+  if (ctx.user.role !== 'admin' && ctx.user.role !== 'owner') {
     throw new TRPCError({ code: 'FORBIDDEN', message: 'Admin access required' });
   }
   return next({ ctx });
@@ -593,17 +593,48 @@ export const appRouter = router({
           userId: z.number(),
           role: z.enum(['user', 'admin']),
         }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+          const target = await db.getUserById(input.userId);
+          if (!target) throw new TRPCError({ code: 'NOT_FOUND' });
+          // 조물주(owner)는 아무도 건드릴 수 없다. admin끼리도 서로 권한을 바꿀 수 없고,
+          // owner만 기존 admin의 권한을 바꿀 수 있다 — 일반 사용자를 admin으로 승격시키는
+          // 것은(한쪽 방향) 어떤 admin이든 가능하다.
+          if (target.role === 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '조물주의 권한은 변경할 수 없습니다' });
+          }
+          if (target.role === 'admin' && ctx.user.role !== 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '다른 관리자의 권한은 조물주만 변경할 수 있습니다' });
+          }
           return db.updateUserRole(input.userId, input.role);
         }),
-      
+
       updateStatus: adminProcedure
         .input(z.object({
           userId: z.number(),
           status: z.enum(['active', 'blocked']),
         }))
-        .mutation(async ({ input }) => {
+        .mutation(async ({ input, ctx }) => {
+          const target = await db.getUserById(input.userId);
+          if (!target) throw new TRPCError({ code: 'NOT_FOUND' });
+          if (target.role === 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '조물주는 차단할 수 없습니다' });
+          }
+          if (target.role === 'admin' && ctx.user.role !== 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '다른 관리자는 조물주만 차단할 수 있습니다' });
+          }
           return db.updateUserStatus(input.userId, input.status);
+        }),
+
+      /** 사용자 활동 내역: 일반 admin은 role='user'만, owner는 admin/owner 포함 누구든 볼 수 있다. */
+      activity: adminProcedure
+        .input(z.object({ userId: z.number() }))
+        .query(async ({ input, ctx }) => {
+          const target = await db.getUserById(input.userId);
+          if (!target) throw new TRPCError({ code: 'NOT_FOUND' });
+          if (target.role !== 'user' && ctx.user.role !== 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '관리자의 활동 내역은 조물주만 볼 수 있습니다' });
+          }
+          return db.getUserActivity(input.userId);
         }),
     }),
     

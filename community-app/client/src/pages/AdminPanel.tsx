@@ -1,11 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Shield, Users, FileText, AlertCircle, Megaphone, Search } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
@@ -13,6 +12,35 @@ import BackButton from "@/components/BackButton";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
+import { isAdminRole, roleLabel } from "@/lib/role";
+
+const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label: string }[] }[] = [
+  { key: 'user', label: '사용자', tabs: [{ key: 'users', label: '회원 관리' }] },
+  {
+    key: 'content',
+    label: '콘텐츠',
+    tabs: [
+      { key: 'boards', label: '게시판 관리' },
+      { key: 'posts', label: '게시글 관리' },
+    ],
+  },
+  {
+    key: 'support',
+    label: '문의',
+    tabs: [
+      { key: 'reports', label: '신고 관리' },
+      { key: 'inquiries', label: '문의 관리' },
+    ],
+  },
+  {
+    key: 'news',
+    label: '소식',
+    tabs: [
+      { key: 'announcements', label: '공지사항' },
+      { key: 'news', label: '뉴스' },
+    ],
+  },
+];
 
 const INQUIRY_CATEGORY_LABELS: Record<string, string> = {
   general: "일반 문의",
@@ -24,9 +52,19 @@ const INQUIRY_CATEGORY_LABELS: Record<string, string> = {
 
 export default function AdminPanel() {
   const { user, isAuthenticated } = useAuth();
-  const [activeTab, setActiveTab] = useState('users');
+  const [activeCategory, setActiveCategory] = useState(ADMIN_CATEGORIES[0].key);
+  const [activeTab, setActiveTab] = useState(ADMIN_CATEGORIES[0].tabs[0].key);
 
-  if (!isAuthenticated || user?.role !== 'admin') {
+  const currentCategory = ADMIN_CATEGORIES.find((c) => c.key === activeCategory) ?? ADMIN_CATEGORIES[0];
+
+  const handleSelectCategory = (categoryKey: string) => {
+    const category = ADMIN_CATEGORIES.find((c) => c.key === categoryKey);
+    if (!category) return;
+    setActiveCategory(categoryKey);
+    setActiveTab(category.tabs[0].key);
+  };
+
+  if (!isAuthenticated || !isAdminRole(user?.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -60,61 +98,58 @@ export default function AdminPanel() {
       <div className="container py-8">
         <h1 className="section-heading text-3xl mb-8">관리자 패널</h1>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-            <TabsList className="sm:w-full sm:grid sm:grid-cols-7">
-            <TabsTrigger value="users">회원 관리</TabsTrigger>
-            <TabsTrigger value="boards">게시판 관리</TabsTrigger>
-            <TabsTrigger value="posts">게시글 관리</TabsTrigger>
-            <TabsTrigger value="reports">신고 관리</TabsTrigger>
-            <TabsTrigger value="announcements">공지사항</TabsTrigger>
-            <TabsTrigger value="news">뉴스</TabsTrigger>
-            <TabsTrigger value="inquiries">문의함</TabsTrigger>
-            </TabsList>
+        <div className="space-y-4">
+          {/* 1단계: 카테고리 */}
+          <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+            {ADMIN_CATEGORIES.map((category) => (
+              <Button
+                key={category.key}
+                size="sm"
+                variant={activeCategory === category.key ? 'default' : 'outline'}
+                onClick={() => handleSelectCategory(category.key)}
+                className="shrink-0"
+              >
+                {category.label}
+              </Button>
+            ))}
           </div>
 
-          {/* Users Tab */}
-          <TabsContent value="users">
-            <UsersTab />
-          </TabsContent>
+          {/* 2단계: 카테고리 안의 세부 메뉴 (하나뿐이면 생략) */}
+          {currentCategory.tabs.length > 1 && (
+            <div className="flex gap-2 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pl-2 border-l-2" style={{ borderColor: 'var(--border-color)' }}>
+              {currentCategory.tabs.map((tab) => (
+                <Button
+                  key={tab.key}
+                  size="sm"
+                  variant={activeTab === tab.key ? 'secondary' : 'ghost'}
+                  onClick={() => setActiveTab(tab.key)}
+                  className="shrink-0"
+                >
+                  {tab.label}
+                </Button>
+              ))}
+            </div>
+          )}
 
-          {/* Boards Tab */}
-          <TabsContent value="boards">
-            <BoardsTab />
-          </TabsContent>
-
-          {/* Posts Tab */}
-          <TabsContent value="posts">
-            <PostsTab />
-          </TabsContent>
-
-          {/* Reports Tab */}
-          <TabsContent value="reports">
-            <ReportsTab />
-          </TabsContent>
-
-          {/* Announcements Tab */}
-          <TabsContent value="announcements">
-            <AnnouncementsTab />
-          </TabsContent>
-
-          {/* Inquiries Tab */}
-          <TabsContent value="inquiries">
-            <InquiriesTab />
-          </TabsContent>
-
-          {/* News Tab */}
-          <TabsContent value="news">
-            <NewsTab />
-          </TabsContent>
-        </Tabs>
+          <div>
+            {activeTab === 'users' && <UsersTab />}
+            {activeTab === 'boards' && <BoardsTab />}
+            {activeTab === 'posts' && <PostsTab />}
+            {activeTab === 'reports' && <ReportsTab />}
+            {activeTab === 'announcements' && <AnnouncementsTab />}
+            {activeTab === 'news' && <NewsTab />}
+            {activeTab === 'inquiries' && <InquiriesTab />}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 function UsersTab() {
+  const { user: viewer } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
+  const [expandedUserId, setExpandedUserId] = useState<number | null>(null);
   const { data: users, isLoading } = trpc.admin.users.list.useQuery({ limit: 100 });
   const utils = trpc.useUtils();
   const filteredUsers = users?.filter(user =>
@@ -135,6 +170,8 @@ function UsersTab() {
     },
     onError: (error) => toast.error(error.message || '상태 변경에 실패했습니다'),
   });
+
+  const viewerIsOwner = viewer?.role === 'owner';
 
   if (isLoading) {
     return (
@@ -160,53 +197,139 @@ function UsersTab() {
           <p className="text-muted-foreground">검색 결과가 없습니다</p>
         </Card>
       ) : (
-      <Card className="card-elevated overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm whitespace-nowrap">
-            <thead className="border-b border-border bg-muted/50">
-              <tr>
-                <th className="px-6 py-3 text-left font-semibold">사용자</th>
-                <th className="px-6 py-3 text-left font-semibold">이메일</th>
-                <th className="px-6 py-3 text-left font-semibold">역할</th>
-                <th className="px-6 py-3 text-left font-semibold">상태</th>
-                <th className="px-6 py-3 text-left font-semibold">가입일</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredUsers.map((user) => (
-              <tr key={user.id} className="border-b border-border hover:bg-muted/30">
-                <td className="px-6 py-3">{user.name || '(이름 없음)'}</td>
-                <td className="px-6 py-3">{user.email || '(이메일 없음)'}</td>
-                <td className="px-6 py-3">
-                  <select
-                    value={user.role}
-                    onChange={(e) => updateRoleMutation.mutate({ userId: user.id, role: e.target.value as 'user' | 'admin' })}
-                    className="px-2 py-1 rounded border border-border"
-                  >
-                    <option value="user">사용자</option>
-                    <option value="admin">관리자</option>
-                  </select>
-                </td>
-                <td className="px-6 py-3">
-                  <select
-                    value={user.status}
-                    onChange={(e) => updateStatusMutation.mutate({ userId: user.id, status: e.target.value as 'active' | 'blocked' })}
-                    className="px-2 py-1 rounded border border-border"
-                  >
-                    <option value="active">활성</option>
-                    <option value="blocked">차단</option>
-                  </select>
-                </td>
-                <td className="px-6 py-3 text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(user.createdAt), { locale: ko, addSuffix: true })}
-                </td>
-              </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="space-y-2">
+          {filteredUsers.map((target) => {
+            const isOwnerRow = target.role === 'owner';
+            const isAdminRow = target.role === 'admin';
+            const canEdit = !isOwnerRow && (!isAdminRow || viewerIsOwner);
+            const canViewActivity = target.role === 'user' || viewerIsOwner;
+
+            return (
+              <Card key={target.id} className="card-elevated overflow-hidden">
+                <div className="flex items-center gap-4 p-4 flex-wrap">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold">{target.name || '(이름 없음)'}</p>
+                      <span className="tag-pill">{roleLabel(target.role)}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-0.5">{target.email || '(이메일 없음)'}</p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {canEdit ? (
+                      <select
+                        value={target.role}
+                        onChange={(e) => updateRoleMutation.mutate({ userId: target.id, role: e.target.value as 'user' | 'admin' })}
+                        disabled={updateRoleMutation.isPending}
+                        className="px-2 py-1 rounded border border-border text-sm"
+                      >
+                        <option value="user">사용자</option>
+                        <option value="admin">관리자</option>
+                      </select>
+                    ) : (
+                      <span className="stat-pill" title={isOwnerRow ? '조물주 권한은 변경할 수 없습니다' : '다른 관리자의 권한은 조물주만 변경할 수 있습니다'}>
+                        {roleLabel(target.role)} (고정)
+                      </span>
+                    )}
+                    {canEdit ? (
+                      <select
+                        value={target.status}
+                        onChange={(e) => updateStatusMutation.mutate({ userId: target.id, status: e.target.value as 'active' | 'blocked' })}
+                        disabled={updateStatusMutation.isPending}
+                        className="px-2 py-1 rounded border border-border text-sm"
+                      >
+                        <option value="active">활성</option>
+                        <option value="blocked">차단</option>
+                      </select>
+                    ) : (
+                      <span className="stat-pill">{target.status === 'active' ? '활성' : '차단'}</span>
+                    )}
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(target.createdAt), { locale: ko, addSuffix: true })}
+                    </span>
+                    {canViewActivity && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setExpandedUserId(expandedUserId === target.id ? null : target.id)}
+                      >
+                        {expandedUserId === target.id ? '활동 닫기' : '활동 보기'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {expandedUserId === target.id && canViewActivity && <UserActivityPanel userId={target.id} />}
+              </Card>
+            );
+          })}
         </div>
-      </Card>
       )}
+    </div>
+  );
+}
+
+function UserActivityPanel({ userId }: { userId: number }) {
+  const { data: activity, isLoading } = trpc.admin.users.activity.useQuery({ userId });
+
+  if (isLoading) {
+    return (
+      <div className="border-t border-border p-4 flex justify-center">
+        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!activity) return null;
+
+  const hasNothing =
+    activity.posts.length === 0 &&
+    activity.comments.length === 0 &&
+    activity.likedPosts.length === 0 &&
+    activity.likedComments.length === 0;
+
+  return (
+    <div className="border-t border-border bg-muted/30 p-4 space-y-4">
+      {hasNothing ? (
+        <p className="text-sm text-muted-foreground text-center py-2">활동 내역이 없습니다</p>
+      ) : (
+        <>
+          <ActivitySection title={`작성한 게시글 (${activity.posts.length})`}>
+            {activity.posts.map((post: any) => (
+              <a key={post.id} href={`/post/${post.id}`} target="_blank" rel="noopener noreferrer" className="block text-sm hover:underline truncate">
+                {post.title}
+              </a>
+            ))}
+          </ActivitySection>
+          <ActivitySection title={`작성한 댓글 (${activity.comments.length})`}>
+            {activity.comments.map((comment: any) => (
+              <p key={comment.id} className="text-sm text-muted-foreground truncate">{comment.content}</p>
+            ))}
+          </ActivitySection>
+          <ActivitySection title={`좋아요한 게시글 (${activity.likedPosts.length})`}>
+            {activity.likedPosts.map((like: any) => (
+              <a key={like.postId} href={`/post/${like.postId}`} target="_blank" rel="noopener noreferrer" className="block text-sm hover:underline truncate">
+                {like.title || `게시글 #${like.postId}`}
+              </a>
+            ))}
+          </ActivitySection>
+          <ActivitySection title={`좋아요한 댓글 (${activity.likedComments.length})`}>
+            {activity.likedComments.map((like: any) => (
+              <p key={like.commentId} className="text-sm text-muted-foreground truncate">{like.content || `댓글 #${like.commentId}`}</p>
+            ))}
+          </ActivitySection>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ActivitySection({ title, children }: { title: string; children: ReactNode }) {
+  const hasChildren = Array.isArray(children) ? children.length > 0 : !!children;
+  if (!hasChildren) return null;
+  return (
+    <div>
+      <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">{title}</h4>
+      <div className="space-y-1.5">{children}</div>
     </div>
   );
 }

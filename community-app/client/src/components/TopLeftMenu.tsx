@@ -28,6 +28,7 @@ import { useLocation } from "wouter";
 import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
 import { toneClass } from "@/lib/tone";
 import Avatar from "@/components/Avatar";
+import { roleLabel } from "@/lib/role";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
   { color: "dark", label: "크림슨", swatch: "#d6304c" },
@@ -250,7 +251,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                       {user.name || "익명"}
                     </p>
                     <p className="text-sm truncate" style={{ color: "var(--text-muted)" }}>
-                      {user.role === "admin" ? "관리자" : "사용자"}
+                      {roleLabel(user.role)}
                     </p>
                   </div>
                 </div>
@@ -414,7 +415,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                 <div className="light-border p-4 space-y-1">
                   <p className="text-sm" style={{ color: "var(--text-muted)" }}>역할</p>
                   <p className="font-extrabold" style={{ color: "var(--text-strong)" }}>
-                    {user.role === "admin" ? "관리자" : "사용자"}
+                    {roleLabel(user.role)}
                   </p>
                 </div>
 
@@ -553,7 +554,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                             {result.name || "익명"}
                           </p>
                           <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                            {result.role === "admin" ? "관리자" : "사용자"}
+                            {roleLabel(result.role)}
                           </p>
                         </div>
                         <Button

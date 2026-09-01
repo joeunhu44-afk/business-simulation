@@ -86,7 +86,7 @@ export async function createUserWithPassword(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const role = isOwnerEmail(data.email) ? "admin" : "user";
+  const role = isOwnerEmail(data.email) ? "owner" : "user";
 
   const [result] = await db.insert(users).values({
     email: data.email.toLowerCase(),
@@ -112,7 +112,7 @@ export async function createUserFromOAuth(data: {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
-  const role = isOwnerEmail(data.email) ? "admin" : "user";
+  const role = isOwnerEmail(data.email) ? "owner" : "user";
 
   const [result] = await db.insert(users).values({
     email: data.email ? data.email.toLowerCase() : null,
@@ -142,14 +142,14 @@ export async function touchLastSignedIn(userId: number, loginMethod?: string) {
   if (!db) return;
 
   const existing = await getUserById(userId);
-  const shouldPromote = existing && existing.role !== "admin" && isOwnerEmail(existing.email);
+  const shouldPromote = existing && existing.role !== "owner" && isOwnerEmail(existing.email);
 
   await db
     .update(users)
     .set({
       lastSignedIn: new Date(),
       ...(loginMethod ? { loginMethod } : {}),
-      ...(shouldPromote ? { role: "admin" as const } : {}),
+      ...(shouldPromote ? { role: "owner" as const } : {}),
     })
     .where(eq(users.id, userId));
 }
@@ -564,6 +564,62 @@ export async function getAllUsers(limit: number = 20, offset: number = 0) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(users).orderBy(desc(users.createdAt)).limit(limit).offset(offset);
+}
+
+/** 관리자 패널의 "활동 내역" 보기용 — 최근 게시글/댓글/좋아요를 모아서 돌려준다. */
+export async function getUserActivity(userId: number) {
+  const db = await getDb();
+  if (!db) return { posts: [], comments: [], likedPosts: [], likedComments: [] };
+
+  const userPosts = await db.select().from(posts)
+    .where(and(eq(posts.userId, userId), isNull(posts.deletedAt)))
+    .orderBy(desc(posts.createdAt))
+    .limit(20);
+
+  const userComments = await db.select().from(comments)
+    .where(and(eq(comments.userId, userId), isNull(comments.deletedAt)))
+    .orderBy(desc(comments.createdAt))
+    .limit(20);
+
+  const likedPostRows = await db.select({ postId: postLikes.postId, createdAt: postLikes.createdAt })
+    .from(postLikes)
+    .where(eq(postLikes.userId, userId))
+    .orderBy(desc(postLikes.createdAt))
+    .limit(20);
+
+  const likedCommentRows = await db.select({ commentId: commentLikes.commentId, createdAt: commentLikes.createdAt })
+    .from(commentLikes)
+    .where(eq(commentLikes.userId, userId))
+    .orderBy(desc(commentLikes.createdAt))
+    .limit(20);
+
+  const likedPostIds = likedPostRows.map((r) => r.postId);
+  const likedPostDetails = likedPostIds.length > 0
+    ? await db.select({ id: posts.id, title: posts.title }).from(posts).where(inArray(posts.id, likedPostIds))
+    : [];
+  const likedPostTitleMap = new Map(likedPostDetails.map((p) => [p.id, p.title]));
+
+  const likedCommentIds = likedCommentRows.map((r) => r.commentId);
+  const likedCommentDetails = likedCommentIds.length > 0
+    ? await db.select({ id: comments.id, content: comments.content, postId: comments.postId }).from(comments).where(inArray(comments.id, likedCommentIds))
+    : [];
+  const likedCommentDetailMap = new Map(likedCommentDetails.map((c) => [c.id, c]));
+
+  return {
+    posts: userPosts.map(normalizePostImages),
+    comments: userComments,
+    likedPosts: likedPostRows.map((r) => ({
+      postId: r.postId,
+      createdAt: r.createdAt,
+      title: likedPostTitleMap.get(r.postId) ?? null,
+    })),
+    likedComments: likedCommentRows.map((r) => ({
+      commentId: r.commentId,
+      createdAt: r.createdAt,
+      content: likedCommentDetailMap.get(r.commentId)?.content ?? null,
+      postId: likedCommentDetailMap.get(r.commentId)?.postId ?? null,
+    })),
+  };
 }
 
 export async function getUserById(id: number) {

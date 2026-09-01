@@ -24,7 +24,9 @@ export const users = mysqlTable("users", {
   avatarEmoji: varchar("avatarEmoji", { length: 8 }),
   /** 직접 업로드한 프로필 사진 URL. 설정되어 있으면 이모지보다 우선 표시된다. */
   avatarImageUrl: varchar("avatarImageUrl", { length: 1024 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  /** owner("조물주")는 OWNER_EMAIL 계정에게만 자동으로 부여되는 최상위 권한. 딱 한 명뿐이고
+   *  아무도(본인 포함) UI로 바꿀 수 없다 — 로그인할 때마다 이메일이 일치하는지로만 결정된다. */
+  role: mysqlEnum("role", ["user", "admin", "owner"]).default("user").notNull(),
   status: mysqlEnum("status", ["active", "blocked"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

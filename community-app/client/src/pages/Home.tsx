@@ -11,6 +11,7 @@ import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
 import { toast } from "sonner";
 import { toneClass } from "@/lib/tone";
+import { isAdminRole } from "@/lib/role";
 
 const FEATURES = [
   { title: "게시판", desc: "관심사에 맞는 게시판을 찾아 이야기를 나눠요" },
@@ -139,7 +140,7 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-4 min-w-0">
             <span className="text-sm text-muted-foreground truncate">{user?.name || "사용자"}</span>
-            {user?.role === 'admin' && (
+            {isAdminRole(user?.role) && (
               <a href="/admin" className="text-sm font-semibold accent-text hover:underline shrink-0">
                 관리자
               </a>
