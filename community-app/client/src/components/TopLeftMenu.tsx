@@ -26,7 +26,6 @@ import { useThemeColor, type ThemeColor } from "@/contexts/ThemeColorContext";
 import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
 import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
-import { toneClass } from "@/lib/tone";
 import Avatar from "@/components/Avatar";
 import { roleLabel } from "@/lib/role";
 
@@ -495,9 +494,15 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                         }}
                         className="w-full light-border p-3 flex items-center gap-3 text-left"
                       >
-                        <span className={`tone-badge ${toneClass(c.otherUserId)} h-10 w-10 text-sm`}>
-                          {(c.otherUserName || "?").charAt(0)}
-                        </span>
+                        <Avatar
+                          userId={c.otherUserId}
+                          isAnonymous={false}
+                          name={c.otherUserName}
+                          avatarEmoji={c.otherUserAvatarEmoji}
+                          avatarImageUrl={c.otherUserAvatarImageUrl}
+                          size="h-10 w-10"
+                          textSize="text-sm"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="font-bold truncate" style={{ color: "var(--text-strong)" }}>
                             {c.otherUserName || "익명"}

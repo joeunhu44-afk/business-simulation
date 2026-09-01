@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
-import { toneClass } from "@/lib/tone";
+import Avatar from "@/components/Avatar";
 export default function ChatList() {
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, navigate] = useLocation();
@@ -58,16 +58,26 @@ export default function ChatList() {
             </p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             {conversations.map((conv) => (
               <Link key={conv.id} href={`/chat/${conv.id}`}>
-                <Card className={`card-elevated p-4 flex items-center gap-3 cursor-pointer ${toneClass(conv.id)}`}>
-                  <span className="tone-badge h-11 w-11 text-base">
-                    {(conv.otherUserName || "?").charAt(0)}
-                  </span>
+                <Card
+                  className={`p-3 flex items-center gap-3 cursor-pointer rounded-2xl border-0 shadow-none hover:bg-secondary transition-colors ${
+                    conv.unreadCount > 0 ? "bg-secondary/60" : ""
+                  }`}
+                >
+                  <Avatar
+                    userId={conv.otherUserId}
+                    isAnonymous={false}
+                    name={conv.otherUserName}
+                    avatarEmoji={conv.otherUserAvatarEmoji}
+                    avatarImageUrl={conv.otherUserAvatarImageUrl}
+                    size="h-12 w-12"
+                    textSize="text-base"
+                  />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="font-semibold truncate">{conv.otherUserName}</p>
+                      <p className={`truncate ${conv.unreadCount > 0 ? "font-bold" : "font-semibold"}`}>{conv.otherUserName}</p>
                       {conv.lastMessageAt && (
                         <span className="text-xs text-muted-foreground shrink-0">
                           {formatDistanceToNow(new Date(conv.lastMessageAt), {
@@ -77,12 +87,12 @@ export default function ChatList() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground truncate">
+                    <p className={`text-sm truncate ${conv.unreadCount > 0 ? "text-foreground font-medium" : "text-muted-foreground"}`}>
                       {conv.lastMessage || "새 대화"}
                     </p>
                   </div>
                   {conv.unreadCount > 0 && (
-                    <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                    <span className="shrink-0 min-w-5 h-5 px-1.5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-semibold">
                       {conv.unreadCount}
                     </span>
                   )}
