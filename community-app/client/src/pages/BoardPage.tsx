@@ -12,6 +12,7 @@ import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import { toneClass } from "@/lib/tone";
 import Avatar from "@/components/Avatar";
+import BackButton from "@/components/BackButton";
 
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -64,6 +65,7 @@ export default function BoardPage() {
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
+            <BackButton />
             <HeaderMenuButton />
             <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
               커뮤니티

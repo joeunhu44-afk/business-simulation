@@ -12,6 +12,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Avatar from "@/components/Avatar";
+import BackButton from "@/components/BackButton";
 
 export default function SearchPage() {
   const [, navigate] = useLocation();
@@ -39,6 +40,7 @@ export default function SearchPage() {
       {/* Navigation */}
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center gap-2 py-4">
+          <BackButton />
           <HeaderMenuButton />
           <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
             커뮤니티

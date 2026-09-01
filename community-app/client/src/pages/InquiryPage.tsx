@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import BackButton from "@/components/BackButton";
 
 const CATEGORY_LABELS: Record<string, string> = {
   general: "일반 문의",
@@ -81,6 +82,7 @@ export default function InquiryPage() {
     <div className="min-h-screen bg-background">
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center gap-2 py-4">
+          <BackButton />
           <HeaderMenuButton />
           <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
             커뮤니티

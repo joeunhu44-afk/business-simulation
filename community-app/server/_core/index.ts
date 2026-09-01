@@ -9,6 +9,7 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { ENV } from "./env";
+import { runMigrations } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -30,6 +31,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 }
 
 async function startServer() {
+  // 배포 플랫폼이 package.json의 prestart 훅을 건너뛰는 커스텀 Start Command를
+  // 쓰더라도 마이그레이션이 항상 적용되도록, 앱 자체 부팅 과정에도 넣어둔다.
+  if (process.env.NODE_ENV === "production") {
+    await runMigrations();
+  }
+
   const app = express();
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads

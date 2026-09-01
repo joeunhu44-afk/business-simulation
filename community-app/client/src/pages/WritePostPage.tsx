@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
+import BackButton from "@/components/BackButton";
 import { toneClass } from "@/lib/tone";
 import ImagePicker from "@/components/ImagePicker";
 
@@ -88,6 +89,7 @@ export default function WritePostPage() {
       {/* Navigation */}
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center gap-2 py-4">
+          <BackButton />
           <HeaderMenuButton />
           <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
             커뮤니티

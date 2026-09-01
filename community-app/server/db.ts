@@ -1,5 +1,7 @@
 import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
+import { migrate } from "drizzle-orm/mysql2/migrator";
+import path from "node:path";
 import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
@@ -16,6 +18,26 @@ export async function getDb() {
     }
   }
   return _db;
+}
+
+/**
+ * 서버 부팅 시 대기 중인 마이그레이션을 직접 적용한다. package.json의 prestart
+ * 훅과 달리, 배포 플랫폼이 커스텀 Start Command로 pnpm/npm 스크립트 체인을
+ * 건너뛰어도(예: "node dist/index.js"를 직접 실행) 항상 실행된다.
+ */
+export async function runMigrations() {
+  const db = await getDb();
+  if (!db) {
+    console.warn("[Migrate] DATABASE_URL이 없어 마이그레이션을 건너뜁니다.");
+    return;
+  }
+  try {
+    await migrate(db, { migrationsFolder: path.resolve(process.cwd(), "drizzle") });
+    console.log("[Migrate] 마이그레이션 적용 완료");
+  } catch (error) {
+    console.error("[Migrate] 마이그레이션 적용 실패:", error);
+    throw error;
+  }
 }
 
 function isOwnerEmail(email: string | null | undefined): boolean {
