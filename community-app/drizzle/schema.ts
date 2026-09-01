@@ -124,7 +124,12 @@ export const postLikes = mysqlTable("postLikes", {
   postId: bigint("postId", { mode: "number" }).notNull(),
   userId: int("userId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  // 동시에 두 번 누르는 등의 레이스 컨디션으로 좋아요가 중복 저장되면
+  // likeCount가 실제 행 수와 어긋나 버튼이 안 눌리는 것처럼 보이는 버그로
+  // 이어진다. DB 레벨에서 아예 중복을 막는다.
+  uniqueLike: unique("postLikes_post_user_unique").on(table.postId, table.userId),
+}));
 
 export type PostLike = typeof postLikes.$inferSelect;
 export type InsertPostLike = typeof postLikes.$inferInsert;
@@ -137,7 +142,9 @@ export const commentLikes = mysqlTable("commentLikes", {
   commentId: bigint("commentId", { mode: "number" }).notNull(),
   userId: int("userId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
+}, (table) => ({
+  uniqueLike: unique("commentLikes_comment_user_unique").on(table.commentId, table.userId),
+}));
 
 export type CommentLike = typeof commentLikes.$inferSelect;
 export type InsertCommentLike = typeof commentLikes.$inferInsert;

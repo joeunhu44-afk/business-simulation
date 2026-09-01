@@ -377,17 +377,29 @@ export async function hasUserLikedPost(postId: number, userId: number) {
   return result.length > 0;
 }
 
+/** postLikes에 (postId, userId) 유니크 제약이 있어, 동시 클릭 등으로 두 번 들어와도
+ *  두 번째 insert는 중복 키 에러가 난다 — 그 경우는 이미 좋아요된 상태이므로 조용히 무시하고
+ *  카운트도 다시 올리지 않는다 (이미 첫 번째 호출에서 올라갔다). */
 export async function addPostLike(postId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(postLikes).values({ postId, userId });
+  try {
+    await db.insert(postLikes).values({ postId, userId });
+  } catch (error: any) {
+    if (error?.code === "ER_DUP_ENTRY" || error?.cause?.code === "ER_DUP_ENTRY") return;
+    throw error;
+  }
   await db.update(posts).set({ likeCount: sql`${posts.likeCount} + 1` }).where(eq(posts.id, postId));
 }
 
+/** 실제로 삭제된 행이 있을 때만 카운트를 내린다 — 동시 요청 등으로 이미 지워진 상태에서
+ *  또 호출되면 delete는 0행에 영향을 주지만, 그래도 카운트를 내리면 실제 좋아요 수보다
+ *  낮게 어긋나 버린다. */
 export async function removePostLike(postId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.delete(postLikes).where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+  const [result] = await db.delete(postLikes).where(and(eq(postLikes.postId, postId), eq(postLikes.userId, userId)));
+  if (result.affectedRows === 0) return;
   await db.update(posts).set({ likeCount: sql`${posts.likeCount} - 1` }).where(eq(posts.id, postId));
 }
 
@@ -403,14 +415,20 @@ export async function hasUserLikedComment(commentId: number, userId: number) {
 export async function addCommentLike(commentId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.insert(commentLikes).values({ commentId, userId });
+  try {
+    await db.insert(commentLikes).values({ commentId, userId });
+  } catch (error: any) {
+    if (error?.code === "ER_DUP_ENTRY" || error?.cause?.code === "ER_DUP_ENTRY") return;
+    throw error;
+  }
   await db.update(comments).set({ likeCount: sql`${comments.likeCount} + 1` }).where(eq(comments.id, commentId));
 }
 
 export async function removeCommentLike(commentId: number, userId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  await db.delete(commentLikes).where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)));
+  const [result] = await db.delete(commentLikes).where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)));
+  if (result.affectedRows === 0) return;
   await db.update(comments).set({ likeCount: sql`${comments.likeCount} - 1` }).where(eq(comments.id, commentId));
 }
 
