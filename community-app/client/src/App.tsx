@@ -20,6 +20,7 @@ import { ThemeColorProvider } from "./contexts/ThemeColorContext";
 import { MenuProvider } from "./contexts/MenuContext";
 import TopLeftMenu from "./components/TopLeftMenu";
 import AnimatedBackground from "./components/AnimatedBackground";
+import ScrollEdgeFade from "./components/ScrollEdgeFade";
 
 function Router() {
   return (
@@ -53,6 +54,7 @@ function App() {
               <AnimatedBackground />
               <Toaster />
               <Router />
+              <ScrollEdgeFade />
               {/* 메뉴 패널은 전역으로 마운트하되, 떠있는 버튼은 끄고 헤더 인라인 버튼(HeaderMenuButton)으로 여다 */}
               <TopLeftMenu showFloatingButton={false} />
             </TooltipProvider>
