@@ -1,10 +1,19 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import moonImg from "@/assets/planets/moon.png";
+import marsImg from "@/assets/planets/mars.png";
+import jupiterImg from "@/assets/planets/jupiter.png";
+import saturnImg from "@/assets/planets/saturn.png";
 
 /**
  * 홈 화면 전용 배경 장식 — 밝은 낮 하늘에 희미하게 비치는 행성들.
  * 전역 AnimatedBackground(단색 배경) 위, 실제 콘텐츠 아래에 겹쳐 그린다.
  * 다른 페이지에는 영향이 없도록 Home.tsx에서만 마운트한다.
+ *
+ * 행성 이미지는 NASA가 공개한 실제 행성 사진(태양계 합성 이미지)에서 잘라내
+ * 검은 우주 배경을 투명하게 처리한 PNG다 (client/src/assets/planets). "달" 슬롯은
+ * 태양계 사진 속 수성(크레이터로 덮인 회색 표면이 달과 매우 흡사) 사진을 사용했다 —
+ * 실제 달 표면 질감과 거의 동일해 보이는 결정적 라벨은 아니고 순수 장식용이다.
  *
  * - 위치("슬롯")는 페이지 전체 스크롤 높이에 대한 %로 정의되어 있어서,
  *   글이 늘어나 페이지가 길어지면 아래쪽 슬롯도 자연스럽게 스크롤해서 나타난다.
@@ -100,156 +109,22 @@ function shuffle<T>(list: T[]): T[] {
   return result;
 }
 
-/**
- * 각 행성은 SVG로 그린다: 구체는 radialGradient로 한쪽에서 빛을 받는 느낌(음영)을 주고,
- * 표면 무늬는 feTurbulence 필터로 자연스러운(기계적이지 않은) 얼룩/줄무늬를 만든다.
- * 인스턴스마다 고유한 id 접두사를 붙여 여러 개가 동시에 떠 있어도 gradient/filter가 서로 섞이지 않게 한다.
- */
-function PlanetVisual({ planet, sizeClass }: { planet: PlanetKey; sizeClass: string }) {
-  const uid = useId().replace(/[:]/g, "");
+const PLANET_IMAGES: Record<PlanetKey, string> = {
+  moon: moonImg,
+  mars: marsImg,
+  jupiter: jupiterImg,
+  saturn: saturnImg,
+};
 
-  switch (planet) {
-    case "moon": {
-      const base = `moonBase-${uid}`;
-      const noise = `moonNoise-${uid}`;
-      return (
-        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
-          <defs>
-            <radialGradient id={base} cx="35%" cy="32%" r="75%">
-              <stop offset="0%" stopColor="#fcfcfa" />
-              <stop offset="55%" stopColor="#d7d7d2" />
-              <stop offset="100%" stopColor="#a3a39d" />
-            </radialGradient>
-            <filter id={noise} x="-20%" y="-20%" width="140%" height="140%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves={3} seed={11} result="n" />
-              <feColorMatrix
-                in="n"
-                type="matrix"
-                values="0 0 0 0 0.32  0 0 0 0 0.32  0 0 0 0 0.3  0 0 0 1.1 -0.42"
-                result="tex"
-              />
-              <feComposite in="tex" in2="SourceGraphic" operator="in" />
-            </filter>
-          </defs>
-          <circle cx="50" cy="50" r="48" fill={`url(#${base})`} />
-          <circle cx="50" cy="50" r="48" filter={`url(#${noise})`} opacity={0.55} />
-          {/* 큰 크레이터 몇 개 — 테두리는 밝게, 안쪽은 그림자로 파인 느낌 */}
-          <circle cx="34" cy="66" r="7" fill="#00000022" />
-          <circle cx="33" cy="64" r="6.4" fill="#ffffff26" />
-          <circle cx="62" cy="28" r="5.5" fill="#00000022" />
-          <circle cx="61" cy="26.3" r="5" fill="#ffffff26" />
-          <circle cx="70" cy="60" r="4" fill="#00000020" />
-        </svg>
-      );
-    }
-    case "mars": {
-      const base = `marsBase-${uid}`;
-      const noise = `marsNoise-${uid}`;
-      return (
-        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
-          <defs>
-            <radialGradient id={base} cx="34%" cy="30%" r="78%">
-              <stop offset="0%" stopColor="#f0ad8c" />
-              <stop offset="55%" stopColor="#c96b34" />
-              <stop offset="100%" stopColor="#8a3f1a" />
-            </radialGradient>
-            <filter id={noise} x="-20%" y="-20%" width="140%" height="140%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves={3} seed={4} result="n" />
-              <feColorMatrix
-                in="n"
-                type="matrix"
-                values="0 0 0 0 0.32  0 0 0 0 0.14  0 0 0 0 0.06  0 0 0 1.1 -0.32"
-                result="tex"
-              />
-              <feComposite in="tex" in2="SourceGraphic" operator="in" />
-            </filter>
-          </defs>
-          <circle cx="50" cy="50" r="48" fill={`url(#${base})`} />
-          <circle cx="50" cy="50" r="48" filter={`url(#${noise})`} opacity={0.6} />
-        </svg>
-      );
-    }
-    case "jupiter": {
-      const base = `jupBase-${uid}`;
-      const bands = `jupBands-${uid}`;
-      return (
-        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
-          <defs>
-            <radialGradient id={base} cx="34%" cy="30%" r="78%">
-              <stop offset="0%" stopColor="#faeecb" />
-              <stop offset="55%" stopColor="#dcb583" />
-              <stop offset="100%" stopColor="#a97c4a" />
-            </radialGradient>
-            <filter id={bands} x="-20%" y="-20%" width="140%" height="140%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.012 0.24" numOctaves={2} seed={9} result="n" />
-              <feColorMatrix
-                in="n"
-                type="matrix"
-                values="0 0 0 0 0.33  0 0 0 0 0.2  0 0 0 0 0.09  0 0 0 1.4 -0.5"
-                result="tex"
-              />
-              <feComposite in="tex" in2="SourceGraphic" operator="in" />
-            </filter>
-          </defs>
-          <circle cx="50" cy="50" r="48" fill={`url(#${base})`} />
-          <circle cx="50" cy="50" r="48" filter={`url(#${bands})`} opacity={0.6} />
-          <ellipse cx="66" cy="58" rx="7" ry="4.2" fill="#b5502f" opacity={0.55} />
-        </svg>
-      );
-    }
-    case "saturn": {
-      const base = `satBase-${uid}`;
-      const ring = `satRing-${uid}`;
-      const clip = `satClip-${uid}`;
-      return (
-        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
-          <defs>
-            <radialGradient id={base} cx="34%" cy="30%" r="78%">
-              <stop offset="0%" stopColor="#faf1d6" />
-              <stop offset="55%" stopColor="#e0c48c" />
-              <stop offset="100%" stopColor="#b48c50" />
-            </radialGradient>
-            <linearGradient id={ring} x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#cdb27f" stopOpacity={0.1} />
-              <stop offset="15%" stopColor="#cdb27f" stopOpacity={0.85} />
-              <stop offset="50%" stopColor="#e8d3a3" stopOpacity={0.92} />
-              <stop offset="85%" stopColor="#cdb27f" stopOpacity={0.85} />
-              <stop offset="100%" stopColor="#cdb27f" stopOpacity={0.1} />
-            </linearGradient>
-            <clipPath id={clip}>
-              <rect x="0" y="50" width="100" height="50" />
-            </clipPath>
-          </defs>
-          {/* 고리 뒷부분 — 몸체 뒤로 지나가는 절반 */}
-          <ellipse
-            cx="50"
-            cy="50"
-            rx="46"
-            ry="12"
-            fill="none"
-            stroke={`url(#${ring})`}
-            strokeWidth={9}
-            transform="rotate(-14 50 50)"
-          />
-          {/* 몸체 */}
-          <circle cx="50" cy="50" r="30" fill={`url(#${base})`} />
-          {/* 고리 앞부분 — 몸체 아래쪽을 가로지르는 절반만 보이게 클립 */}
-          <g clipPath={`url(#${clip})`}>
-            <ellipse
-              cx="50"
-              cy="50"
-              rx="46"
-              ry="12"
-              fill="none"
-              stroke={`url(#${ring})`}
-              strokeWidth={9}
-              transform="rotate(-14 50 50)"
-            />
-          </g>
-        </svg>
-      );
-    }
-  }
+function PlanetVisual({ planet, sizeClass }: { planet: PlanetKey; sizeClass: string }) {
+  return (
+    <img
+      src={PLANET_IMAGES[planet]}
+      alt=""
+      draggable={false}
+      className={`${sizeClass} object-contain select-none`}
+    />
+  );
 }
 
 function PlanetLayer({
