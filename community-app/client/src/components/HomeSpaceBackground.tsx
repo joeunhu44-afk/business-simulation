@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
 
 /**
@@ -91,36 +91,6 @@ const SLOTS: SlotConfig[] = [
 
 const PLANET_KEYS: PlanetKey[] = ["moon", "mars", "saturn", "jupiter"];
 
-// blur는 아주 약하게만 걸리므로(가장자리만 부드럽게), 크레이터/줄무늬 등
-// 표면 디테일은 흐려져도 형태가 남도록 스팟 크기와 대비를 넉넉하게 잡는다.
-const MOON_GRADIENT = [
-  "radial-gradient(circle at 28% 62%, rgba(120,120,120,0.75) 0%, rgba(120,120,120,0) 16%)",
-  "radial-gradient(circle at 62% 24%, rgba(110,110,110,0.7) 0%, rgba(110,110,110,0) 19%)",
-  "radial-gradient(circle at 72% 60%, rgba(130,130,128,0.65) 0%, rgba(130,130,128,0) 14%)",
-  "radial-gradient(circle at 40% 84%, rgba(120,120,118,0.6) 0%, rgba(120,120,118,0) 13%)",
-  "radial-gradient(circle at 18% 26%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 24%)",
-  "radial-gradient(circle at 40% 38%, #f6f6f3 0%, #d5d5d0 55%, #b9b9b3 100%)",
-].join(", ");
-
-const MARS_GRADIENT = [
-  "radial-gradient(circle at 64% 56%, rgba(95,35,15,0.6) 0%, rgba(95,35,15,0) 17%)",
-  "radial-gradient(circle at 28% 66%, rgba(115,45,20,0.55) 0%, rgba(115,45,20,0) 15%)",
-  "radial-gradient(circle at 55% 84%, rgba(105,40,18,0.5) 0%, rgba(105,40,18,0) 12%)",
-  "radial-gradient(ellipse 60% 16% at 42% 38%, rgba(140,55,25,0.55) 0%, rgba(140,55,25,0) 75%)",
-  "radial-gradient(ellipse 50% 12% at 60% 68%, rgba(130,50,22,0.45) 0%, rgba(130,50,22,0) 75%)",
-  "radial-gradient(circle at 32% 28%, #eea082 0%, #c2601f 55%, #8c3d18 100%)",
-].join(", ");
-
-const JUPITER_GRADIENT = [
-  "radial-gradient(circle at 32% 26%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 34%)",
-  "repeating-linear-gradient(0deg, rgba(100,60,34,0.5) 0px, rgba(100,60,34,0.5) 7px, transparent 7px, transparent 16px, rgba(196,146,100,0.4) 16px, rgba(196,146,100,0.4) 23px, transparent 23px, transparent 34px)",
-  "radial-gradient(circle at 36% 34%, #f2ddb9 0%, #d3ac78 55%, #a97c4a 100%)",
-].join(", ");
-
-const SATURN_RING_GRADIENT =
-  "radial-gradient(ellipse at center, transparent 48%, rgba(206,184,132,0.85) 55%, rgba(206,184,132,0.85) 78%, transparent 84%)";
-const SATURN_BODY_GRADIENT = "radial-gradient(circle at 33% 30%, #f7e9c8 0%, #ddb97e 55%, #b48c50 100%)";
-
 function shuffle<T>(list: T[]): T[] {
   const result = [...list];
   for (let i = result.length - 1; i > 0; i--) {
@@ -130,28 +100,155 @@ function shuffle<T>(list: T[]): T[] {
   return result;
 }
 
+/**
+ * 각 행성은 SVG로 그린다: 구체는 radialGradient로 한쪽에서 빛을 받는 느낌(음영)을 주고,
+ * 표면 무늬는 feTurbulence 필터로 자연스러운(기계적이지 않은) 얼룩/줄무늬를 만든다.
+ * 인스턴스마다 고유한 id 접두사를 붙여 여러 개가 동시에 떠 있어도 gradient/filter가 서로 섞이지 않게 한다.
+ */
 function PlanetVisual({ planet, sizeClass }: { planet: PlanetKey; sizeClass: string }) {
+  const uid = useId().replace(/[:]/g, "");
+
   switch (planet) {
-    case "moon":
-      return <div className={`rounded-full ${sizeClass}`} style={{ background: MOON_GRADIENT }} />;
-    case "mars":
-      return <div className={`rounded-full ${sizeClass}`} style={{ background: MARS_GRADIENT }} />;
-    case "jupiter":
-      return <div className={`rounded-full ${sizeClass}`} style={{ background: JUPITER_GRADIENT }} />;
-    case "saturn":
+    case "moon": {
+      const base = `moonBase-${uid}`;
+      const noise = `moonNoise-${uid}`;
       return (
-        <div className={`relative ${sizeClass}`}>
-          {/* 살짝 기울어진 얇은 고리 — 몸체 뒤에서 앞뒤로 감싸는 느낌만 흐릿하게 낸다 */}
-          <div
-            className="absolute top-1/2 left-1/2 w-full h-[34%] rounded-full"
-            style={{ transform: "translate(-50%, -50%) rotate(-16deg)", background: SATURN_RING_GRADIENT }}
-          />
-          <div
-            className="absolute top-1/2 left-1/2 w-[62%] h-[62%] rounded-full"
-            style={{ transform: "translate(-50%, -50%)", background: SATURN_BODY_GRADIENT }}
-          />
-        </div>
+        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
+          <defs>
+            <radialGradient id={base} cx="35%" cy="32%" r="75%">
+              <stop offset="0%" stopColor="#fcfcfa" />
+              <stop offset="55%" stopColor="#d7d7d2" />
+              <stop offset="100%" stopColor="#a3a39d" />
+            </radialGradient>
+            <filter id={noise} x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.09" numOctaves={3} seed={11} result="n" />
+              <feColorMatrix
+                in="n"
+                type="matrix"
+                values="0 0 0 0 0.32  0 0 0 0 0.32  0 0 0 0 0.3  0 0 0 1.1 -0.42"
+                result="tex"
+              />
+              <feComposite in="tex" in2="SourceGraphic" operator="in" />
+            </filter>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill={`url(#${base})`} />
+          <circle cx="50" cy="50" r="48" filter={`url(#${noise})`} opacity={0.55} />
+          {/* 큰 크레이터 몇 개 — 테두리는 밝게, 안쪽은 그림자로 파인 느낌 */}
+          <circle cx="34" cy="66" r="7" fill="#00000022" />
+          <circle cx="33" cy="64" r="6.4" fill="#ffffff26" />
+          <circle cx="62" cy="28" r="5.5" fill="#00000022" />
+          <circle cx="61" cy="26.3" r="5" fill="#ffffff26" />
+          <circle cx="70" cy="60" r="4" fill="#00000020" />
+        </svg>
       );
+    }
+    case "mars": {
+      const base = `marsBase-${uid}`;
+      const noise = `marsNoise-${uid}`;
+      return (
+        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
+          <defs>
+            <radialGradient id={base} cx="34%" cy="30%" r="78%">
+              <stop offset="0%" stopColor="#f0ad8c" />
+              <stop offset="55%" stopColor="#c96b34" />
+              <stop offset="100%" stopColor="#8a3f1a" />
+            </radialGradient>
+            <filter id={noise} x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves={3} seed={4} result="n" />
+              <feColorMatrix
+                in="n"
+                type="matrix"
+                values="0 0 0 0 0.32  0 0 0 0 0.14  0 0 0 0 0.06  0 0 0 1.1 -0.32"
+                result="tex"
+              />
+              <feComposite in="tex" in2="SourceGraphic" operator="in" />
+            </filter>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill={`url(#${base})`} />
+          <circle cx="50" cy="50" r="48" filter={`url(#${noise})`} opacity={0.6} />
+        </svg>
+      );
+    }
+    case "jupiter": {
+      const base = `jupBase-${uid}`;
+      const bands = `jupBands-${uid}`;
+      return (
+        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
+          <defs>
+            <radialGradient id={base} cx="34%" cy="30%" r="78%">
+              <stop offset="0%" stopColor="#faeecb" />
+              <stop offset="55%" stopColor="#dcb583" />
+              <stop offset="100%" stopColor="#a97c4a" />
+            </radialGradient>
+            <filter id={bands} x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.012 0.24" numOctaves={2} seed={9} result="n" />
+              <feColorMatrix
+                in="n"
+                type="matrix"
+                values="0 0 0 0 0.33  0 0 0 0 0.2  0 0 0 0 0.09  0 0 0 1.4 -0.5"
+                result="tex"
+              />
+              <feComposite in="tex" in2="SourceGraphic" operator="in" />
+            </filter>
+          </defs>
+          <circle cx="50" cy="50" r="48" fill={`url(#${base})`} />
+          <circle cx="50" cy="50" r="48" filter={`url(#${bands})`} opacity={0.6} />
+          <ellipse cx="66" cy="58" rx="7" ry="4.2" fill="#b5502f" opacity={0.55} />
+        </svg>
+      );
+    }
+    case "saturn": {
+      const base = `satBase-${uid}`;
+      const ring = `satRing-${uid}`;
+      const clip = `satClip-${uid}`;
+      return (
+        <svg viewBox="0 0 100 100" className={sizeClass} style={{ overflow: "visible" }}>
+          <defs>
+            <radialGradient id={base} cx="34%" cy="30%" r="78%">
+              <stop offset="0%" stopColor="#faf1d6" />
+              <stop offset="55%" stopColor="#e0c48c" />
+              <stop offset="100%" stopColor="#b48c50" />
+            </radialGradient>
+            <linearGradient id={ring} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="#cdb27f" stopOpacity={0.1} />
+              <stop offset="15%" stopColor="#cdb27f" stopOpacity={0.85} />
+              <stop offset="50%" stopColor="#e8d3a3" stopOpacity={0.92} />
+              <stop offset="85%" stopColor="#cdb27f" stopOpacity={0.85} />
+              <stop offset="100%" stopColor="#cdb27f" stopOpacity={0.1} />
+            </linearGradient>
+            <clipPath id={clip}>
+              <rect x="0" y="50" width="100" height="50" />
+            </clipPath>
+          </defs>
+          {/* 고리 뒷부분 — 몸체 뒤로 지나가는 절반 */}
+          <ellipse
+            cx="50"
+            cy="50"
+            rx="46"
+            ry="12"
+            fill="none"
+            stroke={`url(#${ring})`}
+            strokeWidth={9}
+            transform="rotate(-14 50 50)"
+          />
+          {/* 몸체 */}
+          <circle cx="50" cy="50" r="30" fill={`url(#${base})`} />
+          {/* 고리 앞부분 — 몸체 아래쪽을 가로지르는 절반만 보이게 클립 */}
+          <g clipPath={`url(#${clip})`}>
+            <ellipse
+              cx="50"
+              cy="50"
+              rx="46"
+              ry="12"
+              fill="none"
+              stroke={`url(#${ring})`}
+              strokeWidth={9}
+              transform="rotate(-14 50 50)"
+            />
+          </g>
+        </svg>
+      );
+    }
   }
 }
 
