@@ -45,7 +45,7 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen">
+      <div className="min-h-screen relative">
         <HomeSpaceBackground />
         <div className="p-3 sm:p-5">
           <div className="hero-panel min-h-[560px] md:min-h-[640px] flex flex-col">
@@ -129,7 +129,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
       <HomeSpaceBackground />
       {/* Navigation */}
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
