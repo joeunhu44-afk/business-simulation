@@ -702,6 +702,8 @@ export const appRouter = router({
         return {
           otherUserId: otherId,
           otherUserName: other?.name ?? '알 수 없음',
+          otherUserAvatarEmoji: other?.avatarEmoji ?? null,
+          otherUserAvatarImageUrl: other?.avatarImageUrl ?? null,
           messages: list,
         };
       }),

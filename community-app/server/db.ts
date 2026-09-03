@@ -749,7 +749,7 @@ export async function getConversationsForUser(userId: number) {
   for (const conv of rows) {
     const otherId = conv.userAId === userId ? conv.userBId : conv.userAId;
     const other = await db
-      .select({ id: users.id, name: users.name })
+      .select({ id: users.id, name: users.name, avatarEmoji: users.avatarEmoji, avatarImageUrl: users.avatarImageUrl })
       .from(users)
       .where(eq(users.id, otherId))
       .limit(1);
@@ -768,6 +768,8 @@ export async function getConversationsForUser(userId: number) {
       id: conv.id,
       otherUserId: otherId,
       otherUserName: other[0]?.name ?? "알 수 없음",
+      otherUserAvatarEmoji: other[0]?.avatarEmoji ?? null,
+      otherUserAvatarImageUrl: other[0]?.avatarImageUrl ?? null,
       lastMessage: conv.lastMessage,
       lastMessageAt: conv.lastMessageAt,
       unreadCount: Number(unread[0]?.c ?? 0),
