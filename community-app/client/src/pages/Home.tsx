@@ -3,12 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed } from "lucide-react";
 import { getLoginUrl } from "@/const";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
+import HomeSpaceBackground from "@/components/HomeSpaceBackground";
 import { toneClass } from "@/lib/tone";
 import { isAdminRole } from "@/lib/role";
 
@@ -44,7 +45,8 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen relative">
+        <HomeSpaceBackground />
         <div className="p-3 sm:p-5">
           <div className="hero-panel min-h-[560px] md:min-h-[640px] flex flex-col">
             {/* Glass floating nav */}
@@ -127,7 +129,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen relative">
+      <HomeSpaceBackground />
       {/* Navigation */}
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center justify-between gap-3 py-4">
@@ -170,7 +173,7 @@ export default function Home() {
                     <Reveal key={board.id} delay={Math.min(idx, 5) * 0.03} duration={0.32}>
                       <div className={`card-elevated board-card ${toneClass(board.id)} overflow-hidden`}>
                         <div className="flex flex-col sm:flex-row">
-                          <a
+                          <Link
                             href={`/board/${board.slug}`}
                             className="flex sm:w-56 shrink-0 items-start gap-3 p-5 hover:bg-secondary/50 transition-colors"
                           >
@@ -181,7 +184,7 @@ export default function Home() {
                               <h3 className="font-semibold text-base leading-tight">{board.name}</h3>
                               <p className="text-sm text-muted-foreground leading-relaxed mt-1">{board.description}</p>
                             </div>
-                          </a>
+                          </Link>
                           <div className="hidden sm:block w-px shrink-0 self-stretch my-4" style={{ background: "var(--border-color)" }} />
                           <div className="block sm:hidden h-px w-full" style={{ background: "var(--border-color)" }} />
                           <div className="flex-1 min-w-0 p-5">
@@ -219,13 +222,13 @@ function QuickLinksPanel() {
         바로가기
       </h3>
       <div className="space-y-1">
-        <a
+        <Link
           href="/inquiries"
           className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
         >
           <MessageSquareText className="h-4 w-4 accent-text shrink-0" />
           문의하기
-        </a>
+        </Link>
         <a
           href="https://school.cbe.go.kr/shinheung-h/M010304"
           target="_blank"
@@ -267,7 +270,7 @@ function BoardPostList({ boardId }: { boardId: number }) {
   return (
     <div className="space-y-1.5">
       {posts.map((post) => (
-        <a
+        <Link
           key={post.id}
           href={`/post/${post.id}`}
           className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 -mx-2 hover:bg-secondary transition-colors"
@@ -283,7 +286,7 @@ function BoardPostList({ boardId }: { boardId: number }) {
               {post.commentCount}
             </span>
           </span>
-        </a>
+        </Link>
       ))}
     </div>
   );
