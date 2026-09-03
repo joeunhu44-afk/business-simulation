@@ -31,10 +31,12 @@ type PlanetKey = "moon" | "mars" | "saturn" | "jupiter";
 interface SlotConfig {
   id: string;
   verticalPercent: number; // 페이지 전체 스크롤 높이 기준 %
-  // 좌/우 여백 배치: 휴대폰(기본) 살짝 걸치기, sm:(태블릿)/lg:(데스크톱)는 그 크기에 맞춘 여백
+  // 좌/우 여백 배치: 휴대폰(기본) 살짝 걸치기, sm:(태블릿~노트북)/2xl:(큰 데스크톱)는 그 크기에 맞춘 여백
   sideClass: string;
   // 전체 바운딩 박스 크기(토성은 고리 포함): 휴대폰은 화면을 거의 채우고,
-  // 태블릿(sm:)은 화면의 절반, 데스크톱(lg:)은 고정 픽셀로 고정한다.
+  // sm:(640px~) ~ 2xl: 직전(1536px 미만)까지는 화면의 절반 — 실제 태블릿은
+  // CSS 너비가 1024~1366px까지도 흔해서 이 구간을 넓게 잡아야 "절반"으로 보인다.
+  // 2xl:(1536px~, 큰 데스크톱 모니터)에서만 고정 픽셀로 캡을 씌운다.
   sizeClass: string;
   opacity: number;
   blurClass: string;
@@ -52,9 +54,9 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-a",
     verticalPercent: 3,
-    sideClass: "-right-[24vw] sm:right-[1%] lg:right-[2%]",
-    sizeClass: "w-[92vw] h-[92vw] sm:w-[50vw] sm:h-[50vw] lg:w-[460px] lg:h-[460px]",
-    opacity: 0.36,
+    sideClass: "-right-[24vw] sm:right-[1%] 2xl:right-[2%]",
+    sizeClass: "w-[92vw] h-[92vw] sm:w-[50vw] sm:h-[50vw] 2xl:w-[460px] 2xl:h-[460px]",
+    opacity: 0.48,
     blurClass: "blur-[3px]",
     floatX: 12,
     floatY: 18,
@@ -65,9 +67,9 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-b",
     verticalPercent: 19,
-    sideClass: "-left-[20vw] sm:-left-[6%] lg:-left-[4%]",
-    sizeClass: "w-[80vw] h-[80vw] sm:w-[44vw] sm:h-[44vw] lg:w-[400px] lg:h-[400px]",
-    opacity: 0.32,
+    sideClass: "-left-[20vw] sm:-left-[6%] 2xl:-left-[4%]",
+    sizeClass: "w-[80vw] h-[80vw] sm:w-[44vw] sm:h-[44vw] 2xl:w-[400px] 2xl:h-[400px]",
+    opacity: 0.42,
     blurClass: "blur-[3px]",
     floatX: -10,
     floatY: 14,
@@ -78,9 +80,9 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-c",
     verticalPercent: 35,
-    sideClass: "-right-[17vw] sm:right-[4%] lg:right-[6%]",
-    sizeClass: "w-[70vw] h-[70vw] sm:w-[38vw] sm:h-[38vw] lg:w-[340px] lg:h-[340px]",
-    opacity: 0.29,
+    sideClass: "-right-[17vw] sm:right-[4%] 2xl:right-[6%]",
+    sizeClass: "w-[70vw] h-[70vw] sm:w-[38vw] sm:h-[38vw] 2xl:w-[340px] 2xl:h-[340px]",
+    opacity: 0.38,
     blurClass: "blur-[2px]",
     floatX: 9,
     floatY: -11,
@@ -91,9 +93,9 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-d",
     verticalPercent: 53,
-    sideClass: "-left-[14vw] sm:left-[2%] lg:left-[4%]",
-    sizeClass: "w-[60vw] h-[60vw] sm:w-[33vw] sm:h-[33vw] lg:w-[280px] lg:h-[280px]",
-    opacity: 0.26,
+    sideClass: "-left-[14vw] sm:left-[2%] 2xl:left-[4%]",
+    sizeClass: "w-[60vw] h-[60vw] sm:w-[33vw] sm:h-[33vw] 2xl:w-[280px] 2xl:h-[280px]",
+    opacity: 0.34,
     blurClass: "blur-[2px]",
     floatX: -8,
     floatY: 10,
@@ -104,9 +106,9 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-e",
     verticalPercent: 71,
-    sideClass: "-right-[11vw] sm:right-[8%] lg:right-[10%]",
-    sizeClass: "w-[50vw] h-[50vw] sm:w-[28vw] sm:h-[28vw] lg:w-[220px] lg:h-[220px]",
-    opacity: 0.22,
+    sideClass: "-right-[11vw] sm:right-[8%] 2xl:right-[10%]",
+    sizeClass: "w-[50vw] h-[50vw] sm:w-[28vw] sm:h-[28vw] 2xl:w-[220px] 2xl:h-[220px]",
+    opacity: 0.3,
     blurClass: "blur-[2px]",
     floatX: 6,
     floatY: -8,
@@ -117,9 +119,9 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-f",
     verticalPercent: 88,
-    sideClass: "-left-[9vw] sm:left-[6%] lg:left-[8%]",
-    sizeClass: "w-[42vw] h-[42vw] sm:w-[22vw] sm:h-[22vw] lg:w-[170px] lg:h-[170px]",
-    opacity: 0.18,
+    sideClass: "-left-[9vw] sm:left-[6%] 2xl:left-[8%]",
+    sizeClass: "w-[42vw] h-[42vw] sm:w-[22vw] sm:h-[22vw] 2xl:w-[170px] 2xl:h-[170px]",
+    opacity: 0.26,
     blurClass: "blur-[2px]",
     floatX: -5,
     floatY: 7,
