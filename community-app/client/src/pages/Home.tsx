@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
+import HomeSpaceBackground from "@/components/HomeSpaceBackground";
 import { toneClass } from "@/lib/tone";
 import { isAdminRole } from "@/lib/role";
 
@@ -44,7 +45,8 @@ export default function Home() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen">
+        <HomeSpaceBackground />
         <div className="p-3 sm:p-5">
           <div className="hero-panel min-h-[560px] md:min-h-[640px] flex flex-col">
             {/* Glass floating nav */}
@@ -127,7 +129,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
+      <HomeSpaceBackground />
       {/* Navigation */}
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
         <div className="container flex items-center justify-between gap-3 py-4">
