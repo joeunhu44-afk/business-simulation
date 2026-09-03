@@ -31,8 +31,11 @@ type PlanetKey = "moon" | "mars" | "saturn" | "jupiter";
 interface SlotConfig {
   id: string;
   verticalPercent: number; // 페이지 전체 스크롤 높이 기준 %
-  sideClass: string; // 좌/우 여백 배치 (모바일 살짝 걸치기 + sm: 이상 안쪽으로)
-  sizeClass: string; // 전체 바운딩 박스 크기 (토성은 고리 포함)
+  // 좌/우 여백 배치: 휴대폰(기본) 살짝 걸치기, sm:(태블릿)/lg:(데스크톱)는 그 크기에 맞춘 여백
+  sideClass: string;
+  // 전체 바운딩 박스 크기(토성은 고리 포함): 휴대폰은 화면을 거의 채우고,
+  // 태블릿(sm:)은 화면의 절반, 데스크톱(lg:)은 고정 픽셀로 고정한다.
+  sizeClass: string;
   opacity: number;
   blurClass: string;
   floatX: number;
@@ -44,58 +47,85 @@ interface SlotConfig {
 
 const BASE_DRIFT = 80; // px — 슬롯의 parallaxSpeed가 이 기준값에 곱해져 스크롤 추가 이동량을 만든다
 
+// 슬롯이 많을수록(=세로 간격이 촘촘할수록) 스크롤할 때 행성이 더 자주 등장한다.
 const SLOTS: SlotConfig[] = [
   {
     id: "slot-a",
-    verticalPercent: 4,
-    sideClass: "-right-[18vw] sm:right-[2%]",
-    sizeClass: "w-[64vw] h-[64vw] sm:w-[420px] sm:h-[420px]",
-    opacity: 0.34,
+    verticalPercent: 3,
+    sideClass: "-right-[24vw] sm:right-[1%] lg:right-[2%]",
+    sizeClass: "w-[92vw] h-[92vw] sm:w-[50vw] sm:h-[50vw] lg:w-[460px] lg:h-[460px]",
+    opacity: 0.36,
     blurClass: "blur-[3px]",
     floatX: 12,
     floatY: 18,
     floatDuration: 26,
     floatDelay: 0,
-    parallaxSpeed: 1.5,
+    parallaxSpeed: 1.6,
   },
   {
     id: "slot-b",
-    verticalPercent: 34,
-    sideClass: "-left-[16vw] sm:-left-[4%]",
-    sizeClass: "w-[54vw] h-[54vw] sm:w-[360px] sm:h-[360px]",
-    opacity: 0.3,
+    verticalPercent: 19,
+    sideClass: "-left-[20vw] sm:-left-[6%] lg:-left-[4%]",
+    sizeClass: "w-[80vw] h-[80vw] sm:w-[44vw] sm:h-[44vw] lg:w-[400px] lg:h-[400px]",
+    opacity: 0.32,
     blurClass: "blur-[3px]",
     floatX: -10,
     floatY: 14,
-    floatDuration: 32,
+    floatDuration: 30,
     floatDelay: 2,
-    parallaxSpeed: 1.05,
+    parallaxSpeed: 1.25,
   },
   {
     id: "slot-c",
-    verticalPercent: 64,
-    sideClass: "-right-[14vw] sm:right-[6%]",
-    sizeClass: "w-[46vw] h-[46vw] sm:w-[300px] sm:h-[300px]",
-    opacity: 0.26,
+    verticalPercent: 35,
+    sideClass: "-right-[17vw] sm:right-[4%] lg:right-[6%]",
+    sizeClass: "w-[70vw] h-[70vw] sm:w-[38vw] sm:h-[38vw] lg:w-[340px] lg:h-[340px]",
+    opacity: 0.29,
     blurClass: "blur-[2px]",
-    floatX: 8,
-    floatY: -12,
-    floatDuration: 22,
+    floatX: 9,
+    floatY: -11,
+    floatDuration: 24,
     floatDelay: 4,
-    parallaxSpeed: 0.7,
+    parallaxSpeed: 0.95,
   },
   {
     id: "slot-d",
-    verticalPercent: 90,
-    sideClass: "-left-[13vw] sm:left-[4%]",
-    sizeClass: "w-[38vw] h-[38vw] sm:w-[240px] sm:h-[240px]",
+    verticalPercent: 53,
+    sideClass: "-left-[14vw] sm:left-[2%] lg:left-[4%]",
+    sizeClass: "w-[60vw] h-[60vw] sm:w-[33vw] sm:h-[33vw] lg:w-[280px] lg:h-[280px]",
+    opacity: 0.26,
+    blurClass: "blur-[2px]",
+    floatX: -8,
+    floatY: 10,
+    floatDuration: 28,
+    floatDelay: 6,
+    parallaxSpeed: 0.7,
+  },
+  {
+    id: "slot-e",
+    verticalPercent: 71,
+    sideClass: "-right-[11vw] sm:right-[8%] lg:right-[10%]",
+    sizeClass: "w-[50vw] h-[50vw] sm:w-[28vw] sm:h-[28vw] lg:w-[220px] lg:h-[220px]",
     opacity: 0.22,
     blurClass: "blur-[2px]",
-    floatX: -7,
-    floatY: 11,
+    floatX: 6,
+    floatY: -8,
     floatDuration: 20,
-    floatDelay: 6,
-    parallaxSpeed: 0.45,
+    floatDelay: 8,
+    parallaxSpeed: 0.5,
+  },
+  {
+    id: "slot-f",
+    verticalPercent: 88,
+    sideClass: "-left-[9vw] sm:left-[6%] lg:left-[8%]",
+    sizeClass: "w-[42vw] h-[42vw] sm:w-[22vw] sm:h-[22vw] lg:w-[170px] lg:h-[170px]",
+    opacity: 0.18,
+    blurClass: "blur-[2px]",
+    floatX: -5,
+    floatY: 7,
+    floatDuration: 18,
+    floatDelay: 10,
+    parallaxSpeed: 0.35,
   },
 ];
 
