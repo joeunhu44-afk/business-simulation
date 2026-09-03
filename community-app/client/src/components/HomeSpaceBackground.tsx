@@ -17,8 +17,12 @@ import saturnImg from "@/assets/planets/saturn.png";
  *
  * - 위치("슬롯")는 페이지 전체 스크롤 높이에 대한 %로 정의되어 있어서,
  *   글이 늘어나 페이지가 길어지면 아래쪽 슬롯도 자연스럽게 스크롤해서 나타난다.
+ * - 슬롯 간 세로 간격을 넉넉히 벌려서, 스크롤할 때 한 번에 하나의 행성만
+ *   화면에 크게 들어오는 느낌을 준다.
  * - 어떤 슬롯에 어떤 행성(달/화성/토성/목성)이 들어갈지는 마운트(새로고침) 시
- *   한 번만 무작위로 섞인다. 슬롯 자체의 크기/속도/불투명도는 고정이라
+ *   한 번만 무작위로 섞인다 — SLOTS는 항상 위→아래 순서로 정의돼 있고 섞인
+ *   결과를 그 순서 그대로 배정하므로, 스크롤을 내리며 만나는 행성의 순서
+ *   자체가 새로고침마다 랜덤해진다. 슬롯 자체의 크기/속도/불투명도는 고정이라
  *   섞여도 "가까운 슬롯=크고 빠름, 먼 슬롯=작고 느림" 규칙은 유지된다.
  */
 
@@ -36,7 +40,6 @@ interface SlotConfig {
   floatDuration: number;
   floatDelay: number;
   parallaxSpeed: number; // 1보다 크면 더 빠르게(가까운 느낌), 작으면 더 느리게(먼 느낌)
-  hideOnMobile?: boolean;
 }
 
 const BASE_DRIFT = 80; // px — 슬롯의 parallaxSpeed가 이 기준값에 곱해져 스크롤 추가 이동량을 만든다
@@ -44,57 +47,55 @@ const BASE_DRIFT = 80; // px — 슬롯의 parallaxSpeed가 이 기준값에 곱
 const SLOTS: SlotConfig[] = [
   {
     id: "slot-a",
-    verticalPercent: 3,
-    sideClass: "-right-16 sm:right-[3%]",
-    sizeClass: "w-[190px] h-[190px] sm:w-[300px] sm:h-[300px]",
-    opacity: 0.4,
+    verticalPercent: 4,
+    sideClass: "-right-[18vw] sm:right-[2%]",
+    sizeClass: "w-[64vw] h-[64vw] sm:w-[420px] sm:h-[420px]",
+    opacity: 0.34,
     blurClass: "blur-[3px]",
-    floatX: 10,
-    floatY: 16,
+    floatX: 12,
+    floatY: 18,
     floatDuration: 26,
     floatDelay: 0,
     parallaxSpeed: 1.5,
   },
   {
     id: "slot-b",
-    verticalPercent: 26,
-    sideClass: "-left-14 sm:-left-6",
-    sizeClass: "w-[140px] h-[140px] sm:w-[230px] sm:h-[230px]",
-    opacity: 0.34,
+    verticalPercent: 34,
+    sideClass: "-left-[16vw] sm:-left-[4%]",
+    sizeClass: "w-[54vw] h-[54vw] sm:w-[360px] sm:h-[360px]",
+    opacity: 0.3,
     blurClass: "blur-[3px]",
-    floatX: -8,
-    floatY: 12,
+    floatX: -10,
+    floatY: 14,
     floatDuration: 32,
     floatDelay: 2,
     parallaxSpeed: 1.05,
   },
   {
     id: "slot-c",
-    verticalPercent: 56,
-    sideClass: "-right-10 sm:right-[10%]",
-    sizeClass: "w-[110px] h-[110px] sm:w-[190px] sm:h-[190px]",
-    opacity: 0.28,
+    verticalPercent: 64,
+    sideClass: "-right-[14vw] sm:right-[6%]",
+    sizeClass: "w-[46vw] h-[46vw] sm:w-[300px] sm:h-[300px]",
+    opacity: 0.26,
     blurClass: "blur-[2px]",
-    floatX: 7,
-    floatY: -10,
+    floatX: 8,
+    floatY: -12,
     floatDuration: 22,
     floatDelay: 4,
     parallaxSpeed: 0.7,
-    hideOnMobile: true,
   },
   {
     id: "slot-d",
-    verticalPercent: 84,
-    sideClass: "-left-10 sm:-left-4",
-    sizeClass: "w-[90px] h-[90px] sm:w-[160px] sm:h-[160px]",
+    verticalPercent: 90,
+    sideClass: "-left-[13vw] sm:left-[4%]",
+    sizeClass: "w-[38vw] h-[38vw] sm:w-[240px] sm:h-[240px]",
     opacity: 0.22,
     blurClass: "blur-[2px]",
-    floatX: -6,
-    floatY: 10,
+    floatX: -7,
+    floatY: 11,
     floatDuration: 20,
     floatDelay: 6,
     parallaxSpeed: 0.45,
-    hideOnMobile: true,
   },
 ];
 
@@ -144,7 +145,7 @@ function PlanetLayer({
 
   return (
     <motion.div
-      className={`absolute ${slot.sideClass} ${slot.hideOnMobile ? "hidden sm:block" : ""}`}
+      className={`absolute ${slot.sideClass}`}
       style={{ top: `${slot.verticalPercent}%`, y: reducedMotion ? 0 : rawExtraY }}
     >
       <motion.div
