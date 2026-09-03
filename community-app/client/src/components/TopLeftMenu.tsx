@@ -15,7 +15,7 @@ import {
   Search,
   MessageCircle,
   MessageSquareText,
-  GraduationCap,
+  UtensilsCrossed,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
@@ -291,14 +291,26 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                     <span className="flex-1 font-semibold" style={{ color: "var(--text-strong)" }}>문의하기</span>
                     <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "var(--text-muted)" }} />
                   </button>
-                  <button
-                    onClick={() => toast.info("학교 홈페이지 연동은 준비 중이에요")}
+                  <a
+                    href="https://school.cbe.go.kr/shinheung-h/M010304"
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-black/5 transition-colors"
                   >
-                    <GraduationCap className="h-5 w-5 shrink-0" style={{ color: "var(--text-muted)" }} />
-                    <span className="flex-1 font-semibold" style={{ color: "var(--text-strong)" }}>학교 홈페이지</span>
-                    <span className="text-xs shrink-0" style={{ color: "var(--text-muted)" }}>준비중</span>
-                  </button>
+                    <MessageCircle className="h-5 w-5 shrink-0" style={{ color: "var(--text-muted)" }} />
+                    <span className="flex-1 font-semibold" style={{ color: "var(--text-strong)" }}>신흥톡톡</span>
+                    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "var(--text-muted)" }} />
+                  </a>
+                  <a
+                    href="https://school.cbe.go.kr/shinheung-h/M01030801"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left hover:bg-black/5 transition-colors"
+                  >
+                    <UtensilsCrossed className="h-5 w-5 shrink-0" style={{ color: "var(--text-muted)" }} />
+                    <span className="flex-1 font-semibold" style={{ color: "var(--text-strong)" }}>급식표</span>
+                    <ChevronRight className="h-4 w-4 shrink-0" style={{ color: "var(--text-muted)" }} />
+                  </a>
                 </div>
 
                 <div className="mt-2 pt-2 border-t px-1" style={{ borderColor: "var(--border-color)" }}>

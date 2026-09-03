@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, Phone, MessageSquareText, Newspaper, Compass, Megaphone, Hash } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
-import { toast } from "sonner";
 import { toneClass } from "@/lib/tone";
 import { isAdminRole } from "@/lib/role";
 
@@ -227,14 +226,24 @@ function QuickLinksPanel() {
           <MessageSquareText className="h-4 w-4 accent-text shrink-0" />
           문의하기
         </a>
-        <button
-          type="button"
-          onClick={() => toast.info("학교 홈페이지 연동은 준비 중이에요")}
-          className="w-full flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium text-left hover:bg-secondary transition-colors"
+        <a
+          href="https://school.cbe.go.kr/shinheung-h/M010304"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
         >
-          <Phone className="h-4 w-4 text-muted-foreground shrink-0" />
-          학교 홈페이지 <span className="text-xs text-muted-foreground">(준비중)</span>
-        </button>
+          <MessageCircle className="h-4 w-4 text-muted-foreground shrink-0" />
+          신흥톡톡
+        </a>
+        <a
+          href="https://school.cbe.go.kr/shinheung-h/M01030801"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
+        >
+          <UtensilsCrossed className="h-4 w-4 text-muted-foreground shrink-0" />
+          급식표
+        </a>
       </div>
     </Card>
   );
