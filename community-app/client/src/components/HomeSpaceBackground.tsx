@@ -39,7 +39,7 @@ const SLOTS: SlotConfig[] = [
     sideClass: "-right-16 sm:right-[3%]",
     sizeClass: "w-[190px] h-[190px] sm:w-[300px] sm:h-[300px]",
     opacity: 0.4,
-    blurClass: "blur-2xl",
+    blurClass: "blur-[3px]",
     floatX: 10,
     floatY: 16,
     floatDuration: 26,
@@ -52,7 +52,7 @@ const SLOTS: SlotConfig[] = [
     sideClass: "-left-14 sm:-left-6",
     sizeClass: "w-[140px] h-[140px] sm:w-[230px] sm:h-[230px]",
     opacity: 0.34,
-    blurClass: "blur-2xl",
+    blurClass: "blur-[3px]",
     floatX: -8,
     floatY: 12,
     floatDuration: 32,
@@ -65,7 +65,7 @@ const SLOTS: SlotConfig[] = [
     sideClass: "-right-10 sm:right-[10%]",
     sizeClass: "w-[110px] h-[110px] sm:w-[190px] sm:h-[190px]",
     opacity: 0.28,
-    blurClass: "blur-xl",
+    blurClass: "blur-[2px]",
     floatX: 7,
     floatY: -10,
     floatDuration: 22,
@@ -79,7 +79,7 @@ const SLOTS: SlotConfig[] = [
     sideClass: "-left-10 sm:-left-4",
     sizeClass: "w-[90px] h-[90px] sm:w-[160px] sm:h-[160px]",
     opacity: 0.22,
-    blurClass: "blur-xl",
+    blurClass: "blur-[2px]",
     floatX: -6,
     floatY: 10,
     floatDuration: 20,
@@ -91,32 +91,35 @@ const SLOTS: SlotConfig[] = [
 
 const PLANET_KEYS: PlanetKey[] = ["moon", "mars", "saturn", "jupiter"];
 
+// blur는 아주 약하게만 걸리므로(가장자리만 부드럽게), 크레이터/줄무늬 등
+// 표면 디테일은 흐려져도 형태가 남도록 스팟 크기와 대비를 넉넉하게 잡는다.
 const MOON_GRADIENT = [
-  "radial-gradient(circle at 30% 64%, rgba(150,150,150,0.55) 0%, rgba(150,150,150,0) 9%)",
-  "radial-gradient(circle at 60% 26%, rgba(140,140,140,0.5) 0%, rgba(140,140,140,0) 11%)",
-  "radial-gradient(circle at 70% 62%, rgba(160,160,158,0.45) 0%, rgba(160,160,158,0) 8%)",
-  "radial-gradient(circle at 40% 82%, rgba(150,150,148,0.4) 0%, rgba(150,150,148,0) 7%)",
-  "radial-gradient(circle at 22% 30%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 15%)",
-  "radial-gradient(circle at 40% 38%, #f4f4f1 0%, #dcdcd8 55%, #c6c6c1 100%)",
+  "radial-gradient(circle at 28% 62%, rgba(120,120,120,0.75) 0%, rgba(120,120,120,0) 16%)",
+  "radial-gradient(circle at 62% 24%, rgba(110,110,110,0.7) 0%, rgba(110,110,110,0) 19%)",
+  "radial-gradient(circle at 72% 60%, rgba(130,130,128,0.65) 0%, rgba(130,130,128,0) 14%)",
+  "radial-gradient(circle at 40% 84%, rgba(120,120,118,0.6) 0%, rgba(120,120,118,0) 13%)",
+  "radial-gradient(circle at 18% 26%, rgba(255,255,255,0.75) 0%, rgba(255,255,255,0) 24%)",
+  "radial-gradient(circle at 40% 38%, #f6f6f3 0%, #d5d5d0 55%, #b9b9b3 100%)",
 ].join(", ");
 
 const MARS_GRADIENT = [
-  "radial-gradient(circle at 66% 58%, rgba(110,45,20,0.4) 0%, rgba(110,45,20,0) 10%)",
-  "radial-gradient(circle at 30% 68%, rgba(130,55,25,0.35) 0%, rgba(130,55,25,0) 9%)",
-  "radial-gradient(circle at 55% 82%, rgba(120,50,22,0.3) 0%, rgba(120,50,22,0) 7%)",
-  "radial-gradient(ellipse 55% 16% at 45% 40%, rgba(150,65,30,0.32) 0%, rgba(150,65,30,0) 70%)",
-  "radial-gradient(circle at 34% 30%, #e8977a 0%, #c8632f 55%, #99441f 100%)",
+  "radial-gradient(circle at 64% 56%, rgba(95,35,15,0.6) 0%, rgba(95,35,15,0) 17%)",
+  "radial-gradient(circle at 28% 66%, rgba(115,45,20,0.55) 0%, rgba(115,45,20,0) 15%)",
+  "radial-gradient(circle at 55% 84%, rgba(105,40,18,0.5) 0%, rgba(105,40,18,0) 12%)",
+  "radial-gradient(ellipse 60% 16% at 42% 38%, rgba(140,55,25,0.55) 0%, rgba(140,55,25,0) 75%)",
+  "radial-gradient(ellipse 50% 12% at 60% 68%, rgba(130,50,22,0.45) 0%, rgba(130,50,22,0) 75%)",
+  "radial-gradient(circle at 32% 28%, #eea082 0%, #c2601f 55%, #8c3d18 100%)",
 ].join(", ");
 
 const JUPITER_GRADIENT = [
-  "radial-gradient(circle at 35% 28%, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 30%)",
-  "repeating-linear-gradient(0deg, rgba(110,68,40,0.32) 0px, rgba(110,68,40,0.32) 5px, transparent 5px, transparent 12px, rgba(184,138,96,0.24) 12px, rgba(184,138,96,0.24) 17px, transparent 17px, transparent 26px)",
-  "radial-gradient(circle at 38% 35%, #f0dcbc 0%, #d8b88a 55%, #b6905c 100%)",
+  "radial-gradient(circle at 32% 26%, rgba(255,255,255,0.4) 0%, rgba(255,255,255,0) 34%)",
+  "repeating-linear-gradient(0deg, rgba(100,60,34,0.5) 0px, rgba(100,60,34,0.5) 7px, transparent 7px, transparent 16px, rgba(196,146,100,0.4) 16px, rgba(196,146,100,0.4) 23px, transparent 23px, transparent 34px)",
+  "radial-gradient(circle at 36% 34%, #f2ddb9 0%, #d3ac78 55%, #a97c4a 100%)",
 ].join(", ");
 
 const SATURN_RING_GRADIENT =
-  "radial-gradient(ellipse at center, transparent 52%, rgba(216,196,150,0.6) 58%, rgba(216,196,150,0.6) 76%, transparent 82%)";
-const SATURN_BODY_GRADIENT = "radial-gradient(circle at 35% 32%, #f5e6c4 0%, #e0c690 55%, #c2a26a 100%)";
+  "radial-gradient(ellipse at center, transparent 48%, rgba(206,184,132,0.85) 55%, rgba(206,184,132,0.85) 78%, transparent 84%)";
+const SATURN_BODY_GRADIENT = "radial-gradient(circle at 33% 30%, #f7e9c8 0%, #ddb97e 55%, #b48c50 100%)";
 
 function shuffle<T>(list: T[]): T[] {
   const result = [...list];
