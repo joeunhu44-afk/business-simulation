@@ -56,10 +56,12 @@ interface SlotConfig {
   floatDuration: number;
   floatDelay: number;
   // 실제 스크롤 픽셀량 대비 행성이 이동하는 비율 (0~1). 콘텐츠는 스크롤과
-  // 1:1로 움직이므로, 이 값은 항상 1보다 작아야 행성이 "콘텐츠보다 뒤에서
-  // 느리게 따라오는" 원근감을 준다 — 크고 가까운 슬롯은 1에 가깝게(0.7~0.8),
-  // 작고 먼 슬롯은 0에 가깝게(0.4~0.5) 잡는다. 크기(scale)는 절대 건드리지
-  // 않고 오직 이 속도 차이만으로 원근감을 표현한다.
+  // 1:1로 움직이므로, 이 값은 항상 1보다 뚜렷이 작아야 행성이 "콘텐츠보다
+  // 뒤에서 느리게 따라오는" 원근감이 실제로 체감된다 (0.7~0.8처럼 1에 너무
+  // 가까우면 눈으로 봤을 때 스크롤과 거의 같은 속도로 느껴져 차이가 안
+  // 느껴진다) — 크고 가까운 슬롯도 0.5~0.6, 작고 먼 슬롯은 0.15~0.3까지
+  // 확실히 낮춘다. 크기(scale)는 절대 건드리지 않고 오직 이 속도 차이만으로
+  // 원근감을 표현한다.
   parallaxSpeed: number;
   /** 이 슬롯 하나에만 아주 옅은 비대칭 디테일(눈동자 같은 은은한 glow + 살짝 기울어진 각도)을 준다. */
   eerie?: boolean;
@@ -80,7 +82,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 21,
     floatDuration: 21,
     floatDelay: 0,
-    parallaxSpeed: 0.78,
+    parallaxSpeed: 0.55,
   },
   {
     id: "slot-b",
@@ -93,7 +95,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 16,
     floatDuration: 24,
     floatDelay: 2,
-    parallaxSpeed: 0.7,
+    parallaxSpeed: 0.46,
   },
   {
     id: "slot-c",
@@ -106,7 +108,7 @@ const SLOTS: SlotConfig[] = [
     floatY: -13,
     floatDuration: 19,
     floatDelay: 4,
-    parallaxSpeed: 0.62,
+    parallaxSpeed: 0.38,
     eerie: true,
   },
   {
@@ -120,7 +122,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 12,
     floatDuration: 22,
     floatDelay: 6,
-    parallaxSpeed: 0.54,
+    parallaxSpeed: 0.3,
   },
   {
     id: "slot-e",
@@ -133,7 +135,7 @@ const SLOTS: SlotConfig[] = [
     floatY: -9,
     floatDuration: 16,
     floatDelay: 8,
-    parallaxSpeed: 0.46,
+    parallaxSpeed: 0.22,
   },
   {
     id: "slot-f",
@@ -146,7 +148,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 8,
     floatDuration: 15,
     floatDelay: 10,
-    parallaxSpeed: 0.4,
+    parallaxSpeed: 0.15,
   },
 ];
 
