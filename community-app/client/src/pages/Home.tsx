@@ -170,7 +170,7 @@ export default function Home() {
               ) : boards && boards.length > 0 ? (
                 <div className="space-y-4">
                   {boards.map((board, idx) => (
-                    <Reveal key={board.id} delay={Math.min(idx, 5) * 0.03} duration={0.32}>
+                    <Reveal key={board.id} delay={Math.min(idx, 5) * 0.03} duration={0.32} slide={false}>
                       <div className={`card-elevated board-card ${toneClass(board.id)} overflow-hidden`}>
                         <div className="flex flex-col sm:flex-row">
                           <Link
