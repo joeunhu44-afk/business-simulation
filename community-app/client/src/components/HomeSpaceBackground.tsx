@@ -27,6 +27,12 @@ import saturnImg from "@/assets/planets/saturn.png";
  *   결과를 그 순서 그대로 배정하므로, 스크롤을 내리며 만나는 행성의 순서
  *   자체가 새로고침마다 랜덤해진다. 슬롯 자체의 크기/속도/불투명도는 고정이라
  *   섞여도 "가까운 슬롯=크고 빠름, 먼 슬롯=작고 느림" 규칙은 유지된다.
+ * - 슬롯 크기는 "가늠하기 어려운 크기" 느낌을 위해 화면 가장자리에서 살짝
+ *   잘려나가지만, 각 슬롯의 sideClass 오프셋은 sizeClass 대비 약 15~25%만
+ *   잘라내도록 계산되어 있어 항상 60~70% 이상(대부분 75% 이상)이 화면 안에
+ *   남는다 — 반달/초승달처럼 대부분이 잘려나가는 일은 없다. 특히 모바일
+ *   기준 크기는 뷰포트 너비의 최대 48%로 상한을 둬서, 좁은 화면에서 카드
+ *   뒤 비침(투명도)과 은은한 디테일로 존재감을 주는 쪽에 더 무게를 뒀다.
  */
 
 type PlanetKey = "moon" | "mars" | "saturn" | "jupiter";
@@ -34,12 +40,12 @@ type PlanetKey = "moon" | "mars" | "saturn" | "jupiter";
 interface SlotConfig {
   id: string;
   verticalPercent: number; // 페이지 전체 스크롤 높이 기준 % (최소 간격 로직은 HomeSpaceBackground 참고)
-  // 좌/우 여백 배치: 휴대폰(기본) 살짝 걸치기, sm:(태블릿~노트북)/2xl:(큰 데스크톱)는 그 크기에 맞춘 여백
+  // 좌/우 여백 배치: 휴대폰(기본)/sm:(태블릿~노트북)/2xl:(큰 데스크톱) 각각
+  // sizeClass 대비 약 15~25%만 화면 밖으로 걸치도록 계산된 음수 오프셋.
   sideClass: string;
-  // 전체 바운딩 박스 크기(토성은 고리 포함): 휴대폰은 화면을 거의 채우고,
-  // sm:(640px~) ~ 2xl: 직전(1536px 미만)까지는 화면의 절반 — 실제 태블릿은
-  // CSS 너비가 1024~1366px까지도 흔해서 이 구간을 넓게 잡아야 "절반"으로 보인다.
-  // 2xl:(1536px~, 큰 데스크톱 모니터)에서만 고정 픽셀로 캡을 씌운다.
+  // 전체 바운딩 박스 크기(토성은 고리 포함). 모바일은 뷰포트 너비의 최대
+  // 48%로 상한(가시성 확보), sm:(640px~) ~ 2xl: 직전(1536px 미만)까지는
+  // 화면의 40%대, 2xl:(1536px~, 큰 데스크톱 모니터)에서는 고정 픽셀 캡.
   sizeClass: string;
   opacity: number;
   blurClass: string;
@@ -48,6 +54,8 @@ interface SlotConfig {
   floatDuration: number;
   floatDelay: number;
   parallaxSpeed: number; // 1보다 크면 더 빠르게(가까운 느낌), 작으면 더 느리게(먼 느낌)
+  /** 이 슬롯 하나에만 아주 옅은 비대칭 디테일(눈동자 같은 은은한 glow + 살짝 기울어진 각도)을 준다. */
+  eerie?: boolean;
 }
 
 const BASE_DRIFT = 80; // px — 슬롯의 parallaxSpeed가 이 기준값에 곱해져 스크롤 추가 이동량을 만든다
@@ -58,78 +66,79 @@ const SLOTS: SlotConfig[] = [
   {
     id: "slot-a",
     verticalPercent: 3,
-    sideClass: "-right-[24vw] sm:right-[1%] 2xl:right-[2%]",
-    sizeClass: "w-[92vw] h-[92vw] sm:w-[50vw] sm:h-[50vw] 2xl:w-[460px] 2xl:h-[460px]",
-    opacity: 0.48,
+    sideClass: "-right-[12vw] sm:-right-[7vw] 2xl:-right-[84px]",
+    sizeClass: "w-[48vw] h-[48vw] sm:w-[46vw] sm:h-[46vw] 2xl:w-[560px] 2xl:h-[560px]",
+    opacity: 0.5,
     blurClass: "blur-[3px]",
-    floatX: 12,
-    floatY: 18,
-    floatDuration: 26,
+    floatX: 14,
+    floatY: 21,
+    floatDuration: 21,
     floatDelay: 0,
-    parallaxSpeed: 1.6,
+    parallaxSpeed: 1.75,
   },
   {
     id: "slot-b",
     verticalPercent: 19,
-    sideClass: "-left-[20vw] sm:-left-[6%] 2xl:-left-[4%]",
-    sizeClass: "w-[80vw] h-[80vw] sm:w-[44vw] sm:h-[44vw] 2xl:w-[400px] 2xl:h-[400px]",
-    opacity: 0.42,
+    sideClass: "-left-[11vw] sm:-left-[6vw] 2xl:-left-[72px]",
+    sizeClass: "w-[44vw] h-[44vw] sm:w-[42vw] sm:h-[42vw] 2xl:w-[480px] 2xl:h-[480px]",
+    opacity: 0.44,
     blurClass: "blur-[3px]",
-    floatX: -10,
-    floatY: 14,
-    floatDuration: 30,
+    floatX: -12,
+    floatY: 16,
+    floatDuration: 24,
     floatDelay: 2,
     parallaxSpeed: 1.25,
   },
   {
     id: "slot-c",
     verticalPercent: 35,
-    sideClass: "-right-[17vw] sm:right-[4%] 2xl:right-[6%]",
-    sizeClass: "w-[70vw] h-[70vw] sm:w-[38vw] sm:h-[38vw] 2xl:w-[340px] 2xl:h-[340px]",
-    opacity: 0.38,
+    sideClass: "-right-[10vw] sm:-right-[6vw] 2xl:-right-[62px]",
+    sizeClass: "w-[40vw] h-[40vw] sm:w-[38vw] sm:h-[38vw] 2xl:w-[410px] 2xl:h-[410px]",
+    opacity: 0.4,
     blurClass: "blur-[2px]",
-    floatX: 9,
-    floatY: -11,
-    floatDuration: 24,
+    floatX: 11,
+    floatY: -13,
+    floatDuration: 19,
     floatDelay: 4,
     parallaxSpeed: 0.95,
+    eerie: true,
   },
   {
     id: "slot-d",
     verticalPercent: 53,
-    sideClass: "-left-[14vw] sm:left-[2%] 2xl:left-[4%]",
-    sizeClass: "w-[60vw] h-[60vw] sm:w-[33vw] sm:h-[33vw] 2xl:w-[280px] 2xl:h-[280px]",
-    opacity: 0.34,
+    sideClass: "-left-[9vw] sm:-left-[5vw] 2xl:-left-[51px]",
+    sizeClass: "w-[36vw] h-[36vw] sm:w-[34vw] sm:h-[34vw] 2xl:w-[340px] 2xl:h-[340px]",
+    opacity: 0.36,
     blurClass: "blur-[2px]",
-    floatX: -8,
-    floatY: 10,
-    floatDuration: 28,
+    floatX: -9,
+    floatY: 12,
+    floatDuration: 22,
     floatDelay: 6,
     parallaxSpeed: 0.7,
   },
   {
     id: "slot-e",
     verticalPercent: 71,
-    sideClass: "-right-[11vw] sm:right-[8%] 2xl:right-[10%]",
-    sizeClass: "w-[50vw] h-[50vw] sm:w-[28vw] sm:h-[28vw] 2xl:w-[220px] 2xl:h-[220px]",
-    opacity: 0.3,
+    sideClass: "-right-[8vw] sm:-right-[5vw] 2xl:-right-[41px]",
+    sizeClass: "w-[32vw] h-[32vw] sm:w-[30vw] sm:h-[30vw] 2xl:w-[270px] 2xl:h-[270px]",
+    opacity: 0.32,
     blurClass: "blur-[2px]",
-    floatX: 6,
-    floatY: -8,
-    floatDuration: 20,
+    floatX: 7,
+    floatY: -9,
+    floatDuration: 16,
     floatDelay: 8,
     parallaxSpeed: 0.5,
   },
   {
     id: "slot-f",
     verticalPercent: 88,
-    sideClass: "-left-[9vw] sm:left-[6%] 2xl:left-[8%]",
-    sizeClass: "w-[42vw] h-[42vw] sm:w-[22vw] sm:h-[22vw] 2xl:w-[170px] 2xl:h-[170px]",
-    opacity: 0.26,
+    sideClass: "-left-[7vw] sm:-left-[4vw] 2xl:-left-[32px]",
+    sizeClass: "w-[28vw] h-[28vw] sm:w-[26vw] sm:h-[26vw] 2xl:w-[210px] 2xl:h-[210px]",
+    opacity: 0.28,
     blurClass: "blur-[2px]",
-    floatX: -5,
-    floatY: 7,
-    floatDuration: 18,
+    floatX: -6,
+    floatY: 8,
+    floatDuration: 15,
     floatDelay: 10,
     parallaxSpeed: 0.35,
   },
@@ -153,14 +162,44 @@ const PLANET_IMAGES: Record<PlanetKey, string> = {
   saturn: saturnImg,
 };
 
-function PlanetVisual({ planet, sizeClass }: { planet: PlanetKey; sizeClass: string }) {
+function PlanetVisual({
+  planet,
+  sizeClass,
+  eerie,
+  reducedMotion,
+}: {
+  planet: PlanetKey;
+  sizeClass: string;
+  eerie?: boolean;
+  reducedMotion: boolean;
+}) {
   return (
-    <img
-      src={PLANET_IMAGES[planet]}
-      alt=""
-      draggable={false}
-      className={`${sizeClass} object-contain select-none`}
-    />
+    <div className={`relative ${sizeClass} ${eerie ? "rotate-[7deg]" : ""}`}>
+      <img
+        src={PLANET_IMAGES[planet]}
+        alt=""
+        draggable={false}
+        className="h-full w-full object-contain select-none"
+      />
+      {eerie && (
+        <motion.div
+          className="pointer-events-none absolute rounded-full"
+          style={{
+            top: "44%",
+            left: "51%",
+            width: "13%",
+            height: "13%",
+            background:
+              "radial-gradient(circle at 34% 34%, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.15) 11%, transparent 13%), " +
+              "radial-gradient(circle, rgba(12,12,16,0.55) 0%, rgba(12,12,16,0.28) 48%, transparent 72%)",
+          }}
+          animate={reducedMotion ? undefined : { opacity: [0.55, 0.9, 0.55] }}
+          transition={
+            reducedMotion ? undefined : { duration: 9, repeat: Infinity, ease: "easeInOut" }
+          }
+        />
+      )}
+    </div>
   );
 }
 
@@ -195,7 +234,7 @@ function PlanetLayer({
             : { duration: slot.floatDuration, delay: slot.floatDelay, repeat: Infinity, ease: "easeInOut" }
         }
       >
-        <PlanetVisual planet={planet} sizeClass={slot.sizeClass} />
+        <PlanetVisual planet={planet} sizeClass={slot.sizeClass} eerie={slot.eerie} reducedMotion={reducedMotion} />
       </motion.div>
     </motion.div>
   );
@@ -232,23 +271,36 @@ export default function HomeSpaceBackground() {
   const minGapPx = viewportHeight * MIN_GAP_VH_RATIO;
 
   return (
-    <div className="absolute inset-0 -z-[5] overflow-hidden pointer-events-none" aria-hidden="true">
-      {SLOTS.map((slot, i) => {
-        // 문서 전체 높이 기준 %와, 뷰포트 기준 최소 간격 중 더 아래쪽 값을 쓴다 —
-        // 페이지가 길면 %가 이기고, 짧으면 최소 간격이 이겨서 서로 겹치지 않는다.
-        const percentPx = (slot.verticalPercent / 100) * docHeight;
-        const topPx = Math.max(percentPx, i * minGapPx);
-        return (
-          <PlanetLayer
-            key={slot.id}
-            slot={slot}
-            planet={planetOrder[i % planetOrder.length]}
-            topPx={topPx}
-            scrollYProgress={scrollYProgress}
-            reducedMotion={reducedMotion}
-          />
-        );
-      })}
-    </div>
+    <>
+      <div className="absolute inset-0 -z-[5] overflow-hidden pointer-events-none" aria-hidden="true">
+        {SLOTS.map((slot, i) => {
+          // 문서 전체 높이 기준 %와, 뷰포트 기준 최소 간격 중 더 아래쪽 값을 쓴다 —
+          // 페이지가 길면 %가 이기고, 짧으면 최소 간격이 이겨서 서로 겹치지 않는다.
+          const percentPx = (slot.verticalPercent / 100) * docHeight;
+          const topPx = Math.max(percentPx, i * minGapPx);
+          return (
+            <PlanetLayer
+              key={slot.id}
+              slot={slot}
+              planet={planetOrder[i % planetOrder.length]}
+              topPx={topPx}
+              scrollYProgress={scrollYProgress}
+              reducedMotion={reducedMotion}
+            />
+          );
+        })}
+      </div>
+      {/* 화면 가장자리를 아주 옅게 어둡게 해 은은한 긴장감을 준다. 뷰포트에
+          고정되어 스크롤과 무관하게 항상 같은 위치(가장자리)에 걸린다.
+          중심부는 완전히 투명해 가독성/밝기에는 거의 영향이 없다. */}
+      <div
+        className="fixed inset-0 -z-[4] pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse at center, transparent 58%, rgba(12,14,26,0.05) 88%, rgba(12,14,26,0.09) 100%)",
+        }}
+        aria-hidden="true"
+      />
+    </>
   );
 }

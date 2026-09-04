@@ -293,6 +293,11 @@
   position: relative;
   overflow: hidden;
   padding-top: 1.5rem !important;
+  /* 홈 배경의 행성이 카드 뒤로 은은하게 비치도록 반투명 + 블러 처리
+     (글래스모피즘). 텍스트 가독성을 위해 불투명도는 86% 이상으로 유지한다. */
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 .board-card::before {
   content: "";
