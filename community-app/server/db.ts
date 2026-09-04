@@ -177,7 +177,7 @@ export async function createBoard(data: { name: string; slug: string; descriptio
   return result;
 }
 
-export async function updateBoard(id: number, data: Partial<{ name: string; description: string; displayOrder: number; isActive: boolean }>) {
+export async function updateBoard(id: number, data: Partial<{ name: string; slug: string; description: string; displayOrder: number; isActive: boolean }>) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.update(boards).set(data).where(eq(boards.id, id));

@@ -340,6 +340,7 @@ function BoardsTab() {
   const [newBoardDesc, setNewBoardDesc] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState('');
+  const [editSlug, setEditSlug] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const { data: boards, isLoading } = trpc.boards.list.useQuery();
   const utils = trpc.useUtils();
@@ -383,16 +384,21 @@ function BoardsTab() {
       toast.error('게시판 이름과 슬러그를 입력해주세요');
       return;
     }
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(newBoardSlug.trim())) {
+      toast.error('슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있어요 (예: free-board)');
+      return;
+    }
     createBoardMutation.mutate({
       name: newBoardName,
-      slug: newBoardSlug,
+      slug: newBoardSlug.trim(),
       description: newBoardDesc || undefined,
     });
   };
 
-  const startEdit = (board: { id: number; name: string; description: string | null }) => {
+  const startEdit = (board: { id: number; name: string; slug: string; description: string | null }) => {
     setEditingId(board.id);
     setEditName(board.name);
+    setEditSlug(board.slug);
     setEditDesc(board.description || '');
   };
 
@@ -401,7 +407,11 @@ function BoardsTab() {
       toast.error('게시판 이름을 입력해주세요');
       return;
     }
-    updateBoardMutation.mutate({ id, name: editName, description: editDesc || undefined });
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(editSlug.trim())) {
+      toast.error('슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있어요 (예: free-board)');
+      return;
+    }
+    updateBoardMutation.mutate({ id, name: editName, slug: editSlug.trim(), description: editDesc || undefined });
   };
 
   const handleDelete = (id: number, name: string) => {
@@ -428,7 +438,7 @@ function BoardsTab() {
             onChange={(e) => setNewBoardName(e.target.value)}
           />
           <Input
-            placeholder="슬러그 (URL 경로)"
+            placeholder="슬러그 (URL 경로, 예: free-board)"
             value={newBoardSlug}
             onChange={(e) => setNewBoardSlug(e.target.value)}
           />
@@ -453,6 +463,11 @@ function BoardsTab() {
               {editingId === board.id ? (
                 <div className="space-y-2">
                   <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="게시판 이름" />
+                  <Input
+                    value={editSlug}
+                    onChange={(e) => setEditSlug(e.target.value)}
+                    placeholder="슬러그 (URL 경로, 예: free-board)"
+                  />
                   <Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} placeholder="설명" />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => handleSaveEdit(board.id)} disabled={updateBoardMutation.isPending}>
@@ -465,6 +480,7 @@ function BoardsTab() {
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0">
                     <h3 className="font-semibold">{board.name}</h3>
+                    <p className="text-xs text-muted-foreground font-mono">/board/{board.slug}</p>
                     <p className="text-sm text-muted-foreground">{board.description}</p>
                   </div>
                   <div className="flex gap-2 shrink-0">
