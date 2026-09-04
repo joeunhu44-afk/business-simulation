@@ -388,11 +388,11 @@
   position: relative;
   overflow: hidden;
   padding-top: 1.5rem !important;
-  /* 홈 배경의 행성이 카드 뒤로 은은하게 비치도록 반투명 + 블러 처리
-     (글래스모피즘). 텍스트 가독성을 위해 불투명도는 86% 이상으로 유지한다. */
-  background-color: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  /* 홈 배경의 행성이 카드 뒤로 은은하게 비치도록 Phase 1에서 준비해둔
+     --card(반투명)/--card-blur 값을 그대로 쓴다(글래스모피즘). */
+  background-color: var(--card);
+  backdrop-filter: blur(var(--card-blur));
+  -webkit-backdrop-filter: blur(var(--card-blur));
 }
 .board-card::before {
   content: "";
@@ -400,6 +400,20 @@
   top: 0; left: 0; right: 0;
   height: 4px;
   background: var(--tone, var(--accent-color));
+}
+
+/* 게시글 목록/상세 카드 — 역시 --card를 쓰지만 맥락에 맞게 강도를 다르게 준다.
+   목록(post-list-card)은 카드가 한 화면에 여러 개(많으면 20개) 나열되므로
+   backdrop-filter 없이 반투명 배경색만 써서 성능/가독성을 지킨다. 상세
+   페이지(post-detail-card)는 카드가 하나뿐이라 board-card보다 약한 블러
+   정도는 부담 없이 더할 수 있다. */
+.post-list-card {
+  background-color: var(--card);
+}
+.post-detail-card {
+  background-color: var(--card);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 /* 사용자 아바타(원형) — 게시글/댓글 작성자 전용. 게시판은 사람이 아니므로
@@ -457,6 +471,70 @@
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg-surface-2);
+}
+
+/* primary 버튼 hover 시 은은한 오로라 glow. color-mix로 현재 --primary(테마/
+   프리셋에 따라 달라짐)에서 바로 뽑아 쓰므로 프리셋마다 값을 따로 정의할
+   필요가 없다. */
+.btn-glow-hover {
+  transition: box-shadow 0.2s ease, background-color 0.2s ease, opacity 0.2s ease;
+}
+.btn-glow-hover:hover:not(:disabled) {
+  box-shadow: 0 0 18px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+
+/* "보호막" 배지 — 관리자/조물주처럼 신뢰된 역할, 차단 등 안전 관련 상태를
+   한 눈에 알아볼 수 있게 아이콘 + 은은한 링(box-shadow)으로 통일한 스타일.
+   safe(teal, 관리자/활성)와 danger(destructive red, 차단)만 쓴다. */
+.shield-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.shield-pill-safe {
+  color: var(--accent-color);
+  background: var(--accent-soft);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+.shield-pill-danger {
+  color: var(--destructive);
+  background: color-mix(in srgb, var(--destructive) 12%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--destructive) 30%, transparent);
+}
+
+/* 로딩/빈 게시판처럼 여백이 큰 화면에 아주 옅은 별 반짝임을 얹어서 밋밋해
+   보이지 않게 한다. 의사 요소라 DOM 노드를 늘리지 않고, position:relative인
+   컨테이너 뒤에 깔린다. prefers-reduced-motion에서는 반짝임 없이 고정. */
+.cosmic-empty {
+  position: relative;
+}
+.cosmic-empty::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(1.5px 1.5px at 12% 30%, var(--accent-color) 0%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 82% 18%, var(--accent-color) 0%, transparent 60%),
+    radial-gradient(1px 1px at 45% 75%, var(--accent-color) 0%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 68% 55%, var(--accent-color) 0%, transparent 60%),
+    radial-gradient(1px 1px at 25% 85%, var(--accent-color) 0%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 92% 68%, var(--accent-color) 0%, transparent 60%);
+  opacity: 0.5;
+  animation: star-twinkle 3.5s ease-in-out infinite;
+}
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cosmic-empty::before { animation: none; opacity: 0.4; }
 }
 
 .section-heading {

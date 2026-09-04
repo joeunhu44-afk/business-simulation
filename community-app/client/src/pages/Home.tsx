@@ -10,7 +10,6 @@ import { useState } from "react";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
 import HomeSpaceBackground from "@/components/HomeSpaceBackground";
-import { toneClass } from "@/lib/tone";
 import { isAdminRole } from "@/lib/role";
 
 const FEATURES = [
@@ -37,7 +36,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="cosmic-empty flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -164,14 +163,14 @@ export default function Home() {
             <div>
               <h2 className="section-heading mb-6 text-xl">게시판</h2>
               {boardsLoading ? (
-                <div className="flex justify-center py-12">
+                <div className="cosmic-empty flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : boards && boards.length > 0 ? (
                 <div className="space-y-4">
                   {boards.map((board, idx) => (
                     <Reveal key={board.id} delay={Math.min(idx, 5) * 0.03} duration={0.32} slide={false}>
-                      <div className={`card-elevated board-card ${toneClass(board.id)} overflow-hidden`}>
+                      <div className="card-elevated board-card overflow-hidden">
                         <div className="flex flex-col sm:flex-row">
                           <Link
                             href={`/board/${board.slug}`}

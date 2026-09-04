@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Flag, Loader2 } from "lucide-react";
+import { Flag, Loader2, ShieldCheck } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 
@@ -19,7 +19,9 @@ export function ReportDialog({ targetType, targetId }: ReportDialogProps) {
 
   const createReportMutation = trpc.reports.create.useMutation({
     onSuccess: () => {
-      toast.success('신고가 접수되었습니다. 감사합니다.');
+      toast.success('신고가 접수되었습니다. 감사합니다.', {
+        icon: <ShieldCheck className="h-4 w-4" style={{ color: "var(--accent-color)" }} />,
+      });
       setOpen(false);
       setReason('');
       setDescription('');

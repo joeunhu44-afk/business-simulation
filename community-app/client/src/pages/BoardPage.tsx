@@ -10,7 +10,6 @@ import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
-import { toneClass } from "@/lib/tone";
 import Avatar from "@/components/Avatar";
 import BackButton from "@/components/BackButton";
 
@@ -40,7 +39,7 @@ export default function BoardPage() {
 
   if (boardsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="cosmic-empty min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -56,8 +55,6 @@ export default function BoardPage() {
       </div>
     );
   }
-
-  const boardTone = toneClass(board.id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,7 +101,7 @@ export default function BoardPage() {
         )}
 
         {/* Board Header */}
-        <div className={`${boardTone} mb-8 flex items-center gap-4`}>
+        <div className="mb-8 flex items-center gap-4">
           <span className="category-icon h-12 w-12">
             <Hash className="h-5 w-5" />
           </span>
@@ -147,7 +144,7 @@ export default function BoardPage() {
         {/* Posts List */}
         <div className="space-y-3">
           {postsLoading ? (
-            <div className="flex justify-center py-12">
+            <div className="cosmic-empty flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : posts && posts.length > 0 ? (
@@ -155,7 +152,7 @@ export default function BoardPage() {
               <a
                 key={post.id}
                 href={`/post/${post.id}`}
-                className={`card-elevated block p-4 ${post.isNotice ? boardTone : ''}`}
+                className="card-elevated post-list-card block p-4"
               >
                   <div className="flex items-start gap-3 mt-0.5">
                     <Avatar
@@ -167,7 +164,7 @@ export default function BoardPage() {
                     />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1.5 min-w-0">
-                        {post.isNotice && <span className={`tag-pill shrink-0 ${boardTone}`}>공지</span>}
+                        {post.isNotice && <span className="tag-pill shrink-0">공지</span>}
                         <h3 className="font-semibold text-base text-foreground truncate">{post.title}</h3>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">
@@ -190,7 +187,7 @@ export default function BoardPage() {
               </a>
             ))
           ) : (
-            <Card className="card-elevated p-12 text-center">
+            <Card className="cosmic-empty card-elevated p-12 text-center">
               <p className="text-muted-foreground">게시글이 없습니다.</p>
             </Card>
           )}

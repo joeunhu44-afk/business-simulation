@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Shield, Users, FileText, AlertCircle, Megaphone, Search } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, ShieldOff, Users, FileText, AlertCircle, Megaphone, Search } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState, type ReactNode } from "react";
@@ -210,7 +210,14 @@ function UsersTab() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{target.name || '(이름 없음)'}</p>
-                      <span className="tag-pill">{roleLabel(target.role)}</span>
+                      {isAdminRole(target.role) ? (
+                        <span className="shield-pill shield-pill-safe">
+                          <ShieldCheck className="h-3 w-3" />
+                          {roleLabel(target.role)}
+                        </span>
+                      ) : (
+                        <span className="tag-pill">{roleLabel(target.role)}</span>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">{target.email || '(이메일 없음)'}</p>
                   </div>
@@ -227,7 +234,11 @@ function UsersTab() {
                         <option value="admin">관리자</option>
                       </select>
                     ) : (
-                      <span className="stat-pill" title={isOwnerRow ? '조물주 권한은 변경할 수 없습니다' : '다른 관리자의 권한은 조물주만 변경할 수 있습니다'}>
+                      <span
+                        className="shield-pill shield-pill-safe"
+                        title={isOwnerRow ? '조물주 권한은 변경할 수 없습니다' : '다른 관리자의 권한은 조물주만 변경할 수 있습니다'}
+                      >
+                        <ShieldCheck className="h-3 w-3" />
                         {roleLabel(target.role)} (고정)
                       </span>
                     )}
@@ -241,8 +252,16 @@ function UsersTab() {
                         <option value="active">활성</option>
                         <option value="blocked">차단</option>
                       </select>
+                    ) : target.status === 'active' ? (
+                      <span className="shield-pill shield-pill-safe">
+                        <ShieldCheck className="h-3 w-3" />
+                        활성
+                      </span>
                     ) : (
-                      <span className="stat-pill">{target.status === 'active' ? '활성' : '차단'}</span>
+                      <span className="shield-pill shield-pill-danger">
+                        <ShieldOff className="h-3 w-3" />
+                        차단
+                      </span>
                     )}
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(target.createdAt), { locale: ko, addSuffix: true })}
