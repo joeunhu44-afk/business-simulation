@@ -15,6 +15,13 @@ const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주�
 const IMAGE_DATA_URL_REGEX = /^data:image\/(png|jpeg|jpg|webp|gif);base64,([A-Za-z0-9+/=]+)$/;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 
+// 소문자/숫자/하이픈만 허용 (슬래시가 섞이면 /board/:slug 라우팅이 깨진다)
+const boardSlugSchema = z
+  .string()
+  .min(1)
+  .max(100)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/, "슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용할 수 있어요 (예: free-board)");
+
 /** "data:image/png;base64,...." 형식의 문자열을 검증하고 오브젝트 스토리지에 올린 뒤 공개 URL을 돌려준다. */
 async function uploadImageDataUrl(dataUrl: string, keyPrefix: string): Promise<string> {
   const match = dataUrl.match(IMAGE_DATA_URL_REGEX);
@@ -205,21 +212,22 @@ export const appRouter = router({
     list: publicProcedure.query(async () => {
       return db.getBoards();
     }),
-    
+
     create: adminProcedure
       .input(z.object({
         name: z.string().min(1).max(100),
-        slug: z.string().min(1).max(100),
+        slug: boardSlugSchema,
         description: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
         return db.createBoard(input);
       }),
-    
+
     update: adminProcedure
       .input(z.object({
         id: z.number(),
         name: z.string().min(1).max(100).optional(),
+        slug: boardSlugSchema.optional(),
         description: z.string().optional(),
         displayOrder: z.number().optional(),
         isActive: z.boolean().optional(),
