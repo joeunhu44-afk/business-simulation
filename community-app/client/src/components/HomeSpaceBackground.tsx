@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
 import moonImg from "@/assets/planets/moon.png";
 import marsImg from "@/assets/planets/mars.png";
@@ -15,10 +15,13 @@ import saturnImg from "@/assets/planets/saturn.png";
  * 태양계 사진 속 수성(크레이터로 덮인 회색 표면이 달과 매우 흡사) 사진을 사용했다 —
  * 실제 달 표면 질감과 거의 동일해 보이는 결정적 라벨은 아니고 순수 장식용이다.
  *
- * - 위치("슬롯")는 페이지 전체 스크롤 높이에 대한 %로 정의되어 있어서,
- *   글이 늘어나 페이지가 길어지면 아래쪽 슬롯도 자연스럽게 스크롤해서 나타난다.
- * - 슬롯 간 세로 간격을 넉넉히 벌려서, 스크롤할 때 한 번에 하나의 행성만
- *   화면에 크게 들어오는 느낌을 준다.
+ * - 위치("슬롯")는 페이지 전체 스크롤 높이에 대한 %를 기본으로 하되, 실제 픽셀
+ *   간격이 "뷰포트 높이 * MIN_GAP_VH_RATIO"보다 좁아지면 그 최소 간격을 강제한다.
+ *   글이 적어 페이지가 짧을 때 %만 쓰면 슬롯 간 픽셀 거리가 좁아져 여러 행성이
+ *   한 화면에 우르르 몰려 보이는 문제가 있었는데, 이 최소 간격 덕분에 짧은
+ *   페이지에서는 뒤쪽 슬롯 몇 개가 아예 안 보이더라도(문서 끝을 넘어가 잘림)
+ *   보이는 것들끼리는 항상 한 번에 하나씩만 들어오고, 글이 늘어나 페이지가
+ *   길어지면 %가 최소 간격을 자연히 앞질러서 더 많은 슬롯이 드러난다.
  * - 어떤 슬롯에 어떤 행성(달/화성/토성/목성)이 들어갈지는 마운트(새로고침) 시
  *   한 번만 무작위로 섞인다 — SLOTS는 항상 위→아래 순서로 정의돼 있고 섞인
  *   결과를 그 순서 그대로 배정하므로, 스크롤을 내리며 만나는 행성의 순서
@@ -30,7 +33,7 @@ type PlanetKey = "moon" | "mars" | "saturn" | "jupiter";
 
 interface SlotConfig {
   id: string;
-  verticalPercent: number; // 페이지 전체 스크롤 높이 기준 %
+  verticalPercent: number; // 페이지 전체 스크롤 높이 기준 % (최소 간격 로직은 HomeSpaceBackground 참고)
   // 좌/우 여백 배치: 휴대폰(기본) 살짝 걸치기, sm:(태블릿~노트북)/2xl:(큰 데스크톱)는 그 크기에 맞춘 여백
   sideClass: string;
   // 전체 바운딩 박스 크기(토성은 고리 포함): 휴대폰은 화면을 거의 채우고,
@@ -48,6 +51,7 @@ interface SlotConfig {
 }
 
 const BASE_DRIFT = 80; // px — 슬롯의 parallaxSpeed가 이 기준값에 곱해져 스크롤 추가 이동량을 만든다
+const MIN_GAP_VH_RATIO = 1.15; // 슬롯 사이 최소 간격 = 뷰포트 높이의 이 배수
 
 // 슬롯이 많을수록(=세로 간격이 촘촘할수록) 스크롤할 때 행성이 더 자주 등장한다.
 const SLOTS: SlotConfig[] = [
@@ -163,22 +167,23 @@ function PlanetVisual({ planet, sizeClass }: { planet: PlanetKey; sizeClass: str
 function PlanetLayer({
   slot,
   planet,
+  topPx,
   scrollYProgress,
   reducedMotion,
 }: {
   slot: SlotConfig;
   planet: PlanetKey;
+  topPx: number;
   scrollYProgress: MotionValue<number>;
   reducedMotion: boolean;
 }) {
-  // 기본 위치는 문서 전체 높이의 %로 고정해두고(=콘텐츠가 늘어나면 같이 늘어남),
   // 스크롤 진행률에 따라 슬롯마다 다른 양만큼 더 얹어서 서로 다른 속도로 보이게 한다.
   const rawExtraY = useTransform(scrollYProgress, [0, 1], [0, -(slot.parallaxSpeed - 1) * BASE_DRIFT]);
 
   return (
     <motion.div
       className={`absolute ${slot.sideClass}`}
-      style={{ top: `${slot.verticalPercent}%`, y: reducedMotion ? 0 : rawExtraY }}
+      style={{ top: `${topPx}px`, y: reducedMotion ? 0 : rawExtraY }}
     >
       <motion.div
         className={slot.blurClass}
@@ -203,17 +208,47 @@ export default function HomeSpaceBackground() {
   // 마운트(새로고침) 시 한 번만 섞고, 이후 리렌더/스크롤에는 다시 섞이지 않는다.
   const [planetOrder] = useState<PlanetKey[]>(() => shuffle(PLANET_KEYS));
 
+  // 문서 높이 / 뷰포트 높이를 추적해서, 콘텐츠가 적어 페이지가 짧을 때도 슬롯끼리
+  // 최소 간격을 유지하도록 한다 (아래 topPx 계산 참고).
+  const [docHeight, setDocHeight] = useState(0);
+  const [viewportHeight, setViewportHeight] = useState(0);
+
+  useEffect(() => {
+    const updateViewport = () => setViewportHeight(window.innerHeight);
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+
+    const updateDocHeight = () => setDocHeight(document.documentElement.scrollHeight);
+    updateDocHeight();
+    const resizeObserver = new ResizeObserver(updateDocHeight);
+    resizeObserver.observe(document.documentElement);
+
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  const minGapPx = viewportHeight * MIN_GAP_VH_RATIO;
+
   return (
     <div className="absolute inset-0 -z-[5] overflow-hidden pointer-events-none" aria-hidden="true">
-      {SLOTS.map((slot, i) => (
-        <PlanetLayer
-          key={slot.id}
-          slot={slot}
-          planet={planetOrder[i % planetOrder.length]}
-          scrollYProgress={scrollYProgress}
-          reducedMotion={reducedMotion}
-        />
-      ))}
+      {SLOTS.map((slot, i) => {
+        // 문서 전체 높이 기준 %와, 뷰포트 기준 최소 간격 중 더 아래쪽 값을 쓴다 —
+        // 페이지가 길면 %가 이기고, 짧으면 최소 간격이 이겨서 서로 겹치지 않는다.
+        const percentPx = (slot.verticalPercent / 100) * docHeight;
+        const topPx = Math.max(percentPx, i * minGapPx);
+        return (
+          <PlanetLayer
+            key={slot.id}
+            slot={slot}
+            planet={planetOrder[i % planetOrder.length]}
+            topPx={topPx}
+            scrollYProgress={scrollYProgress}
+            reducedMotion={reducedMotion}
+          />
+        );
+      })}
     </div>
   );
 }
