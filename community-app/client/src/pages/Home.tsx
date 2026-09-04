@@ -10,7 +10,6 @@ import { useState } from "react";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
 import HomeSpaceBackground from "@/components/HomeSpaceBackground";
-import { toneClass } from "@/lib/tone";
 import { isAdminRole } from "@/lib/role";
 
 const FEATURES = [
@@ -171,7 +170,7 @@ export default function Home() {
                 <div className="space-y-4">
                   {boards.map((board, idx) => (
                     <Reveal key={board.id} delay={Math.min(idx, 5) * 0.03} duration={0.32} slide={false}>
-                      <div className={`card-elevated board-card ${toneClass(board.id)} overflow-hidden`}>
+                      <div className="card-elevated board-card overflow-hidden">
                         <div className="flex flex-col sm:flex-row">
                           <Link
                             href={`/board/${board.slug}`}

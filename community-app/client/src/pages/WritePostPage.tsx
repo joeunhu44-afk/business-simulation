@@ -10,7 +10,6 @@ import { useState } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import BackButton from "@/components/BackButton";
-import { toneClass } from "@/lib/tone";
 import ImagePicker from "@/components/ImagePicker";
 
 export default function WritePostPage() {
@@ -98,7 +97,7 @@ export default function WritePostPage() {
       </nav>
 
       <div className="container py-8 max-w-3xl">
-        <Card className={`card-elevated p-8 ${toneClass(board.id)}`}>
+        <Card className="card-elevated p-8">
           <span className="tag-pill mb-3 inline-flex">{board.name}</span>
           <h1 className="text-3xl mb-8">새 게시글 작성</h1>
 

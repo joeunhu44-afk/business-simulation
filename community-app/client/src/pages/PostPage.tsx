@@ -11,7 +11,6 @@ import { ko } from "date-fns/locale";
 import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
-import { toneClass } from "@/lib/tone";
 import Avatar from "@/components/Avatar";
 
 export default function PostPage() {
@@ -141,7 +140,7 @@ export default function PostPage() {
 
       <div className="container py-8 max-w-3xl">
         {/* Post */}
-        <Card className={`card-elevated p-8 mb-8 ${board ? toneClass(board.id) : ''}`}>
+        <Card className="card-elevated p-8 mb-8">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0">
               {board && (
