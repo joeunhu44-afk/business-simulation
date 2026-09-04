@@ -26,7 +26,9 @@ import saturnImg from "@/assets/planets/saturn.png";
  *   한 번만 무작위로 섞인다 — SLOTS는 항상 위→아래 순서로 정의돼 있고 섞인
  *   결과를 그 순서 그대로 배정하므로, 스크롤을 내리며 만나는 행성의 순서
  *   자체가 새로고침마다 랜덤해진다. 슬롯 자체의 크기/속도/불투명도는 고정이라
- *   섞여도 "가까운 슬롯=크고 빠름, 먼 슬롯=작고 느림" 규칙은 유지된다.
+ *   섞여도 "가까운 슬롯=크고, 콘텐츠 스크롤 속도에 가깝게 따라옴 / 먼 슬롯=작고,
+ *   스크롤보다 눈에 띄게 느리게 따라옴" 규칙은 유지된다 (둘 다 콘텐츠보다
+ *   느리며, 크기로는 원근감을 표현하지 않는다).
  * - 슬롯 크기는 "가늠하기 어려운 크기" 느낌을 위해 화면 가장자리에서 살짝
  *   잘려나가지만, 각 슬롯의 sideClass 오프셋은 sizeClass 대비 약 15~25%만
  *   잘라내도록 계산되어 있어 항상 60~70% 이상(대부분 75% 이상)이 화면 안에
@@ -53,12 +55,16 @@ interface SlotConfig {
   floatY: number;
   floatDuration: number;
   floatDelay: number;
-  parallaxSpeed: number; // 1보다 크면 더 빠르게(가까운 느낌), 작으면 더 느리게(먼 느낌)
+  // 실제 스크롤 픽셀량 대비 행성이 이동하는 비율 (0~1). 콘텐츠는 스크롤과
+  // 1:1로 움직이므로, 이 값은 항상 1보다 작아야 행성이 "콘텐츠보다 뒤에서
+  // 느리게 따라오는" 원근감을 준다 — 크고 가까운 슬롯은 1에 가깝게(0.7~0.8),
+  // 작고 먼 슬롯은 0에 가깝게(0.4~0.5) 잡는다. 크기(scale)는 절대 건드리지
+  // 않고 오직 이 속도 차이만으로 원근감을 표현한다.
+  parallaxSpeed: number;
   /** 이 슬롯 하나에만 아주 옅은 비대칭 디테일(눈동자 같은 은은한 glow + 살짝 기울어진 각도)을 준다. */
   eerie?: boolean;
 }
 
-const BASE_DRIFT = 80; // px — 슬롯의 parallaxSpeed가 이 기준값에 곱해져 스크롤 추가 이동량을 만든다
 const MIN_GAP_VH_RATIO = 1.15; // 슬롯 사이 최소 간격 = 뷰포트 높이의 이 배수
 
 // 슬롯이 많을수록(=세로 간격이 촘촘할수록) 스크롤할 때 행성이 더 자주 등장한다.
@@ -74,7 +80,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 21,
     floatDuration: 21,
     floatDelay: 0,
-    parallaxSpeed: 1.75,
+    parallaxSpeed: 0.78,
   },
   {
     id: "slot-b",
@@ -87,7 +93,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 16,
     floatDuration: 24,
     floatDelay: 2,
-    parallaxSpeed: 1.25,
+    parallaxSpeed: 0.7,
   },
   {
     id: "slot-c",
@@ -100,7 +106,7 @@ const SLOTS: SlotConfig[] = [
     floatY: -13,
     floatDuration: 19,
     floatDelay: 4,
-    parallaxSpeed: 0.95,
+    parallaxSpeed: 0.62,
     eerie: true,
   },
   {
@@ -114,7 +120,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 12,
     floatDuration: 22,
     floatDelay: 6,
-    parallaxSpeed: 0.7,
+    parallaxSpeed: 0.54,
   },
   {
     id: "slot-e",
@@ -127,7 +133,7 @@ const SLOTS: SlotConfig[] = [
     floatY: -9,
     floatDuration: 16,
     floatDelay: 8,
-    parallaxSpeed: 0.5,
+    parallaxSpeed: 0.46,
   },
   {
     id: "slot-f",
@@ -140,7 +146,7 @@ const SLOTS: SlotConfig[] = [
     floatY: 8,
     floatDuration: 15,
     floatDelay: 10,
-    parallaxSpeed: 0.35,
+    parallaxSpeed: 0.4,
   },
 ];
 
@@ -207,17 +213,23 @@ function PlanetLayer({
   slot,
   planet,
   topPx,
-  scrollYProgress,
+  scrollY,
   reducedMotion,
 }: {
   slot: SlotConfig;
   planet: PlanetKey;
   topPx: number;
-  scrollYProgress: MotionValue<number>;
+  scrollY: MotionValue<number>;
   reducedMotion: boolean;
 }) {
-  // 스크롤 진행률에 따라 슬롯마다 다른 양만큼 더 얹어서 서로 다른 속도로 보이게 한다.
-  const rawExtraY = useTransform(scrollYProgress, [0, 1], [0, -(slot.parallaxSpeed - 1) * BASE_DRIFT]);
+  // 이 레이어는 문서 좌표(topPx)에 절대 배치되어 있어서, 아무 보정도 없으면
+  // 스크롤한 만큼(1:1) 화면 위로 움직여 콘텐츠와 완전히 같은 속도로 보인다.
+  // 여기서 스크롤량(scrollY, px)의 (1 - parallaxSpeed)만큼을 반대 방향으로
+  // 되돌려주면, 실제 화면 이동량은 "-scrollY + scrollY*(1-parallaxSpeed)
+  // = -scrollY*parallaxSpeed"가 되어 콘텐츠보다 항상 parallaxSpeed 배만큼
+  // 느리게(0~1배) 따라오게 된다. 문서 길이와 무관하게 스크롤 픽셀량에
+  // 직접 비례하므로, 페이지가 길든 짧든 체감 속도가 일정하다.
+  const rawExtraY = useTransform(scrollY, (v) => v * (1 - slot.parallaxSpeed));
 
   return (
     <motion.div
@@ -241,8 +253,9 @@ function PlanetLayer({
 }
 
 export default function HomeSpaceBackground() {
-  // 페이지 전체(문서) 스크롤 진행률 — 콘텐츠가 늘어나 페이지가 길어지면 범위도 자동으로 늘어난다.
-  const { scrollYProgress } = useScroll();
+  // 실제 스크롤 픽셀량(px) — 패럴랙스 속도를 문서 길이와 무관하게 일정한
+  // 비율로 유지하려면 0~1 정규화된 progress가 아니라 raw px 값이 필요하다.
+  const { scrollY } = useScroll();
   const reducedMotion = useReducedMotion() ?? false;
   // 마운트(새로고침) 시 한 번만 섞고, 이후 리렌더/스크롤에는 다시 섞이지 않는다.
   const [planetOrder] = useState<PlanetKey[]>(() => shuffle(PLANET_KEYS));
@@ -284,7 +297,7 @@ export default function HomeSpaceBackground() {
               slot={slot}
               planet={planetOrder[i % planetOrder.length]}
               topPx={topPx}
-              scrollYProgress={scrollYProgress}
+              scrollY={scrollY}
               reducedMotion={reducedMotion}
             />
           );
