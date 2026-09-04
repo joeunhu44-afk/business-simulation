@@ -36,7 +36,7 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="cosmic-empty flex min-h-screen items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -163,7 +163,7 @@ export default function Home() {
             <div>
               <h2 className="section-heading mb-6 text-xl">게시판</h2>
               {boardsLoading ? (
-                <div className="flex justify-center py-12">
+                <div className="cosmic-empty flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : boards && boards.length > 0 ? (

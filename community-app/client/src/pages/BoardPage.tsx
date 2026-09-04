@@ -39,7 +39,7 @@ export default function BoardPage() {
 
   if (boardsLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="cosmic-empty min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -144,7 +144,7 @@ export default function BoardPage() {
         {/* Posts List */}
         <div className="space-y-3">
           {postsLoading ? (
-            <div className="flex justify-center py-12">
+            <div className="cosmic-empty flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : posts && posts.length > 0 ? (
@@ -152,7 +152,7 @@ export default function BoardPage() {
               <a
                 key={post.id}
                 href={`/post/${post.id}`}
-                className="card-elevated block p-4"
+                className="card-elevated post-list-card block p-4"
               >
                   <div className="flex items-start gap-3 mt-0.5">
                     <Avatar
@@ -187,7 +187,7 @@ export default function BoardPage() {
               </a>
             ))
           ) : (
-            <Card className="card-elevated p-12 text-center">
+            <Card className="cosmic-empty card-elevated p-12 text-center">
               <p className="text-muted-foreground">게시글이 없습니다.</p>
             </Card>
           )}
