@@ -30,12 +30,12 @@ import Avatar from "@/components/Avatar";
 import { roleLabel } from "@/lib/role";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
-  { color: "dark", label: "크림슨", swatch: "#d6304c" },
-  { color: "blue", label: "더스티 블루", swatch: "#4a6c8c" },
-  { color: "purple", label: "플럼", swatch: "#8c5b7a" },
-  { color: "green", label: "세이지", swatch: "#4c6b58" },
-  { color: "red", label: "차콜", swatch: "#1a1a1c" },
-  { color: "amber", label: "오커", swatch: "#b08a3e" },
+  { color: "dark", label: "오로라 틸", swatch: "#107872" },
+  { color: "blue", label: "코스믹 인디고", swatch: "#4256c9" },
+  { color: "purple", label: "오로라 바이올렛", swatch: "#7346b8" },
+  { color: "green", label: "오로라 그린", swatch: "#1a7455" },
+  { color: "red", label: "브릭 로즈", swatch: "#ad4256" },
+  { color: "amber", label: "오커", swatch: "#b8863f" },
 ];
 
 type MenuView = "root" | "profile" | "chat" | "search" | "settings";

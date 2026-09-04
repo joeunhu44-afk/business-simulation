@@ -45,92 +45,187 @@
 }
 
 /* =========================================================
-   기본 테마 — 크림슨 레드 포인트 컬러 + 깔끔한 화이트 배경
-   레퍼런스 사이트(진한 레드 히어로 + 유리질 플로팅 네비 +
-   블랙 UI)의 톤을 커뮤니티 앱에 맞게 옮겨왔다: 본문은 읽기
-   편한 화이트/블랙 기본기를 유지하고, 히어로·네비 등 포인트가
-   되는 곳에 크림슨 레드와 글래스모피즘을 사용한다.
+   기본 테마 — "궤도(Orbit)" 오로라 포인트 컬러 + 은은한 틴트 배경
+   예전엔 시장 1위 경쟁 앱을 그대로 본뜬 크림슨 레드 + 무채색 회색
+   조합이었다. 지금은 홈 화면 우주 배경(HomeSpaceBackground.tsx의
+   행성 색감 — 살구/러스트 화성, 세이지·카키 톤 토성, 회색 달)과
+   자연스럽게 어울리는 청록 계열 오로라 포인트 컬러로 정체성을
+   바꿨다. 배경도 무채색 대신 아주 옅은 하늘색/라벤더 틴트를 살짝
+   섞어 우주 배경으로 자연스럽게 이어지게 했다 (가독성을 위해
+   명도 자체는 흰색에 가깝게 유지).
    ========================================================= */
 :root {
   --radius: 0.75rem;
 
-  /* 포인트 컬러 (크림슨) */
-  --primary: #d6304c;
+  /* 포인트 컬러 (오로라 틸) */
+  --primary: #107872;
   --primary-foreground: #ffffff;
 
-  --background: #fafafa;
-  --foreground: #141414;
-  --card: #ffffff;
-  --card-foreground: #141414;
-  --popover: #ffffff;
-  --popover-foreground: #141414;
-  --secondary: #f2f2f3;
-  --secondary-foreground: #2b2b2e;
-  --muted: #f2f2f3;
-  --muted-foreground: #6b6b70;
-  --accent: #f2f2f3;
-  --accent-foreground: #141414;
+  --background: #f6f6fb;
+  --foreground: #14141c;
+  /* 살짝 반투명 + 옅은 블러 — 지금 당장 카드에 backdrop-filter를 붙이진
+     않지만(적용은 Phase 2), 나중에 배경과 자연스럽게 겹칠 수 있도록
+     값 자체는 미리 반투명하게 준비해둔다. --card-blur는 그때 쓸 블러량. */
+  --card: rgba(255, 255, 255, 0.94);
+  --card-foreground: #14141c;
+  --card-blur: 10px;
+  --popover: #fbfbfe;
+  --popover-foreground: #14141c;
+  --secondary: #f1f1f6;
+  --secondary-foreground: #2b2b34;
+  --muted: #f1f1f6;
+  --muted-foreground: #6c6c78;
+  --accent: #f1f1f6;
+  --accent-foreground: #14141c;
   --destructive: #c81e3a;
   --destructive-foreground: #ffffff;
-  --border: #e5e5e8;
-  --input: #e5e5e8;
-  --ring: #d6304c;
+  --border: #e4e4ee;
+  --input: #e4e4ee;
+  --ring: #107872;
 
-  --sidebar: #ffffff;
-  --sidebar-foreground: #141414;
-  --sidebar-primary: #d6304c;
+  --sidebar: #fbfbfe;
+  --sidebar-foreground: #14141c;
+  --sidebar-primary: #107872;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #f2f2f3;
-  --sidebar-accent-foreground: #141414;
-  --sidebar-border: #e5e5e8;
-  --sidebar-ring: #d6304c;
+  --sidebar-accent: #f1f1f6;
+  --sidebar-accent-foreground: #14141c;
+  --sidebar-border: #e4e4ee;
+  --sidebar-ring: #107872;
 
-  --chart-1: #d6304c;
-  --chart-2: #4a6c8c;
-  --chart-3: #4c6b58;
-  --chart-4: #8c5b7a;
-  --chart-5: #b08a3e;
+  --chart-1: #107872;
+  --chart-2: #4256c9;
+  --chart-3: #1a7455;
+  --chart-4: #7346b8;
+  --chart-5: #b8863f;
 
   /* 커스텀 변수 */
-  --text-strong: #141414;
-  --text-normal: #2b2b2e;
-  --text-muted: #6b6b70;
-  --bg-base: #fafafa;
+  --text-strong: #14141c;
+  --text-normal: #2b2b34;
+  --text-muted: #6c6c78;
+  --bg-base: #f6f6fb;
   --bg-surface: #ffffff;
-  --bg-surface-2: #f2f2f3;
-  --bg-hover: #ececee;
-  --border-color: #e5e5e8;
-  --accent-color: #d6304c;
-  --accent-soft: rgba(214, 48, 76, 0.1);
+  --bg-surface-2: #f0f0f6;
+  --bg-hover: #ececf4;
+  --border-color: #e4e4ee;
+  --accent-color: #107872;
+  --accent-soft: rgba(16, 120, 114, 0.1);
 
-  /* 히어로 / 글래스 전용 변수 */
-  --hero-dark-1: #2b0509;
-  --hero-dark-2: #55101c;
-  --hero-dark-3: #8f1c2e;
+  /* 히어로 / 글래스 전용 변수 — 진한 크림슨 대신 딥스페이스 네이비 +
+     보라 오로라 글로우로 교체 */
+  --hero-dark-1: #0a0f1f;
+  --hero-dark-2: #16264a;
+  --hero-dark-3: #6d43b0;
   --glass-bg: rgba(255, 255, 255, 0.12);
   --glass-border: rgba(255, 255, 255, 0.18);
 }
 
-/* 색상 테마: 화이트 베이스 위에서 포인트색만 바뀐다 */
+/* 색상 테마: 틴트 베이스 위에서 포인트색만 바뀐다.
+   기본값(위 :root)이 이제 오로라 틸이라 "포인트"라는 지위를 잃었으므로,
+   red 프리셋도 예전 크림슨을 그대로 재탕하지 않고 한 단계 차분한
+   브릭 로즈 톤으로 새로 잡았다. */
 [data-theme-color="blue"] {
-  --primary: #4a6c8c; --ring: #4a6c8c; --sidebar-primary: #4a6c8c; --sidebar-ring: #4a6c8c;
-  --accent-color: #4a6c8c; --accent-soft: rgba(74, 108, 140, 0.1);
+  --primary: #4256c9; --ring: #4256c9; --sidebar-primary: #4256c9; --sidebar-ring: #4256c9;
+  --accent-color: #4256c9; --accent-soft: rgba(66, 86, 201, 0.1);
 }
 [data-theme-color="purple"] {
-  --primary: #8c5b7a; --ring: #8c5b7a; --sidebar-primary: #8c5b7a; --sidebar-ring: #8c5b7a;
-  --accent-color: #8c5b7a; --accent-soft: rgba(140, 91, 122, 0.1);
+  --primary: #7346b8; --ring: #7346b8; --sidebar-primary: #7346b8; --sidebar-ring: #7346b8;
+  --accent-color: #7346b8; --accent-soft: rgba(115, 70, 184, 0.1);
 }
 [data-theme-color="green"] {
-  --primary: #4c6b58; --ring: #4c6b58; --sidebar-primary: #4c6b58; --sidebar-ring: #4c6b58;
-  --accent-color: #4c6b58; --accent-soft: rgba(76, 107, 88, 0.1);
+  --primary: #1a7455; --ring: #1a7455; --sidebar-primary: #1a7455; --sidebar-ring: #1a7455;
+  --accent-color: #1a7455; --accent-soft: rgba(26, 116, 85, 0.1);
 }
 [data-theme-color="red"] {
-  --primary: #1a1a1c; --ring: #1a1a1c; --sidebar-primary: #1a1a1c; --sidebar-ring: #1a1a1c;
-  --accent-color: #1a1a1c; --accent-soft: rgba(26, 26, 28, 0.08);
+  --primary: #ad4256; --ring: #ad4256; --sidebar-primary: #ad4256; --sidebar-ring: #ad4256;
+  --accent-color: #ad4256; --accent-soft: rgba(173, 66, 86, 0.1);
 }
 [data-theme-color="amber"] {
-  --primary: #b08a3e; --ring: #b08a3e; --sidebar-primary: #b08a3e; --sidebar-ring: #b08a3e;
-  --accent-color: #b08a3e; --accent-soft: rgba(176, 138, 62, 0.1);
+  --primary: #b8863f; --ring: #b8863f; --sidebar-primary: #b8863f; --sidebar-ring: #b8863f;
+  --accent-color: #b8863f; --accent-soft: rgba(184, 134, 63, 0.1);
+}
+
+/* =========================================================
+   다크 모드 — 같은 "궤도" 오로라 컨셉을 어둡고 깊은 우주 톤으로
+   반전시킨 버전. 딥스페이스 네이비 배경 위에 오로라 틸이 밝게
+   떠서 포인트 컬러 역할을 한다 (라이트 모드와 반대로, 버튼 등에서는
+   흰 글자 대신 어두운 네이비 글자를 올려야 대비가 나온다 — 밝은
+   오로라 컬러 위에 흰 글자를 얹으면 대비가 부족해진다).
+   ThemeProvider의 switchable 옵션이 꺼져있어 지금은 앱에서 실제로
+   토글할 UI가 없지만, 값 자체는 완전하게 정의해둔다.
+   ========================================================= */
+.dark {
+  --primary: #2bd0c2;
+  --primary-foreground: #0a0d18;
+
+  --background: #0a0d18;
+  --foreground: #e9e9f2;
+  --card: rgba(18, 22, 40, 0.88);
+  --card-foreground: #e9e9f2;
+  --card-blur: 10px;
+  --popover: #12162a;
+  --popover-foreground: #e9e9f2;
+  --secondary: #161b34;
+  --secondary-foreground: #d6d6e6;
+  --muted: #161b34;
+  --muted-foreground: #8f8fa8;
+  --accent: #1a2038;
+  --accent-foreground: #e9e9f2;
+  --destructive: #e6455f;
+  --destructive-foreground: #0a0d18;
+  --border: #262c48;
+  --input: #262c48;
+  --ring: #2bd0c2;
+
+  --sidebar: #0e1224;
+  --sidebar-foreground: #e9e9f2;
+  --sidebar-primary: #2bd0c2;
+  --sidebar-primary-foreground: #0a0d18;
+  --sidebar-accent: #161b34;
+  --sidebar-accent-foreground: #e9e9f2;
+  --sidebar-border: #262c48;
+  --sidebar-ring: #2bd0c2;
+
+  --chart-1: #2bd0c2;
+  --chart-2: #7c96ff;
+  --chart-3: #3ddc9a;
+  --chart-4: #b98af0;
+  --chart-5: #e0a94c;
+
+  --text-strong: #e9e9f2;
+  --text-normal: #cacada;
+  --text-muted: #8f8fa8;
+  --bg-base: #0a0d18;
+  --bg-surface: #12162a;
+  --bg-surface-2: #161b34;
+  --bg-hover: #1c2340;
+  --border-color: #262c48;
+  --accent-color: #2bd0c2;
+  --accent-soft: rgba(43, 208, 194, 0.16);
+}
+
+/* 다크 모드 + 색상 프리셋 조합. 라이트용 프리셋 색은 흰 글자를 전제로
+   고른 중간 명도라 다크 배경/어두운 글자 조합에는 너무 칙칙해지므로,
+   같은 색상군을 다크 모드에 맞게 밝게 다시 잡았다 (글자색은 위 .dark의
+   --primary-foreground를 그대로 물려받는다). */
+.dark[data-theme-color="blue"] {
+  --primary: #7c96ff; --ring: #7c96ff; --sidebar-primary: #7c96ff; --sidebar-ring: #7c96ff;
+  --accent-color: #7c96ff; --accent-soft: rgba(124, 150, 255, 0.16);
+}
+.dark[data-theme-color="purple"] {
+  --primary: #b98af0; --ring: #b98af0; --sidebar-primary: #b98af0; --sidebar-ring: #b98af0;
+  --accent-color: #b98af0; --accent-soft: rgba(185, 138, 240, 0.16);
+}
+.dark[data-theme-color="green"] {
+  --primary: #3ddc9a; --ring: #3ddc9a; --sidebar-primary: #3ddc9a; --sidebar-ring: #3ddc9a;
+  --accent-color: #3ddc9a; --accent-soft: rgba(61, 220, 154, 0.16);
+}
+.dark[data-theme-color="red"] {
+  --primary: #ff6b81; --ring: #ff6b81; --sidebar-primary: #ff6b81; --sidebar-ring: #ff6b81;
+  --accent-color: #ff6b81; --accent-soft: rgba(255, 107, 129, 0.16);
+}
+.dark[data-theme-color="amber"] {
+  --primary: #e0a94c; --ring: #e0a94c; --sidebar-primary: #e0a94c; --sidebar-ring: #e0a94c;
+  --accent-color: #e0a94c; --accent-soft: rgba(224, 169, 76, 0.16);
 }
 
 @layer base {
