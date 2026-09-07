@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Search, Eye, MessageCircle, ThumbsUp, Hash } from "lucide-react";
+import { Loader2, Plus, Search, Eye, MessageCircle, ThumbsUp, Hash, Rocket } from "lucide-react";
 import { Link, useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Avatar from "@/components/Avatar";
 import BackButton from "@/components/BackButton";
+import EmptyState from "@/components/EmptyState";
 
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -187,8 +188,22 @@ export default function BoardPage() {
               </a>
             ))
           ) : (
-            <Card className="cosmic-empty card-elevated p-12 text-center">
-              <p className="text-muted-foreground">게시글이 없습니다.</p>
+            <Card className="card-elevated p-4">
+              <EmptyState
+                icon={Rocket}
+                title="아직 게시글이 없어요"
+                description="가장 먼저 글을 남겨보세요"
+                action={
+                  isAuthenticated && (
+                    <a href={`/board/${slug}/write`}>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4" />
+                        글쓰기
+                      </Button>
+                    </a>
+                  )
+                }
+              />
             </Card>
           )}
         </div>

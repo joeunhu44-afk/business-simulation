@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Sparkles } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -263,7 +263,12 @@ function BoardPostList({ boardId }: { boardId: number }) {
   }
 
   if (!posts || posts.length === 0) {
-    return <p className="text-sm text-muted-foreground py-2">아직 게시글이 없어요</p>;
+    return (
+      <p className="flex items-center gap-1.5 text-sm text-muted-foreground py-2">
+        <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--accent-color)" }} />
+        아직 게시글이 없어요
+      </p>
+    );
   }
 
   return (

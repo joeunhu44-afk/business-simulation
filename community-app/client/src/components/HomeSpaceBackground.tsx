@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, useReducedMotion, useScroll, useTransform, type MotionValue } from "framer-motion";
+import { useMenu } from "@/contexts/MenuContext";
 import moonImg from "@/assets/planets/moon.png";
 import marsImg from "@/assets/planets/mars.png";
 import jupiterImg from "@/assets/planets/jupiter.png";
@@ -259,6 +260,10 @@ export default function HomeSpaceBackground() {
   // 비율로 유지하려면 0~1 정규화된 progress가 아니라 raw px 값이 필요하다.
   const { scrollY } = useScroll();
   const reducedMotion = useReducedMotion() ?? false;
+  // TopLeftMenu의 슬라이드 메뉴가 열려있는 동안은 행성을 옅게 죽여서, 메뉴가
+  // 배경과 어중간하게 겹쳐 "우연히 가려진 것"처럼 보이지 않고 메뉴가 그 위에
+  // 확실히 떠 있는 것처럼 보이게 한다 (메뉴 쪽에는 sheet-glow로 그림자를 더한다).
+  const { isOpen: menuOpen } = useMenu();
   // 마운트(새로고침) 시 한 번만 섞고, 이후 리렌더/스크롤에는 다시 섞이지 않는다.
   const [planetOrder] = useState<PlanetKey[]>(() => shuffle(PLANET_KEYS));
 
@@ -287,7 +292,11 @@ export default function HomeSpaceBackground() {
 
   return (
     <>
-      <div className="absolute inset-0 -z-[5] overflow-hidden pointer-events-none" aria-hidden="true">
+      <div
+        className="absolute inset-0 -z-[5] overflow-hidden pointer-events-none transition-opacity duration-300"
+        style={{ opacity: menuOpen ? 0.4 : 1 }}
+        aria-hidden="true"
+      >
         {SLOTS.map((slot, i) => {
           // 문서 전체 높이 기준 %와, 뷰포트 기준 최소 간격 중 더 아래쪽 값을 쓴다 —
           // 페이지가 길면 %가 이기고, 짧으면 최소 간격이 이겨서 서로 겹치지 않는다.
