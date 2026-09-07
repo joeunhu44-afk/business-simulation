@@ -271,6 +271,37 @@ export type Message = typeof messages.$inferSelect;
 export type InsertMessage = typeof messages.$inferInsert;
 
 /**
+ * 광고 배너 테이블 (제휴 업체 광고 등). 관리자가 등록/관리한다.
+ * position은 "어디에 노출되는가"를 나타내는 배치 슬롯 — 지금은 홈 상단(home_top)과
+ * 특정 게시판 상단(board_top) 두 가지지만, enum이라 나중에 다른 위치(예: 검색
+ * 결과 상단 등)를 추가하기 쉽다. targetBoardId는 position이 board_top일 때만
+ * 의미가 있고(어느 게시판에 노출할지), 그 외엔 null이다.
+ */
+export const adBanners = mysqlTable("adBanners", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  /** 배너 이미지 URL (server/storage.ts를 통해 업로드된 공개 URL). */
+  imageUrl: varchar("imageUrl", { length: 1024 }).notNull(),
+  /** 클릭 시 새 탭으로 열리는 대상 URL. */
+  linkUrl: varchar("linkUrl", { length: 1024 }).notNull(),
+  position: mysqlEnum("position", ["home_top", "board_top"]).default("home_top").notNull(),
+  /** position이 "board_top"일 때만 값이 있음. null이면(=home_top) 게시판 무관 전체 노출. */
+  targetBoardId: int("targetBoardId"),
+  isActive: boolean("isActive").default(true).notNull(),
+  displayOrder: int("displayOrder").default(0).notNull(),
+  clickCount: int("clickCount").default(0).notNull(),
+  impressionCount: int("impressionCount").default(0).notNull(),
+  /** 둘 다 선택 — 기간 한정 노출용. null이면 그쪽 경계는 제한 없음. */
+  startsAt: timestamp("startsAt"),
+  endsAt: timestamp("endsAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type AdBanner = typeof adBanners.$inferSelect;
+export type InsertAdBanner = typeof adBanners.$inferInsert;
+
+/**
  * Relations
  */
 export const usersRelations = relations(users, ({ many }) => ({

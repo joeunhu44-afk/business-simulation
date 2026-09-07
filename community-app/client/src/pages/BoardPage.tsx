@@ -13,6 +13,7 @@ import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Avatar from "@/components/Avatar";
 import BackButton from "@/components/BackButton";
 import EmptyState from "@/components/EmptyState";
+import AdBannerCarousel from "@/components/AdBannerCarousel";
 
 export default function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -141,6 +142,9 @@ export default function BoardPage() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Ad Banner */}
+        <AdBannerCarousel position="board_top" boardId={board.id} className="mb-6" />
 
         {/* Posts List */}
         <div className="space-y-3">

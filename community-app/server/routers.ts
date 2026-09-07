@@ -582,6 +582,95 @@ export const appRouter = router({
         const url = await uploadImageDataUrl(input.dataUrl, `posts/${ctx.user.id}`);
         return { url };
       }),
+
+    uploadAdBannerImage: adminProcedure
+      .input(z.object({ dataUrl: z.string() }))
+      .mutation(async ({ input }) => {
+        const url = await uploadImageDataUrl(input.dataUrl, "ad-banners");
+        return { url };
+      }),
+  }),
+
+  // 광고 배너 API (제휴 업체 광고 등, 관리자가 등록/관리)
+  adBanners: router({
+    list: publicProcedure
+      .input(z.object({
+        position: z.enum(['home_top', 'board_top']),
+        boardId: z.number().optional(),
+      }))
+      .query(async ({ input }) => {
+        return db.getActiveAdBanners(input.position, input.boardId);
+      }),
+
+    listAll: adminProcedure.query(async () => {
+      return db.getAllAdBanners();
+    }),
+
+    create: adminProcedure
+      .input(z.object({
+        title: z.string().min(1).max(255),
+        imageUrl: z.string().min(1).max(1024),
+        linkUrl: z.string().min(1).max(1024),
+        position: z.enum(['home_top', 'board_top']).default('home_top'),
+        targetBoardId: z.number().optional(),
+        displayOrder: z.number().default(0),
+        startsAt: z.string().datetime().optional(),
+        endsAt: z.string().datetime().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        return db.createAdBanner({
+          title: input.title,
+          imageUrl: input.imageUrl,
+          linkUrl: input.linkUrl,
+          position: input.position,
+          targetBoardId: input.position === 'board_top' ? (input.targetBoardId ?? null) : null,
+          displayOrder: input.displayOrder,
+          startsAt: input.startsAt ? new Date(input.startsAt) : null,
+          endsAt: input.endsAt ? new Date(input.endsAt) : null,
+        });
+      }),
+
+    update: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        title: z.string().min(1).max(255).optional(),
+        imageUrl: z.string().min(1).max(1024).optional(),
+        linkUrl: z.string().min(1).max(1024).optional(),
+        position: z.enum(['home_top', 'board_top']).optional(),
+        targetBoardId: z.number().nullable().optional(),
+        isActive: z.boolean().optional(),
+        displayOrder: z.number().optional(),
+        startsAt: z.string().datetime().nullable().optional(),
+        endsAt: z.string().datetime().nullable().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, startsAt, endsAt, ...rest } = input;
+        return db.updateAdBanner(id, {
+          ...rest,
+          ...(startsAt !== undefined ? { startsAt: startsAt ? new Date(startsAt) : null } : {}),
+          ...(endsAt !== undefined ? { endsAt: endsAt ? new Date(endsAt) : null } : {}),
+        });
+      }),
+
+    delete: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteAdBanner(input.id);
+      }),
+
+    recordClick: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.incrementAdBannerClick(input.id);
+        return { success: true };
+      }),
+
+    recordImpression: publicProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.incrementAdBannerImpression(input.id);
+        return { success: true };
+      }),
   }),
 
   // 관리자 API

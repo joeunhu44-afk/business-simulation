@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Sparkles } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Sparkles, Shield } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -11,6 +11,20 @@ import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
 import HomeSpaceBackground from "@/components/HomeSpaceBackground";
 import { isAdminRole } from "@/lib/role";
+import AdBannerCarousel from "@/components/AdBannerCarousel";
+
+const QUICK_LINKS: {
+  key: string;
+  label: string;
+  icon: typeof MessageSquareText;
+  href: string;
+  external?: boolean;
+  iconClassName?: string;
+}[] = [
+  { key: "inquiry", label: "문의하기", icon: MessageSquareText, href: "/inquiries", iconClassName: "accent-text" },
+  { key: "talk", label: "신흥톡톡", icon: MessageCircle, href: "https://school.cbe.go.kr/shinheung-h/M010304", external: true },
+  { key: "meal", label: "급식표", icon: UtensilsCrossed, href: "https://school.cbe.go.kr/shinheung-h/M01030801", external: true },
+];
 
 const FEATURES = [
   { title: "게시판", desc: "관심사에 맞는 게시판을 찾아 이야기를 나눠요" },
@@ -96,6 +110,9 @@ export default function Home() {
           </div>
         </div>
 
+        {/* Ad Banner */}
+        <AdBannerCarousel position="home_top" className="container pt-8" />
+
         {/* Features */}
         <div id="features" className="py-20">
           <div className="container">
@@ -132,14 +149,56 @@ export default function Home() {
       <HomeSpaceBackground />
       {/* Navigation */}
       <nav className="sticky top-3 z-40 mx-3 sm:mx-6 lg:mx-auto lg:max-w-6xl rounded-2xl border border-border bg-card/90 backdrop-blur-md shadow-sm">
-        <div className="container flex items-center justify-between gap-3 py-4">
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="container flex items-center justify-between gap-2 py-4">
+          <div className="flex items-center gap-2 shrink-0 min-w-0">
             <HeaderMenuButton />
-            <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity">
+            <a href="/" className="font-serif text-xl font-bold accent-text hover:opacity-80 transition-opacity shrink-0">
               커뮤니티
             </a>
           </div>
-          <div className="flex items-center gap-4 min-w-0">
+
+          {/* 모바일(md 미만): 바로가기를 사이드바 카드 대신 헤더 아이콘 버튼으로 노출.
+              항목이 3개뿐이라 "더보기" 없이 전부 아이콘으로 넣어도 폭에 들어간다
+              (실측 확인: 375px 기준 줄바꿈 없음). 라벨 텍스트는 aria-label로만 제공. */}
+          <div className="flex md:hidden items-center gap-0.5 shrink-0">
+            {QUICK_LINKS.map(({ key, label, icon: Icon, href, external, iconClassName }) =>
+              external ? (
+                <a
+                  key={key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  title={label}
+                  className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-secondary transition-colors shrink-0"
+                >
+                  <Icon className={`h-[18px] w-[18px] text-muted-foreground ${iconClassName || ""}`} />
+                </a>
+              ) : (
+                <Link
+                  key={key}
+                  href={href}
+                  aria-label={label}
+                  title={label}
+                  className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-secondary transition-colors shrink-0"
+                >
+                  <Icon className={`h-[18px] w-[18px] text-muted-foreground ${iconClassName || ""}`} />
+                </Link>
+              )
+            )}
+            {isAdminRole(user?.role) && (
+              <a
+                href="/admin"
+                aria-label="관리자"
+                title="관리자"
+                className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-secondary transition-colors shrink-0"
+              >
+                <Shield className="h-[18px] w-[18px] accent-text" />
+              </a>
+            )}
+          </div>
+
+          <div className="hidden md:flex items-center gap-4 min-w-0">
             <span className="text-sm text-muted-foreground truncate">{user?.name || "사용자"}</span>
             {isAdminRole(user?.role) && (
               <a href="/admin" className="text-sm font-semibold accent-text hover:underline shrink-0">
@@ -154,6 +213,9 @@ export default function Home() {
       <div className="container py-8">
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
           <div>
+            {/* Ad Banner */}
+            <AdBannerCarousel position="home_top" className="mb-8" />
+
             {/* Announcements */}
             <div className="mb-8 pb-8 border-b border-border">
               <AnnouncementsSection />
@@ -202,10 +264,14 @@ export default function Home() {
             </div>
           </div>
 
-          {/* News Panel (top-right) */}
+          {/* News Panel (top-right). 바로가기 카드는 md 미만에서 헤더 아이콘
+              버튼으로 대체되므로(위 nav 참고) 여기서는 숨긴다 — 안 그러면
+              lg 미만에서 게시판 목록 아래로 밀려나 같은 항목이 두 번 보인다. */}
           <div className="space-y-4">
             <NewsPanel />
-            <QuickLinksPanel />
+            <div className="hidden md:block">
+              <QuickLinksPanel />
+            </div>
           </div>
         </div>
       </div>
@@ -221,31 +287,29 @@ function QuickLinksPanel() {
         바로가기
       </h3>
       <div className="space-y-1">
-        <Link
-          href="/inquiries"
-          className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
-        >
-          <MessageSquareText className="h-4 w-4 accent-text shrink-0" />
-          문의하기
-        </Link>
-        <a
-          href="https://school.cbe.go.kr/shinheung-h/M010304"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
-        >
-          <MessageCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-          신흥톡톡
-        </a>
-        <a
-          href="https://school.cbe.go.kr/shinheung-h/M01030801"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
-        >
-          <UtensilsCrossed className="h-4 w-4 text-muted-foreground shrink-0" />
-          급식표
-        </a>
+        {QUICK_LINKS.map(({ key, label, icon: Icon, href, external, iconClassName }) =>
+          external ? (
+            <a
+              key={key}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
+            >
+              <Icon className={`h-4 w-4 text-muted-foreground shrink-0 ${iconClassName || ""}`} />
+              {label}
+            </a>
+          ) : (
+            <Link
+              key={key}
+              href={href}
+              className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
+            >
+              <Icon className={`h-4 w-4 text-muted-foreground shrink-0 ${iconClassName || ""}`} />
+              {label}
+            </Link>
+          )
+        )}
       </div>
     </Card>
   );

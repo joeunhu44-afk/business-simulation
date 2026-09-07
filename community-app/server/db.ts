@@ -2,7 +2,7 @@ import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "driz
 import { drizzle } from "drizzle-orm/mysql2";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "node:path";
-import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages } from "../drizzle/schema";
+import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -519,6 +519,86 @@ export async function deleteAnnouncement(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.delete(announcements).where(eq(announcements.id, id));
+}
+
+/**
+ * 광고 배너 관련 쿼리
+ */
+export async function getActiveAdBanners(position: "home_top" | "board_top", boardId?: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(adBanners.isActive, true), eq(adBanners.position, position)];
+  if (position === "board_top") {
+    if (!boardId) return [];
+    conditions.push(eq(adBanners.targetBoardId, boardId));
+  }
+  const rows = await db.select().from(adBanners)
+    .where(and(...conditions))
+    .orderBy(desc(adBanners.displayOrder), desc(adBanners.createdAt));
+  const now = Date.now();
+  return rows.filter((b) => {
+    if (b.startsAt && new Date(b.startsAt).getTime() > now) return false;
+    if (b.endsAt && new Date(b.endsAt).getTime() < now) return false;
+    return true;
+  });
+}
+
+export async function getAllAdBanners() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(adBanners).orderBy(desc(adBanners.displayOrder), desc(adBanners.createdAt));
+}
+
+export async function createAdBanner(data: {
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  position: "home_top" | "board_top";
+  targetBoardId?: number | null;
+  displayOrder?: number;
+  startsAt?: Date | null;
+  endsAt?: Date | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(adBanners).values(data);
+}
+
+export async function updateAdBanner(
+  id: number,
+  data: Partial<{
+    title: string;
+    imageUrl: string;
+    linkUrl: string;
+    position: "home_top" | "board_top";
+    targetBoardId: number | null;
+    isActive: boolean;
+    displayOrder: number;
+    startsAt: Date | null;
+    endsAt: Date | null;
+  }>
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(adBanners).set(data).where(eq(adBanners.id, id));
+}
+
+export async function deleteAdBanner(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.delete(adBanners).where(eq(adBanners.id, id));
+}
+
+export async function incrementAdBannerClick(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(adBanners).set({ clickCount: sql`${adBanners.clickCount} + 1` }).where(eq(adBanners.id, id));
+}
+
+export async function incrementAdBannerImpression(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(adBanners).set({ impressionCount: sql`${adBanners.impressionCount} + 1` }).where(eq(adBanners.id, id));
 }
 
 /**

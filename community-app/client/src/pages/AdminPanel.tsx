@@ -1,10 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Shield, ShieldCheck, ShieldOff, Users, FileText, AlertCircle, Megaphone, Search } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, ShieldOff, Users, FileText, AlertCircle, Megaphone, Search, ImagePlus, X, MousePointerClick, Eye } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { isAdminRole, roleLabel } from "@/lib/role";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label: string }[] }[] = [
   { key: 'user', label: '사용자', tabs: [{ key: 'users', label: '회원 관리' }] },
@@ -22,6 +23,7 @@ const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label
     tabs: [
       { key: 'boards', label: '게시판 관리' },
       { key: 'posts', label: '게시글 관리' },
+      { key: 'banners', label: '배너 관리' },
     ],
   },
   {
@@ -135,6 +137,7 @@ export default function AdminPanel() {
             {activeTab === 'users' && <UsersTab />}
             {activeTab === 'boards' && <BoardsTab />}
             {activeTab === 'posts' && <PostsTab />}
+            {activeTab === 'banners' && <AdBannersTab />}
             {activeTab === 'reports' && <ReportsTab />}
             {activeTab === 'announcements' && <AnnouncementsTab />}
             {activeTab === 'news' && <NewsTab />}
@@ -873,6 +876,339 @@ function AnnouncementsTab() {
                       variant="destructive"
                       size="sm"
                       onClick={() => handleDelete(announcement.id, announcement.title)}
+                      disabled={deleteMutation.isPending}
+                    >
+                      삭제
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+type AdBannerFormState = {
+  title: string;
+  imageUrl: string;
+  linkUrl: string;
+  position: 'home_top' | 'board_top';
+  targetBoardId: string;
+  startsAt: string;
+  endsAt: string;
+};
+
+const EMPTY_BANNER_FORM: AdBannerFormState = {
+  title: '',
+  imageUrl: '',
+  linkUrl: '',
+  position: 'home_top',
+  targetBoardId: '',
+  startsAt: '',
+  endsAt: '',
+};
+
+/** 서버의 Date/ISO 문자열을 <input type="datetime-local">에 바로 쓸 수 있는 형식으로 변환한다. */
+function toDatetimeLocalValue(value: string | Date | null | undefined): string {
+  if (!value) return '';
+  const d = new Date(value);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function AdBannerImagePicker({ imageUrl, onChange }: { imageUrl: string; onChange: (url: string) => void }) {
+  const [uploading, setUploading] = useState(false);
+  const uploadMutation = trpc.media.uploadAdBannerImage.useMutation();
+  const ref = useRef<HTMLInputElement | null>(null);
+
+  const handleFile = async (file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드할 수 있어요');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error('이미지는 8MB 이하만 업로드할 수 있어요');
+      return;
+    }
+    setUploading(true);
+    try {
+      const dataUrl: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const { url } = await uploadMutation.mutateAsync({ dataUrl });
+      onChange(url);
+    } catch (error: any) {
+      toast.error(error?.message || '이미지 업로드에 실패했습니다');
+    } finally {
+      setUploading(false);
+      if (ref.current) ref.current.value = '';
+    }
+  };
+
+  return (
+    <div>
+      {imageUrl ? (
+        <div className="relative w-full max-w-xs">
+          <img src={imageUrl} alt="배너 미리보기" className="w-full h-auto max-h-40 object-cover rounded-lg border border-border" />
+          <button
+            type="button"
+            onClick={() => onChange('')}
+            className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-black/60 text-white flex items-center justify-center"
+            aria-label="이미지 제거"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => ref.current?.click()}
+          disabled={uploading}
+          className="h-24 w-full max-w-xs rounded-lg border-2 border-dashed border-border flex items-center justify-center gap-2 text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+        >
+          {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" />}
+          <span className="text-sm">배너 이미지 업로드</span>
+        </button>
+      )}
+      <input
+        ref={(el) => { ref.current = el; }}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+      />
+    </div>
+  );
+}
+
+function AdBannersTab() {
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [form, setForm] = useState<AdBannerFormState>(EMPTY_BANNER_FORM);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<AdBannerFormState>(EMPTY_BANNER_FORM);
+
+  const { data: banners, isLoading } = trpc.adBanners.listAll.useQuery();
+  const { data: boards } = trpc.boards.list.useQuery();
+  const utils = trpc.useUtils();
+  const invalidate = () => utils.adBanners.listAll.invalidate();
+
+  const createMutation = trpc.adBanners.create.useMutation({
+    onSuccess: () => {
+      toast.success('배너가 등록되었습니다');
+      setForm(EMPTY_BANNER_FORM);
+      setShowCreateForm(false);
+      invalidate();
+    },
+    onError: (error) => toast.error(error.message || '배너 등록에 실패했습니다'),
+  });
+
+  const updateMutation = trpc.adBanners.update.useMutation({
+    onSuccess: () => {
+      toast.success('배너가 수정되었습니다');
+      setEditingId(null);
+      invalidate();
+    },
+    onError: (error) => toast.error(error.message || '배너 수정에 실패했습니다'),
+  });
+
+  const deleteMutation = trpc.adBanners.delete.useMutation({
+    onSuccess: () => {
+      toast.success('배너가 삭제되었습니다');
+      invalidate();
+    },
+    onError: (error) => toast.error(error.message || '삭제에 실패했습니다'),
+  });
+
+  const validateForm = (f: AdBannerFormState) => {
+    if (!f.title.trim() || !f.imageUrl.trim() || !f.linkUrl.trim()) {
+      toast.error('제목, 이미지, 링크 URL을 모두 입력해주세요');
+      return false;
+    }
+    if (f.position === 'board_top' && !f.targetBoardId) {
+      toast.error('노출할 게시판을 선택해주세요');
+      return false;
+    }
+    return true;
+  };
+
+  const handleCreate = () => {
+    if (!validateForm(form)) return;
+    createMutation.mutate({
+      title: form.title.trim(),
+      imageUrl: form.imageUrl,
+      linkUrl: form.linkUrl.trim(),
+      position: form.position,
+      targetBoardId: form.position === 'board_top' ? Number(form.targetBoardId) : undefined,
+      startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : undefined,
+      endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : undefined,
+    });
+  };
+
+  const startEdit = (b: NonNullable<typeof banners>[number]) => {
+    setEditingId(b.id);
+    setEditForm({
+      title: b.title,
+      imageUrl: b.imageUrl,
+      linkUrl: b.linkUrl,
+      position: b.position,
+      targetBoardId: b.targetBoardId ? String(b.targetBoardId) : '',
+      startsAt: toDatetimeLocalValue(b.startsAt),
+      endsAt: toDatetimeLocalValue(b.endsAt),
+    });
+  };
+
+  const handleSaveEdit = (id: number) => {
+    if (!validateForm(editForm)) return;
+    updateMutation.mutate({
+      id,
+      title: editForm.title.trim(),
+      imageUrl: editForm.imageUrl,
+      linkUrl: editForm.linkUrl.trim(),
+      position: editForm.position,
+      targetBoardId: editForm.position === 'board_top' ? Number(editForm.targetBoardId) : null,
+      startsAt: editForm.startsAt ? new Date(editForm.startsAt).toISOString() : null,
+      endsAt: editForm.endsAt ? new Date(editForm.endsAt).toISOString() : null,
+    });
+  };
+
+  const handleToggleActive = (b: NonNullable<typeof banners>[number]) => {
+    updateMutation.mutate({ id: b.id, isActive: !b.isActive });
+  };
+
+  const handleDelete = (id: number, title: string) => {
+    if (!window.confirm(`"${title}" 배너를 삭제하시겠습니까?`)) return;
+    deleteMutation.mutate({ id });
+  };
+
+  const boardName = (id: number | null) => boards?.find((b) => b.id === id)?.name || `#${id}`;
+
+  const renderPositionFields = (f: AdBannerFormState, setF: (updater: (prev: AdBannerFormState) => AdBannerFormState) => void) => (
+    <>
+      <div>
+        <label className="text-xs text-muted-foreground mb-1 block">노출 위치</label>
+        <Select value={f.position} onValueChange={(v) => setF((prev) => ({ ...prev, position: v as 'home_top' | 'board_top' }))}>
+          <SelectTrigger className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="home_top">홈 상단</SelectItem>
+            <SelectItem value="board_top">특정 게시판</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      {f.position === 'board_top' && (
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">대상 게시판</label>
+          <Select value={f.targetBoardId} onValueChange={(v) => setF((prev) => ({ ...prev, targetBoardId: v }))}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="게시판 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {boards?.map((board) => (
+                <SelectItem key={board.id} value={String(board.id)}>{board.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">노출 시작(선택)</label>
+          <Input type="datetime-local" value={f.startsAt} onChange={(e) => setF((prev) => ({ ...prev, startsAt: e.target.value }))} />
+        </div>
+        <div>
+          <label className="text-xs text-muted-foreground mb-1 block">노출 종료(선택)</label>
+          <Input type="datetime-local" value={f.endsAt} onChange={(e) => setF((prev) => ({ ...prev, endsAt: e.target.value }))} />
+        </div>
+      </div>
+    </>
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {showCreateForm ? (
+        <Card className="card-elevated p-6 bg-secondary">
+          <h3 className="font-semibold mb-4">새 배너 등록</h3>
+          <div className="space-y-3">
+            <AdBannerImagePicker imageUrl={form.imageUrl} onChange={(url) => setForm((prev) => ({ ...prev, imageUrl: url }))} />
+            <Input placeholder="제목" value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} />
+            <Input placeholder="링크 URL (클릭 시 이동할 주소)" value={form.linkUrl} onChange={(e) => setForm((prev) => ({ ...prev, linkUrl: e.target.value }))} />
+            {renderPositionFields(form, setForm)}
+            <div className="flex gap-2">
+              <Button onClick={handleCreate} disabled={createMutation.isPending} className="flex-1">
+                {createMutation.isPending ? '등록 중...' : '등록'}
+              </Button>
+              <Button variant="outline" onClick={() => { setShowCreateForm(false); setForm(EMPTY_BANNER_FORM); }}>취소</Button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Button onClick={() => setShowCreateForm(true)}>+ 새 배너 등록</Button>
+      )}
+      <Card className="card-elevated p-6">
+        <div className="space-y-4">
+          {banners?.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">등록된 배너가 없습니다</p>
+          )}
+          {banners?.map((banner) => (
+            <div key={banner.id} className="p-4 border border-border rounded-lg">
+              {editingId === banner.id ? (
+                <div className="space-y-2">
+                  <AdBannerImagePicker imageUrl={editForm.imageUrl} onChange={(url) => setEditForm((prev) => ({ ...prev, imageUrl: url }))} />
+                  <Input value={editForm.title} onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="제목" />
+                  <Input value={editForm.linkUrl} onChange={(e) => setEditForm((prev) => ({ ...prev, linkUrl: e.target.value }))} placeholder="링크 URL" />
+                  {renderPositionFields(editForm, setEditForm)}
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => handleSaveEdit(banner.id)} disabled={updateMutation.isPending}>
+                      저장
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>취소</Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <img src={banner.imageUrl} alt={banner.title} className="h-14 w-20 object-cover rounded-md border border-border shrink-0" />
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold truncate">{banner.title}</h3>
+                        <span className={`shield-pill ${banner.isActive ? 'shield-pill-safe' : 'shield-pill-danger'}`}>
+                          {banner.isActive ? '노출 중' : '비활성'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {banner.position === 'home_top' ? '홈 상단' : `게시판: ${boardName(banner.targetBoardId)}`}
+                      </p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-1">
+                        <span className="inline-flex items-center gap-1"><Eye className="h-3.5 w-3.5" />{banner.impressionCount}</span>
+                        <span className="inline-flex items-center gap-1"><MousePointerClick className="h-3.5 w-3.5" />{banner.clickCount}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => handleToggleActive(banner)} disabled={updateMutation.isPending}>
+                      {banner.isActive ? '비활성화' : '활성화'}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => startEdit(banner)}>수정</Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDelete(banner.id, banner.title)}
                       disabled={deleteMutation.isPending}
                     >
                       삭제
