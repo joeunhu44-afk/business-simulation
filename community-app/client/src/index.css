@@ -416,6 +416,47 @@
   -webkit-backdrop-filter: blur(6px);
 }
 
+/* 게시판/게시글 목록 카드의 입체감. card-elevated의 기본 그림자(0.04 알파)가
+   너무 옅어서 배경과 거의 구분이 안 됐던 걸, 목록 카드에 한해 살짝 더
+   또렷한 휴식 상태 그림자 + 확실한 hover 부양감 + tap(active) 눌림 효과로
+   보강한다. card-elevated 다음에 선언돼 있어 캐스케이드상 자연히 덮어쓴다. */
+.board-card,
+.post-list-card {
+  box-shadow: 0 2px 10px rgba(20, 20, 20, 0.07);
+  transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.board-card:hover,
+.post-list-card:hover {
+  box-shadow: 0 14px 32px rgba(20, 20, 20, 0.12), 0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent);
+  border-color: var(--accent-color);
+  transform: translateY(-2px);
+}
+.board-card:active,
+.post-list-card:active {
+  transform: translateY(0) scale(0.995);
+  box-shadow: 0 4px 14px rgba(20, 20, 20, 0.08);
+}
+
+/* TopLeftMenu의 슬라이드 메뉴(Sheet) — 배경 행성/콘텐츠 위에 "확실히 떠
+   있다"는 느낌을 주는 그림자. 어두운 그림자(입체감) + 아주 옅은 primary
+   글로우(브랜드 톤)를 함께 준다. */
+.sheet-glow {
+  box-shadow: 0 20px 60px -12px rgba(0, 0, 0, 0.35), 0 0 40px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+/* 빈 상태(empty state) 아이콘 뱃지 — 은은한 원형 배경 위에 아이콘을 얹어
+   "회색 글씨 한 줄"보다 시선을 끄는 포인트를 만든다. */
+.empty-state-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-color);
+}
+
 /* 사용자 아바타(원형) — 게시글/댓글 작성자 전용. 게시판은 사람이 아니므로
    category-icon(둥근 사각형)을 대신 쓴다. */
 .tone-badge {

@@ -158,8 +158,24 @@ export default function ChatRoom() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : !data || data.messages.length === 0 ? (
-          <div className="text-center py-20 text-muted-foreground">
-            첫 메시지를 보내보세요
+          <div className="cosmic-empty flex flex-col items-center justify-center gap-3 py-20 text-center">
+            {data && (
+              <Avatar
+                userId={data.otherUserId}
+                isAnonymous={false}
+                name={data.otherUserName}
+                avatarEmoji={data.otherUserAvatarEmoji}
+                avatarImageUrl={data.otherUserAvatarImageUrl}
+                size="h-14 w-14"
+                textSize="text-xl"
+              />
+            )}
+            <div>
+              <p className="font-semibold" style={{ color: "var(--text-strong)" }}>
+                {data?.otherUserName || "상대방"}님과의 대화
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">첫 메시지를 보내 대화를 시작해보세요</p>
+            </div>
           </div>
         ) : (
           <div className="space-y-0.5">

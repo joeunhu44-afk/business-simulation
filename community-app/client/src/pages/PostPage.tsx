@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft } from "lucide-react";
+import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, MessageCircle } from "lucide-react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { ReportDialog } from "@/components/ReportDialog";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Avatar from "@/components/Avatar";
+import EmptyState from "@/components/EmptyState";
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
@@ -185,16 +186,22 @@ export default function PostPage() {
             )}
           </div>
 
-          <div className="divider-elegant my-6" />
+          <div className="divider-elegant my-4" />
 
-          <div className="prose prose-sm max-w-none mb-8">
+          <div className="prose prose-sm max-w-none mb-6">
             <p className="text-foreground whitespace-pre-wrap">{post.content}</p>
           </div>
 
           {post.images && post.images.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-8">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2 mb-8">
               {post.images.map((url) => (
-                <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block rounded-xl overflow-hidden border border-border aspect-square">
+                <a
+                  key={url}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block rounded-xl overflow-hidden border border-border aspect-square shadow-sm hover:shadow-md transition-shadow"
+                >
                   <img src={url} alt="" className="h-full w-full object-cover" />
                 </a>
               ))}
@@ -288,8 +295,12 @@ export default function PostPage() {
                   />
                 ))
             ) : (
-              <Card className="card-elevated p-8 text-center">
-                <p className="text-muted-foreground">첫 번째 댓글을 작성해보세요</p>
+              <Card className="card-elevated p-4">
+                <EmptyState
+                  icon={MessageCircle}
+                  title="아직 댓글이 없어요"
+                  description="첫 번째 댓글을 남겨보세요"
+                />
               </Card>
             )}
           </div>
