@@ -103,14 +103,14 @@ export default function BoardPage() {
         )}
 
         {/* Board Header */}
-        <div className="mb-8 flex items-center gap-4">
-          <span className="category-icon h-12 w-12">
-            <Hash className="h-5 w-5" />
+        <div className="mb-6 flex items-center gap-3">
+          <span className="category-icon h-10 w-10">
+            <Hash className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <h1 className="text-3xl leading-tight">{board.name}</h1>
+            <h1 className="text-2xl leading-tight">{board.name}</h1>
             {board.description && (
-              <p className="text-muted-foreground mt-1">{board.description}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{board.description}</p>
             )}
           </div>
         </div>
@@ -147,7 +147,7 @@ export default function BoardPage() {
         <AdBannerCarousel position="board_top" boardId={board.id} className="mb-6" />
 
         {/* Posts List */}
-        <div className="space-y-3">
+        <div>
           {postsLoading ? (
             <div className="cosmic-empty flex justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -157,38 +157,35 @@ export default function BoardPage() {
               <a
                 key={post.id}
                 href={`/post/${post.id}`}
-                className="card-elevated post-list-card block p-4"
+                className="list-row items-start gap-3 -mx-2 px-2 py-2.5"
               >
-                  <div className="flex items-start gap-3 mt-0.5">
-                    <Avatar
-                      userId={post.userId}
-                      isAnonymous={post.isAnonymous}
-                      name={post.authorName}
-                      avatarEmoji={post.authorAvatarEmoji}
-                      avatarImageUrl={post.authorAvatarImageUrl}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1.5 min-w-0">
-                        {post.isNotice && <span className="tag-pill shrink-0">공지</span>}
-                        <h3 className="font-semibold text-base text-foreground truncate">{post.title}</h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">
-                        {post.content.substring(0, 100)}...
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-xs text-muted-foreground">{post.isAnonymous ? '익명' : post.authorName || '사용자'}</span>
-                        <span className="text-xs text-muted-foreground">·</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
-                        </span>
-                        <span className="flex items-center gap-1.5 ml-auto">
-                          <span className="stat-pill"><Eye className="h-3 w-3" />{post.viewCount}</span>
-                          <span className="stat-pill"><MessageCircle className="h-3 w-3" />{post.commentCount}</span>
-                          <span className="stat-pill"><ThumbsUp className="h-3 w-3" />{post.likeCount}</span>
-                        </span>
-                      </div>
-                    </div>
+                <Avatar
+                  userId={post.userId}
+                  isAnonymous={post.isAnonymous}
+                  name={post.authorName}
+                  avatarEmoji={post.authorAvatarEmoji}
+                  avatarImageUrl={post.authorAvatarImageUrl}
+                  size="h-8 w-8"
+                  textSize="text-xs"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {post.isNotice && <span className="tag-pill shrink-0">공지</span>}
+                    <h3 className="font-sans font-bold text-[15px] text-foreground truncate">{post.title}</h3>
                   </div>
+                  <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
+                    <span className="truncate">{post.isAnonymous ? '익명' : post.authorName || '사용자'}</span>
+                    <span className="shrink-0">·</span>
+                    <span className="shrink-0">
+                      {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
+                    </span>
+                    <span className="ml-auto flex items-center gap-2 shrink-0">
+                      <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>
+                      <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{post.commentCount}</span>
+                      <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{post.likeCount}</span>
+                    </span>
+                  </div>
+                </div>
               </a>
             ))
           ) : (
