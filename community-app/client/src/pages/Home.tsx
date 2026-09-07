@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ChevronRight } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ChevronRight, ThumbsUp } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -295,9 +295,9 @@ function QuickLinksPanel() {
 
 /**
  * 게시판 한 줄. 카드/그림자 없이 얇은 구분선(.list-row)만으로 나뉜다.
- * 게시판 구분은 색이 아니라 이름(텍스트)으로만 하고, 최신 글 제목을 같은
- * 줄에 붙여서 한 눈에 활동성을 파악할 수 있게 한다(설명은 최신 글이 없을
- * 때만 대신 보여준다).
+ * 게시판 구분은 색이 아니라 이름(텍스트)으로만 하고, 최신 글 제목 +
+ * 좋아요/댓글 수를 같은 줄에 붙여서 한 눈에 활동성을 파악할 수 있게 한다
+ * (설명은 최신 글이 없을 때만 대신 보여준다).
  */
 function BoardRow({ board }: { board: { id: number; slug: string; name: string; description: string | null } }) {
   const { data: posts } = trpc.posts.listByBoard.useQuery({ boardId: board.id, limit: 1, sortBy: 'latest' });
@@ -315,6 +315,12 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
           {latest ? latest.title : board.description}
         </span>
       </div>
+      {latest && (
+        <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{latest.likeCount}</span>
+          <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
+        </span>
+      )}
       <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
     </Link>
   );
