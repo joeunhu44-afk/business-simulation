@@ -8,6 +8,7 @@ import * as db from "./db";
 import { hashPassword, verifyPassword } from "./_core/auth/password";
 import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/session";
 import { putUpload } from "./media";
+import { moderateContent, recordAutoReport } from "./moderation";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -279,7 +280,12 @@ export const appRouter = router({
         images: z.array(z.string().url()).max(4).default([]),
       }))
       .mutation(async ({ input, ctx }) => {
-        return db.createPost({
+        const verdict = await moderateContent(`${input.title}\n${input.content}`);
+        if (verdict.action === 'block') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: verdict.userMessage });
+        }
+
+        const result = await db.createPost({
           boardId: input.boardId,
           userId: ctx.user.id,
           title: input.title,
@@ -287,6 +293,11 @@ export const appRouter = router({
           isAnonymous: input.isAnonymous,
           images: input.images,
         });
+
+        if (verdict.action === 'review') {
+          await recordAutoReport('post', Number(result[0].insertId), verdict.reason);
+        }
+        return result;
       }),
 
     update: protectedProcedure
@@ -346,13 +357,23 @@ export const appRouter = router({
         parentCommentId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        return db.createComment({
+        const verdict = await moderateContent(input.content);
+        if (verdict.action === 'block') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: verdict.userMessage });
+        }
+
+        const result = await db.createComment({
           postId: input.postId,
           userId: ctx.user.id,
           content: input.content,
           isAnonymous: input.isAnonymous,
           parentCommentId: input.parentCommentId,
         });
+
+        if (verdict.action === 'review') {
+          await recordAutoReport('comment', Number(result[0].insertId), verdict.reason);
+        }
+        return result;
       }),
     
     delete: protectedProcedure

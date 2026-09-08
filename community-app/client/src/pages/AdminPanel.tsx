@@ -14,6 +14,7 @@ import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { isAdminRole, roleLabel } from "@/lib/role";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SYSTEM_REPORTER_USER_ID } from "@shared/const";
 
 const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label: string }[] }[] = [
   { key: 'user', label: '사용자', tabs: [{ key: 'users', label: '회원 관리' }] },
@@ -720,6 +721,9 @@ function ReportsTab() {
             <Card key={report.id} className="card-elevated p-5">
               <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <span className="tag-pill">{REPORT_TARGET_LABELS[report.targetType] || report.targetType}</span>
+                {report.reporterUserId === SYSTEM_REPORTER_USER_ID && (
+                  <span className="shield-pill shield-pill-safe">자동 감지</span>
+                )}
                 <span className="text-sm font-semibold">{report.reason}</span>
                 {report.targetType === 'post' && (
                   <a href={`/post/${report.targetId}`} target="_blank" rel="noopener noreferrer" className="text-xs accent-text hover:underline">
