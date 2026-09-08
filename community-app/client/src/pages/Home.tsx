@@ -6,7 +6,8 @@ import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { hasDraft } from "@/lib/postDraft";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Reveal from "@/components/Reveal";
 import HomeSpaceBackground from "@/components/HomeSpaceBackground";
@@ -22,7 +23,7 @@ const QUICK_LINKS: {
   iconClassName?: string;
 }[] = [
   { key: "inquiry", label: "문의하기", icon: MessageSquareText, href: "/inquiries", iconClassName: "accent-text" },
-  { key: "talk", label: "신흥톡톡", icon: MessageCircle, href: "https://school.cbe.go.kr/shinheung-h/M010304", external: true },
+  { key: "talk", label: "신흥고 홈페이지", icon: MessageCircle, href: "https://school.cbe.go.kr/shinheung-h/M01/", external: true },
   { key: "meal", label: "급식표", icon: UtensilsCrossed, href: "https://school.cbe.go.kr/shinheung-h/M01030801", external: true },
 ];
 
@@ -303,6 +304,14 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
   const { data: posts } = trpc.posts.listByBoard.useQuery({ boardId: board.id, limit: 1, sortBy: 'latest' });
   const latest = posts?.[0];
 
+  // 작성 중인 임시저장 글 표시용. 항상 같은 크기의 점 자리를 예약해두고 색만
+  // 켜고 끄는 방식이라(투명 vs 은은한 회색), 표시가 생겨도/사라져도 오른쪽
+  // 화살표 등 다른 요소의 위치는 절대 밀리지 않는다.
+  const [draftHere, setDraftHere] = useState(false);
+  useEffect(() => {
+    setDraftHere(hasDraft(board.slug));
+  }, [board.slug]);
+
   return (
     <Link
       href={`/board/${board.slug}`}
@@ -321,6 +330,11 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
           <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
         </span>
       )}
+      <span
+        aria-hidden={!draftHere}
+        title={draftHere ? "작성 중인 글이 있어요" : undefined}
+        className={`h-1.5 w-1.5 rounded-full shrink-0 ${draftHere ? "bg-muted-foreground/40" : "bg-transparent"}`}
+      />
       <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
     </Link>
   );
