@@ -1,4 +1,5 @@
 import { User } from "lucide-react";
+import { useState } from "react";
 import { toneClass } from "@/lib/tone";
 
 function getInitial(name?: string | null): string | null {
@@ -39,17 +40,52 @@ export default function Avatar({
   }
 
   if (avatarImageUrl) {
-    return (
-      <span className={`tone-badge ${toneClass(userId)} ${size} shrink-0 overflow-hidden p-0`}>
-        <img src={avatarImageUrl} alt="" className="h-full w-full object-cover" />
-      </span>
-    );
+    return <ImageAvatar key={avatarImageUrl} url={avatarImageUrl} userId={userId} name={name} avatarEmoji={avatarEmoji} size={size} textSize={textSize} />;
   }
 
   const initial = getInitial(name);
   return (
     <span className={`tone-badge ${toneClass(userId)} ${size} ${textSize} shrink-0`}>
       {avatarEmoji || initial || <User className="h-[55%] w-[55%]" />}
+    </span>
+  );
+}
+
+/**
+ * 업로드된 프로필 사진 전용 렌더러. 스토리지 설정 문제 등으로 이미지 URL이
+ * 깨져 있으면(로드 실패) 새로고침해도 계속 깨진 아이콘만 보이는 대신, 이모지
+ * → 이니셜 → 기본 아이콘 순으로 자동 대체한다. avatarImageUrl이 바뀌면
+ * key로 리마운트되어 실패 상태가 초기화된다.
+ */
+function ImageAvatar({
+  url,
+  userId,
+  name,
+  avatarEmoji,
+  size,
+  textSize,
+}: {
+  url: string;
+  userId: number;
+  name?: string | null;
+  avatarEmoji?: string | null;
+  size: string;
+  textSize: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    const initial = getInitial(name);
+    return (
+      <span className={`tone-badge ${toneClass(userId)} ${size} ${textSize} shrink-0`}>
+        {avatarEmoji || initial || <User className="h-[55%] w-[55%]" />}
+      </span>
+    );
+  }
+
+  return (
+    <span className={`tone-badge ${toneClass(userId)} ${size} shrink-0 overflow-hidden p-0`}>
+      <img src={url} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
     </span>
   );
 }
