@@ -2,7 +2,7 @@ import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "driz
 import { drizzle } from "drizzle-orm/mysql2";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "node:path";
-import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners } from "../drizzle/schema";
+import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -519,6 +519,30 @@ export async function deleteAnnouncement(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.delete(announcements).where(eq(announcements.id, id));
+}
+
+/**
+ * 자동 필터 차단 기록 관련 쿼리
+ */
+export async function createModerationLog(data: {
+  userId: number;
+  targetType: 'post' | 'comment';
+  boardId?: number | null;
+  content: string;
+  reason: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(moderationLogs).values(data);
+}
+
+export async function getModerationLogs(limit: number = 50, offset: number = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(moderationLogs)
+    .orderBy(desc(moderationLogs.createdAt))
+    .limit(limit)
+    .offset(offset);
 }
 
 /**

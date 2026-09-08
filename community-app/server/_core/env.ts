@@ -39,12 +39,6 @@ export const ENV = {
     privateKey: (process.env.APPLE_PRIVATE_KEY ?? "").replace(/\\n/g, "\n"),
   },
 
-  /**
-   * OpenAI Moderation API 키 (게시글/댓글 자동 필터링용). 비워두면 키워드 필터만
-   * 동작하고 AI 검사는 건너뛴다. Moderation API는 무료라 글마다 호출해도 과금되지 않는다.
-   */
-  openaiApiKey: process.env.OPENAI_API_KEY ?? "",
-
   /** S3 호환 오브젝트 스토리지 (Cloudflare R2, AWS S3 등) 설정. 설정돼 있으면 로컬 디스크보다 우선 사용된다. */
   s3: {
     endpoint: process.env.S3_ENDPOINT ?? "",

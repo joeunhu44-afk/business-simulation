@@ -33,6 +33,7 @@ const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label
     tabs: [
       { key: 'reports', label: '신고 관리' },
       { key: 'inquiries', label: '문의 관리' },
+      { key: 'blocked', label: '차단 기록' },
     ],
   },
   {
@@ -143,6 +144,7 @@ export default function AdminPanel() {
             {activeTab === 'announcements' && <AnnouncementsTab />}
             {activeTab === 'news' && <NewsTab />}
             {activeTab === 'inquiries' && <InquiriesTab />}
+            {activeTab === 'blocked' && <BlockedAttemptsTab />}
           </div>
         </div>
       </div>
@@ -1220,6 +1222,50 @@ function AdBannersTab() {
                   </div>
                 </div>
               )}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function BlockedAttemptsTab() {
+  const { data: logs, isLoading } = trpc.moderation.listBlocked.useQuery({ limit: 100 });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!logs || logs.length === 0) {
+    return (
+      <Card className="card-elevated p-12 text-center">
+        <p className="text-muted-foreground">차단된 작성 시도가 없습니다</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">
+        자동 필터가 막은 작성 시도입니다. 자주 시도되는 표현을 확인해 금지어 목록(server/_core/moderation.ts)을 보강하세요.
+      </p>
+      <Card className="card-elevated p-6">
+        <div className="space-y-3">
+          {logs.map((log) => (
+            <div key={log.id} className="p-4 border border-border rounded-lg">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
+                <span className="tag-pill">{log.targetType === 'post' ? '게시글' : '댓글'}</span>
+                <span className="text-xs font-mono text-muted-foreground">{log.reason}</span>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {formatDistanceToNow(new Date(log.createdAt), { locale: ko, addSuffix: true })}
+                </span>
+              </div>
+              <p className="text-sm whitespace-pre-wrap break-words line-clamp-4">{log.content}</p>
             </div>
           ))}
         </div>
