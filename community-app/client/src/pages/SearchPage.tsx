@@ -119,32 +119,31 @@ function SearchPostsResults({ query }: { query: string }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div>
       {posts.map((post: any) => (
-        <a key={post.id} href={`/post/${post.id}`} className="card-elevated block p-4">
-          <div className="flex items-start gap-3">
-            <Avatar
-              userId={post.userId}
-              isAnonymous={post.isAnonymous}
-              name={post.authorName}
-              avatarEmoji={post.authorAvatarEmoji}
-              avatarImageUrl={post.authorAvatarImageUrl}
-            />
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base text-foreground truncate mb-1.5">{post.title}</h3>
-              <p className="text-sm text-muted-foreground mb-2.5 line-clamp-2">{post.content}</p>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs text-muted-foreground">{post.isAnonymous ? "익명" : post.authorName || "사용자"}</span>
-                <span className="text-xs text-muted-foreground">·</span>
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
-                </span>
-                <span className="flex items-center gap-1.5 ml-auto">
-                  <span className="stat-pill"><Eye className="h-3 w-3" />{post.viewCount}</span>
-                  <span className="stat-pill"><MessageCircle className="h-3 w-3" />{post.commentCount || 0}</span>
-                  <span className="stat-pill"><ThumbsUp className="h-3 w-3" />{post.likeCount || 0}</span>
-                </span>
-              </div>
+        <a key={post.id} href={`/post/${post.id}`} className="list-row items-start gap-3 -mx-2 px-2 py-2.5">
+          <Avatar
+            userId={post.userId}
+            isAnonymous={post.isAnonymous}
+            name={post.authorName}
+            avatarEmoji={post.authorAvatarEmoji}
+            avatarImageUrl={post.authorAvatarImageUrl}
+            size="h-8 w-8"
+            textSize="text-xs"
+          />
+          <div className="flex-1 min-w-0">
+            <h3 className="font-sans font-bold text-[15px] text-foreground truncate">{post.title}</h3>
+            <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground">
+              <span className="truncate">{post.isAnonymous ? "익명" : post.authorName || "사용자"}</span>
+              <span className="shrink-0">·</span>
+              <span className="shrink-0">
+                {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
+              </span>
+              <span className="ml-auto flex items-center gap-2 shrink-0">
+                <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>
+                <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{post.commentCount || 0}</span>
+                <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{post.likeCount || 0}</span>
+              </span>
             </div>
           </div>
         </a>

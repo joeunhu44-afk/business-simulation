@@ -55,7 +55,9 @@
    명도 자체는 흰색에 가깝게 유지).
    ========================================================= */
 :root {
-  --radius: 0.75rem;
+  /* 예전엔 0.75rem이라 카드/버튼 모서리가 크게 둥글어 "낯선 목업" 느낌을 줬다.
+     실제 서비스는 대체로 더 각지고 단정한 인상을 쓰므로 낮췄다. */
+  --radius: 0.5rem;
 
   /* 포인트 컬러 (오로라 틸) */
   --primary: #107872;
@@ -309,7 +311,7 @@
 .light-border {
   position: relative;
   background-color: var(--bg-surface);
-  border-radius: 0.85rem;
+  border-radius: 0.625rem;
   color: var(--text-normal);
   border: 1px solid var(--border-color);
   box-shadow: 0 1px 2px rgba(20, 20, 20, 0.04);
@@ -328,7 +330,7 @@
   border: 1px solid var(--border-color) !important;
   color: var(--text-strong) !important;
   box-shadow: none;
-  border-radius: 0.6rem;
+  border-radius: 0.5rem;
 }
 
 .accent-text { color: var(--accent-color) !important; }
@@ -371,12 +373,11 @@
 }
 
 /* =========================================================
-   커뮤니티 콘텐츠용 멀티 컬러 시스템
-   레퍼런스 사이트가 여러 포인트 컬러를 함께 쓰는 것처럼, 게시판/글/
-   댓글마다 5가지 톤 중 하나를 배정해 화이트 카드 일색이던 커뮤니티
-   화면(홈 피드, 게시판, 게시글)에 실제 색 구분감을 준다. 사용자가
-   고르는 테마색(--accent-color)과는 별개로 항상 고정된 팔레트를
-   써서, 게시판별 색이 테마를 바꿔도 계속 같은 정체성을 유지한다.
+   사용자 아바타 전용 컬러 팔레트
+   게시글/댓글 작성자를 스레드 안에서 빠르게 구분할 수 있도록, 사용자
+   ID마다 5가지 톤 중 하나를 고정 배정한다(Avatar.tsx의 toneClass).
+   게시판 구분에는 더 이상 색을 쓰지 않는다 — 게시판은 이름(텍스트)만으로
+   구분하고, --accent-color는 액션(버튼/링크)과 상태 표시에만 남겨둔다.
    ========================================================= */
 .tone-1 { --tone: #d6304c; --tone-soft: rgba(214, 48, 76, 0.12); }
 .tone-2 { --tone: #4a6c8c; --tone-soft: rgba(74, 108, 140, 0.12); }
@@ -387,54 +388,56 @@
 .board-card {
   position: relative;
   overflow: hidden;
-  padding-top: 1.5rem !important;
   /* 홈 배경의 행성이 카드 뒤로 은은하게 비치도록 Phase 1에서 준비해둔
      --card(반투명)/--card-blur 값을 그대로 쓴다(글래스모피즘). */
   background-color: var(--card);
   backdrop-filter: blur(var(--card-blur));
   -webkit-backdrop-filter: blur(var(--card-blur));
 }
-.board-card::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 4px;
-  background: var(--tone, var(--accent-color));
-}
 
-/* 게시글 목록/상세 카드 — 역시 --card를 쓰지만 맥락에 맞게 강도를 다르게 준다.
-   목록(post-list-card)은 카드가 한 화면에 여러 개(많으면 20개) 나열되므로
-   backdrop-filter 없이 반투명 배경색만 써서 성능/가독성을 지킨다. 상세
-   페이지(post-detail-card)는 카드가 하나뿐이라 board-card보다 약한 블러
-   정도는 부담 없이 더할 수 있다. */
-.post-list-card {
-  background-color: var(--card);
-}
+/* 게시글 상세 카드 — 화면에 하나뿐이라 board-card보다 약한 블러 정도는
+   부담 없이 더할 수 있다. */
 .post-detail-card {
   background-color: var(--card);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
 
-/* 게시판/게시글 목록 카드의 입체감. card-elevated의 기본 그림자(0.04 알파)가
-   너무 옅어서 배경과 거의 구분이 안 됐던 걸, 목록 카드에 한해 살짝 더
-   또렷한 휴식 상태 그림자 + 확실한 hover 부양감 + tap(active) 눌림 효과로
-   보강한다. card-elevated 다음에 선언돼 있어 캐스케이드상 자연히 덮어쓴다. */
-.board-card,
-.post-list-card {
+/* 강조가 필요한 카드(광고 배너 등)의 입체감. card-elevated의 기본 그림자
+   (0.04 알파)가 너무 옅어서 배경과 거의 구분이 안 됐던 걸, hover 부양감 +
+   tap(active) 눌림 효과로 보강한다. card-elevated 다음에 선언돼 있어
+   캐스케이드상 자연히 덮어쓴다. */
+.board-card {
   box-shadow: 0 2px 10px rgba(20, 20, 20, 0.07);
   transition: box-shadow 0.2s ease, transform 0.2s ease, border-color 0.2s ease;
 }
-.board-card:hover,
-.post-list-card:hover {
+.board-card:hover {
   box-shadow: 0 14px 32px rgba(20, 20, 20, 0.12), 0 0 0 1px color-mix(in srgb, var(--primary) 14%, transparent);
   border-color: var(--accent-color);
   transform: translateY(-2px);
 }
-.board-card:active,
-.post-list-card:active {
+.board-card:active {
   transform: translateY(0) scale(0.995);
   box-shadow: 0 4px 14px rgba(20, 20, 20, 0.08);
+}
+
+/* =========================================================
+   리스트 행 — 게시판/게시글 목록처럼 항목 수가 많은 화면에서 카드 대신
+   쓰는 고밀도 행. 그림자·테두리 박스 없이 얇은 구분선 하나로만 항목을
+   나누고, hover/tap 시 배경색만 바뀐다. 카드는 강조가 필요한 요소(공지,
+   광고, 급식표 등)에만 남겨둔다.
+   ========================================================= */
+.list-row {
+  display: flex;
+  border-bottom: 1px solid var(--border-color);
+  transition: background-color 0.12s ease;
+}
+.list-row:last-child {
+  border-bottom: none;
+}
+.list-row:hover,
+.list-row:active {
+  background-color: var(--bg-hover);
 }
 
 /* TopLeftMenu의 슬라이드 메뉴(Sheet) — 배경 행성/콘텐츠 위에 "확실히 떠
@@ -477,15 +480,16 @@
 }
 
 /* 게시판/카테고리 마커 — 사람이 아니라 카테고리를 나타내므로 원형이 아닌
-   둥근 사각형을 쓴다 (사용자 아바타와 시각적으로 확실히 구분). */
+   둥근 사각형을 쓴다 (사용자 아바타와 시각적으로 확실히 구분). accent-color는
+   액션/상태 전용이라 여기서는 쓰지 않고, 중립적인 회색 톤만 쓴다. */
 .category-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 0.65rem;
-  color: #ffffff;
-  background: var(--tone, var(--accent-color));
+  border-radius: 0.5rem;
+  color: var(--text-muted);
+  background: var(--bg-surface-2);
 }
 
 .tag-pill {

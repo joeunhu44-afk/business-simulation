@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, ThumbsUp, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Sparkles, Shield } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ChevronRight, ThumbsUp } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -221,39 +221,17 @@ export default function Home() {
               <AnnouncementsSection />
             </div>
 
-            {/* Boards Grid */}
+            {/* Boards List */}
             <div>
-              <h2 className="section-heading mb-6 text-xl">게시판</h2>
+              <h2 className="section-heading mb-2 text-xl">게시판</h2>
               {boardsLoading ? (
                 <div className="cosmic-empty flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : boards && boards.length > 0 ? (
-                <div className="space-y-4">
-                  {boards.map((board, idx) => (
-                    <Reveal key={board.id} delay={Math.min(idx, 5) * 0.03} duration={0.32} slide={false}>
-                      <div className="card-elevated board-card overflow-hidden">
-                        <div className="flex flex-col sm:flex-row">
-                          <Link
-                            href={`/board/${board.slug}`}
-                            className="flex sm:w-56 shrink-0 items-start gap-3 p-5 hover:bg-secondary/50 transition-colors"
-                          >
-                            <span className="category-icon h-9 w-9 shrink-0">
-                              <Hash className="h-4 w-4" />
-                            </span>
-                            <div className="min-w-0">
-                              <h3 className="font-semibold text-base leading-tight">{board.name}</h3>
-                              <p className="text-sm text-muted-foreground leading-relaxed mt-1">{board.description}</p>
-                            </div>
-                          </Link>
-                          <div className="hidden sm:block w-px shrink-0 self-stretch my-4" style={{ background: "var(--border-color)" }} />
-                          <div className="block sm:hidden h-px w-full" style={{ background: "var(--border-color)" }} />
-                          <div className="flex-1 min-w-0 p-5">
-                            <BoardPostList boardId={board.id} />
-                          </div>
-                        </div>
-                      </div>
-                    </Reveal>
+                <div>
+                  {boards.map((board) => (
+                    <BoardRow key={board.id} board={board} />
                   ))}
                 </div>
               ) : (
@@ -315,48 +293,36 @@ function QuickLinksPanel() {
   );
 }
 
-function BoardPostList({ boardId }: { boardId: number }) {
-  const { data: posts, isLoading } = trpc.posts.listByBoard.useQuery({ boardId, limit: 5, sortBy: 'latest' });
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-4">
-        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!posts || posts.length === 0) {
-    return (
-      <p className="flex items-center gap-1.5 text-sm text-muted-foreground py-2">
-        <Sparkles className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--accent-color)" }} />
-        아직 게시글이 없어요
-      </p>
-    );
-  }
+/**
+ * 게시판 한 줄. 카드/그림자 없이 얇은 구분선(.list-row)만으로 나뉜다.
+ * 게시판 구분은 색이 아니라 이름(텍스트)으로만 하고, 최신 글 제목 +
+ * 좋아요/댓글 수를 같은 줄에 붙여서 한 눈에 활동성을 파악할 수 있게 한다
+ * (설명은 최신 글이 없을 때만 대신 보여준다).
+ */
+function BoardRow({ board }: { board: { id: number; slug: string; name: string; description: string | null } }) {
+  const { data: posts } = trpc.posts.listByBoard.useQuery({ boardId: board.id, limit: 1, sortBy: 'latest' });
+  const latest = posts?.[0];
 
   return (
-    <div className="space-y-1.5">
-      {posts.map((post) => (
-        <Link
-          key={post.id}
-          href={`/post/${post.id}`}
-          className="flex items-center gap-2 text-sm rounded-lg px-2 py-1.5 -mx-2 hover:bg-secondary transition-colors"
-        >
-          <span className="truncate min-w-0 flex-1 font-medium text-foreground/85">{post.title}</span>
-          <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
-            <span className="flex items-center gap-0.5">
-              <ThumbsUp className="h-3 w-3" />
-              {post.likeCount}
-            </span>
-            <span className="flex items-center gap-0.5">
-              <MessageCircle className="h-3 w-3" />
-              {post.commentCount}
-            </span>
-          </span>
-        </Link>
-      ))}
-    </div>
+    <Link
+      href={`/board/${board.slug}`}
+      className="list-row items-center gap-3 -mx-2 px-2 py-3"
+    >
+      <Hash className="h-4 w-4 text-muted-foreground shrink-0" />
+      <div className="min-w-0 flex-1 flex items-baseline gap-2">
+        <span className="font-sans font-bold text-[15px] text-foreground shrink-0">{board.name}</span>
+        <span className="truncate text-[13px] text-muted-foreground">
+          {latest ? latest.title : board.description}
+        </span>
+      </div>
+      {latest && (
+        <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{latest.likeCount}</span>
+          <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
+        </span>
+      )}
+      <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+    </Link>
   );
 }
 
