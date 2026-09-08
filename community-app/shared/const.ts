@@ -7,5 +7,11 @@ export const AVATAR_EMOJI_OPTIONS = [
 ] as const;
 export const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365;
 export const AXIOS_TIMEOUT_MS = 30_000;
+/**
+ * 자동 필터가 등록한 신고의 reporterUserId. 실제 사용자 id는 1부터 시작하므로
+ * 0은 "시스템이 올린 신고"를 뜻한다 (관리자 페이지에서 사용자 신고와 구분용).
+ */
+export const SYSTEM_REPORTER_USER_ID = 0;
+
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
