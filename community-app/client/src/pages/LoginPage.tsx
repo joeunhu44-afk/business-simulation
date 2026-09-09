@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
+import NotifyConsentFields, { EMPTY_NOTIFY_CONSENT } from "@/components/NotifyConsentFields";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
@@ -41,6 +42,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [consent, setConsent] = useState(EMPTY_NOTIFY_CONSENT);
 
   const utils = trpc.useUtils();
 
@@ -71,7 +73,7 @@ export default function LoginPage() {
     if (mode === "login") {
       loginMutation.mutate({ email, password });
     } else {
-      signupMutation.mutate({ email, password, name });
+      signupMutation.mutate({ email, password, name, ...consent });
     }
   };
 
@@ -140,6 +142,9 @@ export default function LoginPage() {
                   className="h-11"
                 />
               </div>
+            )}
+            {mode === "signup" && (
+              <NotifyConsentFields value={consent} onChange={setConsent} disabled={isPending} />
             )}
 
             <Button type="submit" className="w-full h-11 mt-1" disabled={isPending}>

@@ -2,7 +2,7 @@ import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "driz
 import { drizzle } from "drizzle-orm/mysql2";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "node:path";
-import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs } from "../drizzle/schema";
+import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -82,11 +82,14 @@ export async function createUserWithPassword(data: {
   email: string;
   passwordHash: string;
   name: string;
+  notifyPost?: boolean;
+  notifyMarketing?: boolean;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const role = isOwnerEmail(data.email) ? "owner" : "user";
+  const now = new Date();
 
   const [result] = await db.insert(users).values({
     email: data.email.toLowerCase(),
@@ -94,7 +97,11 @@ export async function createUserWithPassword(data: {
     name: data.name,
     loginMethod: "email",
     role,
-    lastSignedIn: new Date(),
+    notifyPost: data.notifyPost ?? false,
+    notifyPostAt: data.notifyPost ? now : null,
+    notifyMarketing: data.notifyMarketing ?? false,
+    notifyMarketingAt: data.notifyMarketing ? now : null,
+    lastSignedIn: now,
   });
 
   return getUserById(result.insertId);
@@ -108,18 +115,25 @@ export async function createUserFromOAuth(data: {
   providerUserId: string;
   email: string | null;
   name: string;
+  notifyPost?: boolean;
+  notifyMarketing?: boolean;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   const role = isOwnerEmail(data.email) ? "owner" : "user";
+  const now = new Date();
 
   const [result] = await db.insert(users).values({
     email: data.email ? data.email.toLowerCase() : null,
     name: data.name,
     loginMethod: data.provider,
     role,
-    lastSignedIn: new Date(),
+    notifyPost: data.notifyPost ?? false,
+    notifyPostAt: data.notifyPost ? now : null,
+    notifyMarketing: data.notifyMarketing ?? false,
+    notifyMarketingAt: data.notifyMarketing ? now : null,
+    lastSignedIn: now,
   });
 
   await db.insert(authIdentities).values({
@@ -519,6 +533,111 @@ export async function deleteAnnouncement(id: number) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return db.delete(announcements).where(eq(announcements.id, id));
+}
+
+/**
+ * 알림 수신 동의 / 앱 내 알림함 관련 쿼리
+ */
+
+/** 동의를 켤 때만 동의 시각을 갱신하고, 끌 때는 시각을 지운다(동의 이력 추적용). */
+export async function updateNotificationPrefs(
+  userId: number,
+  prefs: { notifyPost?: boolean; notifyMarketing?: boolean }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const now = new Date();
+  const data: Record<string, unknown> = {};
+  if (prefs.notifyPost !== undefined) {
+    data.notifyPost = prefs.notifyPost;
+    data.notifyPostAt = prefs.notifyPost ? now : null;
+  }
+  if (prefs.notifyMarketing !== undefined) {
+    data.notifyMarketing = prefs.notifyMarketing;
+    data.notifyMarketingAt = prefs.notifyMarketing ? now : null;
+  }
+  if (Object.keys(data).length === 0) return;
+  return db.update(users).set(data).where(eq(users.id, userId));
+}
+
+export async function createNotification(data: {
+  userId: number;
+  type: 'post_comment' | 'post_like' | 'marketing' | 'announcement';
+  title: string;
+  body?: string | null;
+  linkUrl?: string | null;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.insert(notifications).values(data);
+}
+
+/** 여러 사용자에게 같은 알림을 한 번에 넣는다 (관리자 광고성 발송용). */
+export async function createNotificationsForUsers(
+  userIds: number[],
+  data: {
+    type: 'post_comment' | 'post_like' | 'marketing' | 'announcement';
+    title: string;
+    body?: string | null;
+    linkUrl?: string | null;
+  }
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  if (userIds.length === 0) return;
+  return db.insert(notifications).values(userIds.map((userId) => ({ ...data, userId })));
+}
+
+/** 광고성 정보 수신에 동의했고 차단되지 않은 사용자 id 목록. */
+export async function getMarketingOptInUserIds(): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(and(eq(users.notifyMarketing, true), eq(users.status, 'active')));
+  return rows.map((row) => row.id);
+}
+
+/** 특정 사용자가 활동 알림(notifyPost)에 동의했는지 확인. */
+export async function hasPostNotifyConsent(userId: number): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ notifyPost: users.notifyPost }).from(users).where(eq(users.id, userId)).limit(1);
+  return rows.length > 0 ? rows[0].notifyPost : false;
+}
+
+export async function getNotifications(userId: number, limit: number = 30, offset: number = 0) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(notifications)
+    .where(eq(notifications.userId, userId))
+    .orderBy(desc(notifications.createdAt))
+    .limit(limit)
+    .offset(offset);
+}
+
+export async function getUnreadNotificationCount(userId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db.select({ id: notifications.id }).from(notifications)
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
+  return rows.length;
+}
+
+/** 본인 알림만 읽음 처리할 수 있도록 userId를 함께 조건에 넣는다. */
+export async function markNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(notifications).set({ isRead: true })
+    .where(and(eq(notifications.id, id), eq(notifications.userId, userId)));
+}
+
+export async function markAllNotificationsRead(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db.update(notifications).set({ isRead: true })
+    .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false)));
 }
 
 /**

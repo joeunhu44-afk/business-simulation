@@ -28,6 +28,12 @@ export const users = mysqlTable("users", {
    *  아무도(본인 포함) UI로 바꿀 수 없다 — 로그인할 때마다 이메일이 일치하는지로만 결정된다. */
   role: mysqlEnum("role", ["user", "admin", "owner"]).default("user").notNull(),
   status: mysqlEnum("status", ["active", "blocked"]).default("active").notNull(),
+  /** 내 글에 달린 댓글·좋아요 등 활동 알림 수신 동의 (선택). 동의 시각도 함께 남긴다. */
+  notifyPost: boolean("notifyPost").default(false).notNull(),
+  notifyPostAt: timestamp("notifyPostAt"),
+  /** 광고·이벤트 등 광고성 정보 수신 동의 (선택). 미동의여도 가입·이용에 제한이 없다. */
+  notifyMarketing: boolean("notifyMarketing").default(false).notNull(),
+  notifyMarketingAt: timestamp("notifyMarketingAt"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
@@ -297,6 +303,26 @@ export const adBanners = mysqlTable("adBanners", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
+
+/**
+ * 앱 내 알림함. 지금은 외부 발송(웹 푸시/이메일) 없이 앱에서만 확인하지만,
+ * 나중에 푸시를 붙일 때도 이 테이블이 그대로 발송 원장이 된다.
+ */
+export const notifications = mysqlTable("notifications", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  /** post_comment/post_like는 notifyPost 동의자에게만, marketing은 notifyMarketing 동의자에게만 쌓인다. */
+  type: mysqlEnum("type", ["post_comment", "post_like", "marketing", "announcement"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  body: text("body"),
+  /** 알림을 눌렀을 때 이동할 앱 내 경로 (예: /post/12). */
+  linkUrl: varchar("linkUrl", { length: 1024 }),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = typeof notifications.$inferInsert;
 
 /**
  * 자동 필터가 차단한 작성 시도 기록.

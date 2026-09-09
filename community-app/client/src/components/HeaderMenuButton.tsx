@@ -21,7 +21,7 @@ export default function HeaderMenuButton() {
 
   return (
     <button
-      onClick={openMenu}
+      onClick={() => openMenu()}
       aria-label="메뉴 열기"
       className="relative inline-flex items-center justify-center rounded-lg p-2 transition-colors hover:bg-black/5 active:scale-95"
       style={{ transition: "transform 160ms cubic-bezier(0.23, 1, 0.32, 1)" }}

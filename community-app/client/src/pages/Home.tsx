@@ -13,6 +13,7 @@ import Reveal from "@/components/Reveal";
 import HomeSpaceBackground from "@/components/HomeSpaceBackground";
 import { isAdminRole } from "@/lib/role";
 import AdBannerCarousel from "@/components/AdBannerCarousel";
+import NotificationBell from "@/components/NotificationBell";
 
 const QUICK_LINKS: {
   key: string;
@@ -162,6 +163,7 @@ export default function Home() {
               항목이 3개뿐이라 "더보기" 없이 전부 아이콘으로 넣어도 폭에 들어간다
               (실측 확인: 375px 기준 줄바꿈 없음). 라벨 텍스트는 aria-label로만 제공. */}
           <div className="flex md:hidden items-center gap-0.5 shrink-0">
+            <NotificationBell />
             {QUICK_LINKS.map(({ key, label, icon: Icon, href, external, iconClassName }) =>
               external ? (
                 <a
@@ -199,8 +201,9 @@ export default function Home() {
             )}
           </div>
 
-          <div className="hidden md:flex items-center gap-4 min-w-0">
-            <span className="text-sm text-muted-foreground truncate">{user?.name || "사용자"}</span>
+          <div className="hidden md:flex items-center gap-2 min-w-0">
+            <NotificationBell />
+            <span className="text-sm text-muted-foreground truncate ml-2">{user?.name || "사용자"}</span>
             {isAdminRole(user?.role) && (
               <a href="/admin" className="text-sm font-semibold accent-text hover:underline shrink-0">
                 관리자

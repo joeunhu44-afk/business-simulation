@@ -3,12 +3,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
+import NotifyConsentFields, { EMPTY_NOTIFY_CONSENT } from "@/components/NotifyConsentFields";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
 
 export default function CompleteSignupPage() {
   const [, navigate] = useLocation();
   const [name, setName] = useState("");
+  const [consent, setConsent] = useState(EMPTY_NOTIFY_CONSENT);
 
   const params = new URLSearchParams(window.location.search);
   const token = params.get("token") ?? "";
@@ -50,7 +52,7 @@ export default function CompleteSignupPage() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            completeMutation.mutate({ token, name });
+            completeMutation.mutate({ token, name, ...consent });
           }}
           className="flex flex-col gap-4"
         >
@@ -68,6 +70,7 @@ export default function CompleteSignupPage() {
               className="h-11"
             />
           </div>
+          <NotifyConsentFields value={consent} onChange={setConsent} disabled={completeMutation.isPending} />
           <Button type="submit" className="w-full h-11 mt-1" disabled={completeMutation.isPending}>
             가입 완료
           </Button>
