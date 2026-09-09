@@ -8,7 +8,7 @@ import * as db from "./db";
 import { hashPassword, verifyPassword } from "./_core/auth/password";
 import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/session";
 import { putUpload } from "./media";
-import { moderateContent, recordAutoReport } from "./moderation";
+import { checkContent, BLOCKED_MESSAGE } from "./_core/moderation";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -49,6 +49,25 @@ async function uploadImageDataUrl(dataUrl: string, keyPrefix: string): Promise<s
 function issueSession(ctx: { req: any; res: any }, sessionToken: string) {
   const cookieOptions = getSessionCookieOptions(ctx.req);
   ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
+}
+
+/**
+ * 자동 필터가 막은 작성 시도를 기록한다. 어떤 표현이 자주 시도되는지 관리자가
+ * 파악해 금지어를 보강하기 위한 것으로, 기록 실패가 응답을 막으면 안 되므로
+ * 오류는 로그만 남기고 삼킨다.
+ */
+async function logBlockedAttempt(data: {
+  userId: number;
+  targetType: 'post' | 'comment';
+  boardId?: number;
+  content: string;
+  reason: string;
+}) {
+  try {
+    await db.createModerationLog(data);
+  } catch (error) {
+    console.warn('[Moderation] 차단 기록 저장 실패:', error);
+  }
 }
 
 // Admin procedure - only admin users can access
@@ -280,12 +299,19 @@ export const appRouter = router({
         images: z.array(z.string().url()).max(4).default([]),
       }))
       .mutation(async ({ input, ctx }) => {
-        const verdict = await moderateContent(`${input.title}\n${input.content}`);
-        if (verdict.action === 'block') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: verdict.userMessage });
+        const verdict = await checkContent(`${input.title}\n${input.content}`);
+        if (verdict.blocked) {
+          await logBlockedAttempt({
+            userId: ctx.user.id,
+            targetType: 'post',
+            boardId: input.boardId,
+            content: `${input.title}\n${input.content}`,
+            reason: verdict.reason ?? 'unknown',
+          });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: BLOCKED_MESSAGE });
         }
 
-        const result = await db.createPost({
+        return db.createPost({
           boardId: input.boardId,
           userId: ctx.user.id,
           title: input.title,
@@ -293,11 +319,6 @@ export const appRouter = router({
           isAnonymous: input.isAnonymous,
           images: input.images,
         });
-
-        if (verdict.action === 'review') {
-          await recordAutoReport('post', Number(result[0].insertId), verdict.reason);
-        }
-        return result;
       }),
 
     update: protectedProcedure
@@ -357,23 +378,24 @@ export const appRouter = router({
         parentCommentId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
-        const verdict = await moderateContent(input.content);
-        if (verdict.action === 'block') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: verdict.userMessage });
+        const verdict = await checkContent(input.content);
+        if (verdict.blocked) {
+          await logBlockedAttempt({
+            userId: ctx.user.id,
+            targetType: 'comment',
+            content: input.content,
+            reason: verdict.reason ?? 'unknown',
+          });
+          throw new TRPCError({ code: 'BAD_REQUEST', message: BLOCKED_MESSAGE });
         }
 
-        const result = await db.createComment({
+        return db.createComment({
           postId: input.postId,
           userId: ctx.user.id,
           content: input.content,
           isAnonymous: input.isAnonymous,
           parentCommentId: input.parentCommentId,
         });
-
-        if (verdict.action === 'review') {
-          await recordAutoReport('comment', Number(result[0].insertId), verdict.reason);
-        }
-        return result;
       }),
     
     delete: protectedProcedure
@@ -469,6 +491,18 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         return db.updateReportStatus(input.id, input.status, input.adminNotes);
+      }),
+  }),
+
+  // 자동 필터 차단 기록 (관리자 전용)
+  moderation: router({
+    listBlocked: adminProcedure
+      .input(z.object({
+        limit: z.number().default(50),
+        offset: z.number().default(0),
+      }))
+      .query(async ({ input }) => {
+        return db.getModerationLogs(input.limit, input.offset);
       }),
   }),
 

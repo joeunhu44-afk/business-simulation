@@ -298,6 +298,29 @@ export const adBanners = mysqlTable("adBanners", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
+/**
+ * 자동 필터가 차단한 작성 시도 기록.
+ * reports 테이블과 분리한 이유: 차단된 글은 저장되지 않으므로 가리킬 post/comment가
+ * 없어 reports.targetId가 의미를 잃고, "대기/해결/무시"로 처리할 대상도 아니다.
+ * 여기서는 어떤 표현이 자주 시도되는지 관리자가 파악해 금지어를 보강하는 게 목적이라
+ * 차단된 원문 자체를 남긴다 (관리자만 조회 가능).
+ */
+export const moderationLogs = mysqlTable("moderationLogs", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  targetType: mysqlEnum("targetType", ["post", "comment"]).notNull(),
+  /** 게시글 작성 시도일 때의 게시판. 댓글이면 null. */
+  boardId: int("boardId"),
+  /** 차단된 원문. 어떤 우회 표현이 쓰이는지 알아야 금지어를 보강할 수 있다. */
+  content: text("content").notNull(),
+  /** 판정 근거 (예: "korcen:원본", "커스텀 금지어:시발"). 사용자에게는 노출하지 않는다. */
+  reason: varchar("reason", { length: 255 }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type ModerationLog = typeof moderationLogs.$inferSelect;
+export type InsertModerationLog = typeof moderationLogs.$inferInsert;
+
 export type AdBanner = typeof adBanners.$inferSelect;
 export type InsertAdBanner = typeof adBanners.$inferInsert;
 

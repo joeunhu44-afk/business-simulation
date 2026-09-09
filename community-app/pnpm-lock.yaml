@@ -157,6 +157,9 @@ importers:
       jose:
         specifier: 6.1.0
         version: 6.1.0
+      korcen:
+        specifier: ^1.0.1
+        version: 1.0.1
       lucide-react:
         specifier: ^0.453.0
         version: 0.453.0(react@19.2.1)
@@ -3250,6 +3253,9 @@ packages:
 
   kolorist@1.8.0:
     resolution: {integrity: sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==}
+
+  korcen@1.0.1:
+    resolution: {integrity: sha512-Yxd1ht8CfV6nUHVbT6zId+yrFD6gNcP+XEdiBVUeY2ET95K7NTwu8E61ay8wsRnGUuotWg4gzw0odpx4ffbnaA==}
 
   langium@3.3.1:
     resolution: {integrity: sha512-QJv/h939gDpvT+9SiLVlY7tZC3xB2qK57v0J04Sh9wpMb6MP1q8gB21L3WIo8T5P1MSMg3Ep14L7KkDCFG3y4w==}
@@ -7633,6 +7639,8 @@ snapshots:
   khroma@2.1.0: {}
 
   kolorist@1.8.0: {}
+
+  korcen@1.0.1: {}
 
   langium@3.3.1:
     dependencies:
