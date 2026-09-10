@@ -1,10 +1,12 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ChevronRight, ThumbsUp } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ThumbsUp } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { formatDistanceToNow } from "date-fns";
+import { ko } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { useEffect, useState } from "react";
 import { hasDraft } from "@/lib/postDraft";
@@ -214,16 +216,14 @@ export default function Home() {
       </nav>
 
       {/* Main Content */}
-      <div className="container py-8">
+      <div className="container pt-6 pb-4 sm:py-8">
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
           <div>
             {/* Ad Banner */}
             <AdBannerCarousel position="home_top" className="mb-8" />
 
-            {/* Announcements */}
-            <div className="mb-8 pb-8 border-b border-border">
-              <AnnouncementsSection />
-            </div>
+            {/* Announcements — 공지가 없으면 여백까지 통째로 사라진다 */}
+            <AnnouncementsSection />
 
             {/* 추천 — 글이 부족하면 컴포넌트가 스스로 null을 반환해 영역째 사라진다 */}
             <RecommendedSection />
@@ -273,6 +273,8 @@ export default function Home() {
  * 빈 껍데기를 보여주느니 없는 편이 낫다.
  */
 const MIN_RECOMMENDED = 3;
+/** 본문 미리보기를 붙일 상위 순위 수. 아래 순위는 제목만 보여 밀도를 지킨다. */
+const PREVIEW_RANKS = 3;
 
 function RecommendedSection() {
   const { data: recommended, isLoading } = trpc.posts.recommended.useQuery({ limit: 5 });
@@ -282,36 +284,84 @@ function RecommendedSection() {
   if (isLoading || !recommended || recommended.length < MIN_RECOMMENDED) return null;
 
   return (
-    <div className="mb-8 pb-8 border-b border-border">
-      <h2 className="section-heading mb-2 text-xl">지금 인기있는 글</h2>
+    // 아래 게시판 목록과 같은 리스트로 읽히지 않도록 배경 톤을 달리한 영역으로 감싼다.
+    // 그림자 없이 톤 차이만 줘서 카드처럼 떠 보이지는 않게 한다.
+    <div className="mb-10 rounded-xl bg-[var(--bg-surface-2)] px-3 py-4 sm:px-4 sm:py-5">
+      <h2 className="section-heading mb-1 text-lg sm:text-xl">지금 인기있는 글</h2>
       <div>
-        {recommended.map((post) => (
-          <Link
-            key={post.id}
-            href={`/post/${post.id}`}
-            className="list-row items-center gap-3 -mx-2 px-2 py-3"
-          >
-            <div className="min-w-0 flex-1 flex items-baseline gap-2">
-              <span className="truncate font-sans font-semibold text-[15px] text-foreground">
-                {post.title}
-              </span>
-              <span className="shrink-0 text-[13px] text-muted-foreground">{post.boardName}</span>
-            </div>
-            <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-0.5">
-                <ThumbsUp className="h-3 w-3" />
-                {post.likeCount}
-              </span>
-              <span className="inline-flex items-center gap-0.5">
-                <MessageCircle className="h-3 w-3" />
-                {post.commentCount}
-              </span>
-            </span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
-          </Link>
+        {recommended.map((post, index) => (
+          <RecommendedRow key={post.id} post={post} rank={index + 1} />
         ))}
       </div>
     </div>
+  );
+}
+
+/**
+ * 인기글 한 줄. 순위 번호 + 제목 + (상위 순위만) 본문 한 줄 + 메타 한 줄 구조로,
+ * 게시판 목록의 한 줄짜리 행과 형태부터 다르게 보이도록 했다.
+ */
+function RecommendedRow({
+  post,
+  rank,
+}: {
+  post: {
+    id: number;
+    title: string;
+    excerpt: string;
+    boardName: string;
+    likeCount: number;
+    commentCount: number;
+    createdAt: string | Date;
+  };
+  rank: number;
+}) {
+  // 1~3위는 색과 굵기로 존재감을 주고, 4~5위는 muted로 낮춰 상위권을 돋보이게 한다.
+  const isTop = rank <= PREVIEW_RANKS;
+
+  return (
+    <Link href={`/post/${post.id}`} className="list-row items-start gap-3 -mx-1 px-1 py-3">
+      <span
+        aria-hidden="true"
+        className={`w-4 shrink-0 text-center font-sans tabular-nums leading-6 ${
+          isTop ? "text-[15px] font-bold" : "text-[13px] font-semibold"
+        }`}
+        style={{ color: isTop ? "var(--accent-color)" : "var(--text-muted)" }}
+      >
+        {rank}
+      </span>
+
+      <span className="min-w-0 flex-1">
+        <span className="block truncate font-sans text-[15px] font-bold leading-6 text-foreground">
+          {post.title}
+        </span>
+
+        {/* 상위 순위만 본문 미리보기 — 클릭 유인은 주되 목록이 길어지지 않게 한다 */}
+        {isTop && post.excerpt && (
+          <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
+            {post.excerpt}
+          </span>
+        )}
+
+        {/* 게시판명·시간·반응 수는 제목보다 확실히 아래 단계로 내린다 */}
+        <span className="mt-1 flex items-center gap-1.5 text-[12px] text-muted-foreground">
+          <span className="truncate">{post.boardName}</span>
+          <span aria-hidden="true">·</span>
+          <span className="shrink-0 whitespace-nowrap">
+            {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span className="inline-flex shrink-0 items-center gap-0.5">
+            <ThumbsUp className="h-3 w-3" />
+            {post.likeCount}
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-0.5">
+            <MessageCircle className="h-3 w-3" />
+            {post.commentCount}
+          </span>
+        </span>
+      </span>
+    </Link>
   );
 }
 
@@ -382,7 +432,7 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
         </span>
       </div>
       {latest && (
-        <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5 shrink-0 text-[12px] text-muted-foreground">
           <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{latest.likeCount}</span>
           <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
         </span>
@@ -392,7 +442,6 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
         title={draftHere ? "작성 중인 글이 있어요" : undefined}
         className={`h-1.5 w-1.5 rounded-full shrink-0 ${draftHere ? "bg-muted-foreground/40" : "bg-transparent"}`}
       />
-      <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
     </Link>
   );
 }
@@ -448,7 +497,7 @@ function AnnouncementsSection() {
   if (!announcements || announcements.length === 0) return null;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 mb-8 pb-8 border-b border-border">
       <h3 className="panel-header font-semibold text-xs text-muted-foreground uppercase tracking-wide">
         <span className="panel-icon"><Megaphone className="h-3.5 w-3.5" /></span>
         공지사항

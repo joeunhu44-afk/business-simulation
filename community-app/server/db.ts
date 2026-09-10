@@ -357,6 +357,8 @@ export async function searchPosts(query: string, limit: number = 20, offset: num
 const RECOMMEND_WINDOW_DAYS = 14;
 /** 점수를 매길 후보 상한. 이 정도면 학교 커뮤니티 규모에서 2주치를 다 덮는다. */
 const RECOMMEND_CANDIDATE_LIMIT = 200;
+/** 목록 미리보기에 쓸 본문 길이. 한 줄 말줄임으로 잘리므로 넉넉히 이 정도면 충분하다. */
+const EXCERPT_MAX_CHARS = 120;
 
 /**
  * 로그인 사용자의 게시판 선호도 원천 데이터.
@@ -420,6 +422,7 @@ export async function getRecommendedPosts(userId: number | null, limit: number =
       id: posts.id,
       boardId: posts.boardId,
       title: posts.title,
+      content: posts.content,
       likeCount: posts.likeCount,
       commentCount: posts.commentCount,
       viewCount: posts.viewCount,
@@ -449,7 +452,12 @@ export async function getRecommendedPosts(userId: number | null, limit: number =
     }
   }
 
-  return rankPosts(candidates, { affinity, limit });
+  // 미리보기용으로 본문 첫 줄만 잘라 보낸다. 목록에 쓸 것이라 전문을 실어 보낼
+  // 이유가 없고, 줄바꿈이 섞이면 한 줄 말줄임이 깨지므로 공백으로 눕혀둔다.
+  return rankPosts(candidates, { affinity, limit }).map(({ content, ...post }) => ({
+    ...post,
+    excerpt: content.replace(/\s+/g, " ").trim().slice(0, EXCERPT_MAX_CHARS),
+  }));
 }
 
 /**
