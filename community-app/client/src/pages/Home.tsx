@@ -424,23 +424,16 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
   }, [board.slug]);
 
   return (
-    // 게시판명과 최신 글을 두 줄로 나눠 행에 무게를 준다. 홈의 주인공이므로
-    // 탭 영역(py-4)도 추천 행(py-2)보다 확실히 넉넉하게 잡았다.
+    // 게시판명과 최신 글 제목을 한 줄에 나란히 둔다(게시판명은 고정, 제목은 남는
+    // 폭만큼 쓰고 말줄임). 홈의 주인공이므로 탭 영역(py-4)은 넉넉하게 유지한다.
     <Link
       href={`/board/${board.slug}`}
       className="list-row items-center gap-3 -mx-2 px-2 py-4"
     >
       <Hash className="h-[18px] w-[18px] shrink-0 text-muted-foreground/70" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <span className="font-sans text-[17px] font-bold leading-6 text-foreground">{board.name}</span>
-          <span
-            aria-hidden={!draftHere}
-            title={draftHere ? "작성 중인 글이 있어요" : undefined}
-            className={`h-1.5 w-1.5 rounded-full shrink-0 ${draftHere ? "bg-muted-foreground/40" : "bg-transparent"}`}
-          />
-        </div>
-        <span className="mt-0.5 block truncate text-[13px] leading-5 text-muted-foreground">
+      <div className="min-w-0 flex-1 flex items-baseline gap-2">
+        <span className="shrink-0 font-sans text-[17px] font-bold leading-6 text-foreground">{board.name}</span>
+        <span className="truncate text-[13px] text-muted-foreground">
           {latest ? latest.title : board.description}
         </span>
       </div>
@@ -450,6 +443,11 @@ function BoardRow({ board }: { board: { id: number; slug: string; name: string; 
           <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
         </span>
       )}
+      <span
+        aria-hidden={!draftHere}
+        title={draftHere ? "작성 중인 글이 있어요" : undefined}
+        className={`h-1.5 w-1.5 rounded-full shrink-0 ${draftHere ? "bg-muted-foreground/40" : "bg-transparent"}`}
+      />
     </Link>
   );
 }
