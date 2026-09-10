@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, MessageCircle } from "lucide-react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -253,11 +254,9 @@ export default function PostPage() {
                 />
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={isAnonymous}
-                      onChange={(e) => setIsAnonymous(e.target.checked)}
-                      className="rounded"
+                      onCheckedChange={(checked) => setIsAnonymous(checked === true)}
                     />
                     <span className="text-sm text-muted-foreground">익명으로 작성</span>
                   </label>

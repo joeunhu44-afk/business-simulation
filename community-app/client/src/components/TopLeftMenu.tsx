@@ -19,6 +19,9 @@ import {
   ChevronRight,
   ChevronLeft,
   Bell,
+  ThumbsUp,
+  Megaphone,
+  Check,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -28,18 +31,29 @@ import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
 import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
 import Avatar from "@/components/Avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { roleLabel } from "@/lib/role";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 
-const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
-  { color: "dark", label: "오로라 틸", swatch: "#107872" },
-  { color: "blue", label: "코스믹 인디고", swatch: "#4256c9" },
-  { color: "purple", label: "오로라 바이올렛", swatch: "#7346b8" },
-  { color: "green", label: "오로라 그린", swatch: "#1a7455" },
-  { color: "red", label: "브릭 로즈", swatch: "#ad4256" },
-  { color: "amber", label: "오커", swatch: "#b8863f" },
+// label은 변경 토스트에 쓰는 정식 이름, short는 칩 안에 들어가는 짧은 이름.
+// 칩 폭이 좁아 정식 이름을 그대로 넣으면 "오로라 …"처럼 잘려 서로 구분이 안 된다.
+const THEME_COLORS: { color: ThemeColor; label: string; short: string; swatch: string }[] = [
+  { color: "dark", label: "오로라 틸", short: "틸", swatch: "#107872" },
+  { color: "blue", label: "코스믹 인디고", short: "인디고", swatch: "#4256c9" },
+  { color: "purple", label: "오로라 바이올렛", short: "바이올렛", swatch: "#7346b8" },
+  { color: "green", label: "오로라 그린", short: "그린", swatch: "#1a7455" },
+  { color: "red", label: "브릭 로즈", short: "로즈", swatch: "#ad4256" },
+  { color: "amber", label: "오커", short: "오커", swatch: "#b8863f" },
 ];
+
+/** 알림 종류별 아이콘. 셋 다 같은 점이면 목록을 훑을 때 구분이 안 된다. */
+const NOTIFICATION_STYLES: Record<string, { icon: typeof Bell; tint: string }> = {
+  post_comment: { icon: MessageSquareText, tint: "var(--bg-surface-2)" },
+  post_like: { icon: ThumbsUp, tint: "var(--bg-surface-2)" },
+  marketing: { icon: Megaphone, tint: "var(--bg-surface-2)" },
+  announcement: { icon: Bell, tint: "var(--bg-surface-2)" },
+};
 
 type MenuView = "root" | "profile" | "chat" | "search" | "settings" | "notifications";
 
@@ -660,53 +674,68 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
 
             {/* 알림함 */}
             {view === "notifications" && (
-              <div className="p-5">
+              <div className="py-2">
                 {!notifications || notifications.length === 0 ? (
-                  <p className="text-sm text-center py-10" style={{ color: "var(--text-muted)" }}>
+                  <p className="text-sm text-center px-5 py-10" style={{ color: "var(--text-muted)" }}>
                     아직 받은 알림이 없어요
                   </p>
                 ) : (
-                  <div className="space-y-1">
+                  <div>
                     {!!unreadNotifications && unreadNotifications > 0 && (
-                      <button
-                        onClick={() => markAllReadMutation.mutate()}
-                        disabled={markAllReadMutation.isPending}
-                        className="text-xs mb-2 hover:underline"
-                        style={{ color: "var(--text-muted)" }}
-                      >
-                        모두 읽음으로 표시
-                      </button>
+                      <div className="flex justify-end px-4 py-2">
+                        <button
+                          onClick={() => markAllReadMutation.mutate()}
+                          disabled={markAllReadMutation.isPending}
+                          className="text-xs font-semibold hover:underline disabled:opacity-50"
+                          style={{ color: "var(--accent-color)" }}
+                        >
+                          모두 읽음
+                        </button>
+                      </div>
                     )}
-                    {notifications.map((notification) => (
-                      <button
-                        key={notification.id}
-                        onClick={() => openNotification(notification)}
-                        className="w-full text-left px-3 py-3 rounded-xl hover:bg-black/5 transition-colors flex gap-2.5"
-                      >
-                        {/* 안 읽음 표시 — 빨간 뱃지 대신 primary 색 작은 점 */}
-                        <span
-                          aria-hidden={notification.isRead}
-                          className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
-                          style={{ backgroundColor: notification.isRead ? "transparent" : "var(--accent-color)" }}
-                        />
-                        <span className="min-w-0 flex-1">
+                    {notifications.map((notification) => {
+                      const style = NOTIFICATION_STYLES[notification.type] ?? NOTIFICATION_STYLES.announcement;
+                      const Icon = style.icon;
+                      return (
+                        <button
+                          key={notification.id}
+                          onClick={() => openNotification(notification)}
+                          className="w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-black/[0.04] active:bg-black/[0.07]"
+                          style={{ backgroundColor: notification.isRead ? undefined : "var(--accent-soft)" }}
+                        >
+                          {/* 종류별 아이콘 — 댓글/추천/이벤트를 한눈에 구분 */}
                           <span
-                            className="block text-sm font-semibold"
-                            style={{ color: notification.isRead ? "var(--text-normal)" : "var(--text-strong)" }}
+                            className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                            style={{ backgroundColor: style.tint, color: "var(--text-normal)" }}
                           >
-                            {notification.title}
+                            <Icon className="h-4 w-4" />
                           </span>
-                          {notification.body && (
-                            <span className="block text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
-                              {notification.body}
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold truncate" style={{ color: "var(--text-strong)" }}>
+                              {notification.title}
                             </span>
-                          )}
-                          <span className="block text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
-                            {formatDistanceToNow(new Date(notification.createdAt), { locale: ko, addSuffix: true })}
+                            {notification.body && (
+                              <span className="block text-xs truncate mt-0.5" style={{ color: "var(--text-muted)" }}>
+                                {notification.body}
+                              </span>
+                            )}
                           </span>
-                        </span>
-                      </button>
-                    ))}
+                          {/* 시각은 우측 정렬로 붙여 세로 공간을 아낀다 */}
+                          <span className="flex shrink-0 items-center gap-1.5 pt-0.5">
+                            <span className="text-[11px] whitespace-nowrap" style={{ color: "var(--text-muted)" }}>
+                              {formatDistanceToNow(new Date(notification.createdAt), { locale: ko, addSuffix: true })}
+                            </span>
+                            {!notification.isRead && (
+                              <span
+                                aria-label="안 읽음"
+                                className="h-1.5 w-1.5 rounded-full"
+                                style={{ backgroundColor: "var(--accent-color)" }}
+                              />
+                            )}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -719,28 +748,43 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                   <label className="text-sm font-semibold block mb-3" style={{ color: "var(--text-strong)" }}>
                     포인트 색상
                   </label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {THEME_COLORS.map(({ color, label, swatch }) => (
-                      <button
-                        key={color}
-                        onClick={() => {
-                          setThemeColor(color);
-                          toast.success(`${label} 색상으로 변경되었습니다`);
-                        }}
-                        className="flex flex-col items-center gap-2 p-2 rounded-xl hover:bg-black/5 transition-colors"
-                      >
-                        <span
-                          className="w-10 h-10 rounded-full border-2 transition-all"
-                          style={{
-                            backgroundColor: swatch,
-                            borderColor: themeColor === color ? "var(--text-strong)" : "transparent",
+                  {/* 스와치를 가로형 칩으로 눕혀 두 줄로 압축. 선택된 색은 링 + 체크로 표시한다. */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {THEME_COLORS.map(({ color, label, short, swatch }) => {
+                      const selected = themeColor === color;
+                      return (
+                        <button
+                          key={color}
+                          onClick={() => {
+                            setThemeColor(color);
+                            toast.success(`${label} 색상으로 변경되었습니다`);
                           }}
-                        />
-                        <span className="text-xs font-semibold" style={{ color: "var(--text-strong)" }}>
-                          {label}
-                        </span>
-                      </button>
-                    ))}
+                          aria-pressed={selected}
+                          className="flex items-center gap-1.5 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-black/[0.04] active:bg-black/[0.07]"
+                          style={{ backgroundColor: selected ? "var(--accent-soft)" : undefined }}
+                        >
+                          <span
+                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-white transition-shadow"
+                            style={{
+                              backgroundColor: swatch,
+                              boxShadow: selected ? `0 0 0 2px var(--bg-surface), 0 0 0 3.5px ${swatch}` : undefined,
+                            }}
+                          >
+                            {selected && <Check className="h-3 w-3" strokeWidth={3} />}
+                          </span>
+                          <span
+                            className="min-w-0 flex-1 truncate text-left text-[11px]"
+                            style={{
+                              color: selected ? "var(--text-strong)" : "var(--text-normal)",
+                              fontWeight: selected ? 600 : 500,
+                            }}
+                            title={label}
+                          >
+                            {short}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
@@ -753,12 +797,11 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                   </p>
                   <div className="space-y-3">
                     <label className="flex items-start gap-2.5 cursor-pointer" style={{ color: "var(--text-normal)" }}>
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 rounded"
+                      <Checkbox
+                        className="mt-0.5"
                         checked={user.notifyPost}
                         disabled={updateNotifyPrefsMutation.isPending}
-                        onChange={(e) => updateNotifyPrefsMutation.mutate({ notifyPost: e.target.checked })}
+                        onCheckedChange={(checked) => updateNotifyPrefsMutation.mutate({ notifyPost: checked === true })}
                       />
                       <span className="text-sm leading-snug">
                         활동 알림
@@ -768,12 +811,11 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                       </span>
                     </label>
                     <label className="flex items-start gap-2.5 cursor-pointer" style={{ color: "var(--text-normal)" }}>
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 rounded"
+                      <Checkbox
+                        className="mt-0.5"
                         checked={user.notifyMarketing}
                         disabled={updateNotifyPrefsMutation.isPending}
-                        onChange={(e) => updateNotifyPrefsMutation.mutate({ notifyMarketing: e.target.checked })}
+                        onCheckedChange={(checked) => updateNotifyPrefsMutation.mutate({ notifyMarketing: checked === true })}
                       />
                       <span className="text-sm leading-snug">
                         광고성 정보
