@@ -225,6 +225,9 @@ export default function Home() {
               <AnnouncementsSection />
             </div>
 
+            {/* 추천 — 글이 부족하면 컴포넌트가 스스로 null을 반환해 영역째 사라진다 */}
+            <RecommendedSection />
+
             {/* Boards List */}
             <div>
               <h2 className="section-heading mb-2 text-xl">게시판</h2>
@@ -256,6 +259,57 @@ export default function Home() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 지금 인기있는 글. 반응 수에 시간 감쇠를 적용한 점수 상위 글을 보여준다
+ * (로그인 사용자는 활동 이력이 쌓이면 서버에서 자동으로 개인화된다).
+ *
+ * 표시할 글이 MIN_RECOMMENDED개 미만이면 영역 자체를 렌더링하지 않는다 —
+ * 글이 서너 개뿐인 상태에서 "추천"을 띄우면 게시판 목록과 같은 글이 중복될 뿐이라
+ * 빈 껍데기를 보여주느니 없는 편이 낫다.
+ */
+const MIN_RECOMMENDED = 3;
+
+function RecommendedSection() {
+  const { data: recommended, isLoading } = trpc.posts.recommended.useQuery({ limit: 5 });
+
+  // 로딩 중에는 자리를 잡아두지 않는다. 어차피 추천이 없으면 영역이 사라지는데
+  // 스켈레톤을 깔면 그때마다 아래 게시판 목록이 위로 밀려 올라온다.
+  if (isLoading || !recommended || recommended.length < MIN_RECOMMENDED) return null;
+
+  return (
+    <div className="mb-8 pb-8 border-b border-border">
+      <h2 className="section-heading mb-2 text-xl">지금 인기있는 글</h2>
+      <div>
+        {recommended.map((post) => (
+          <Link
+            key={post.id}
+            href={`/post/${post.id}`}
+            className="list-row items-center gap-3 -mx-2 px-2 py-3"
+          >
+            <div className="min-w-0 flex-1 flex items-baseline gap-2">
+              <span className="truncate font-sans font-semibold text-[15px] text-foreground">
+                {post.title}
+              </span>
+              <span className="shrink-0 text-[13px] text-muted-foreground">{post.boardName}</span>
+            </div>
+            <span className="flex items-center gap-2 shrink-0 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-0.5">
+                <ThumbsUp className="h-3 w-3" />
+                {post.likeCount}
+              </span>
+              <span className="inline-flex items-center gap-0.5">
+                <MessageCircle className="h-3 w-3" />
+                {post.commentCount}
+              </span>
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+          </Link>
+        ))}
       </div>
     </div>
   );

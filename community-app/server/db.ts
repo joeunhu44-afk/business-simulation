@@ -4,6 +4,12 @@ import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "node:path";
 import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import {
+  buildBoardAffinity,
+  hasEnoughActivity,
+  rankPosts,
+  type BoardAffinity,
+} from "./_core/ranking";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -339,6 +345,111 @@ export async function searchPosts(query: string, limit: number = 20, offset: num
     .limit(limit)
     .offset(offset);
   return attachAuthors(rows.map(normalizePostImages));
+}
+
+/**
+ * 추천 게시글 — 후보를 모아 ranking.ts에 점수 계산을 위임한다.
+ *
+ * 여기서는 "어떤 글을 후보로 볼지"(기간·삭제·공지 제외)와 "사용자 활동을 어떻게
+ * 읽어올지"만 정하고, 점수와 정렬은 전부 ranking.ts가 맡는다. 알고리즘 교체 시
+ * 이 함수는 그대로 두고 ranking.ts만 바꾸면 된다.
+ */
+const RECOMMEND_WINDOW_DAYS = 14;
+/** 점수를 매길 후보 상한. 이 정도면 학교 커뮤니티 규모에서 2주치를 다 덮는다. */
+const RECOMMEND_CANDIDATE_LIMIT = 200;
+
+/**
+ * 로그인 사용자의 게시판 선호도 원천 데이터.
+ *
+ * 새 테이블 없이 기존 postLikes / posts.userId / comments만으로 만든다 —
+ * "좋아요 누른 글의 게시판", "내가 쓴 글의 게시판", "내가 댓글 단 글의 게시판"이
+ * 모두 이 세 테이블에서 조인으로 나온다. (별도의 방문 로그는 저장하지 않는다.)
+ */
+export async function getUserBoardActivity(userId: number): Promise<{
+  likedBoardIds: number[];
+  authoredBoardIds: number[];
+  commentedBoardIds: number[];
+}> {
+  const db = await getDb();
+  const empty = { likedBoardIds: [], authoredBoardIds: [], commentedBoardIds: [] };
+  if (!db) return empty;
+
+  const [liked, authored, commented] = await Promise.all([
+    db
+      .select({ boardId: posts.boardId })
+      .from(postLikes)
+      .innerJoin(posts, eq(postLikes.postId, posts.id))
+      .where(and(eq(postLikes.userId, userId), isNull(posts.deletedAt)))
+      .orderBy(desc(postLikes.createdAt))
+      .limit(100),
+    db
+      .select({ boardId: posts.boardId })
+      .from(posts)
+      .where(and(eq(posts.userId, userId), isNull(posts.deletedAt)))
+      .orderBy(desc(posts.createdAt))
+      .limit(100),
+    db
+      .select({ boardId: posts.boardId })
+      .from(comments)
+      .innerJoin(posts, eq(comments.postId, posts.id))
+      .where(and(eq(comments.userId, userId), isNull(comments.deletedAt), isNull(posts.deletedAt)))
+      .orderBy(desc(comments.createdAt))
+      .limit(100),
+  ]);
+
+  return {
+    likedBoardIds: liked.map((r) => r.boardId),
+    authoredBoardIds: authored.map((r) => r.boardId),
+    commentedBoardIds: commented.map((r) => r.boardId),
+  };
+}
+
+/**
+ * 홈 화면 추천 목록. userId가 없거나(비로그인) 활동이 부족하면 자동으로
+ * 인기글(1단계)만으로 계산된다 — 호출부는 분기할 필요가 없다.
+ */
+export async function getRecommendedPosts(userId: number | null, limit: number = 5) {
+  const db = await getDb();
+  if (!db) return [];
+
+  const since = new Date(Date.now() - RECOMMEND_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+
+  // 공지는 이미 별도 영역에서 항상 상단 고정으로 노출되므로 추천에서는 뺀다.
+  const candidates = await db
+    .select({
+      id: posts.id,
+      boardId: posts.boardId,
+      title: posts.title,
+      likeCount: posts.likeCount,
+      commentCount: posts.commentCount,
+      viewCount: posts.viewCount,
+      createdAt: posts.createdAt,
+      boardName: boards.name,
+      boardSlug: boards.slug,
+    })
+    .from(posts)
+    .innerJoin(boards, eq(posts.boardId, boards.id))
+    .where(and(
+      isNull(posts.deletedAt),
+      eq(posts.isNotice, false),
+      eq(boards.isActive, true),
+      gt(posts.createdAt, since),
+    ))
+    .orderBy(desc(posts.createdAt))
+    .limit(RECOMMEND_CANDIDATE_LIMIT);
+
+  if (candidates.length === 0) return [];
+
+  let affinity: BoardAffinity = new Map();
+  if (userId !== null) {
+    const activity = await getUserBoardActivity(userId);
+    // 활동이 적을 때 억지로 개인화하면 표본이 1~2건인 게시판이 추천을 독점한다.
+    if (hasEnoughActivity(activity)) {
+      affinity = buildBoardAffinity(activity);
+    }
+  }
+
+  return rankPosts(candidates, { affinity, limit });
 }
 
 /**
