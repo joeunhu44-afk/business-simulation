@@ -327,6 +327,16 @@ export const appRouter = router({
         return db.getPostsByBoard(input.boardId, input.limit, input.offset, input.sortBy, input.search);
       }),
     
+    /**
+     * 홈 화면 추천 목록. 로그인 여부에 따라 개인화가 자동으로 켜지고 꺼지므로
+     * publicProcedure로 두고 ctx.user만 넘긴다 (비로그인은 인기글로 계산된다).
+     */
+    recommended: publicProcedure
+      .input(z.object({ limit: z.number().min(1).max(10).default(5) }).optional())
+      .query(async ({ input, ctx }) => {
+        return db.getRecommendedPosts(ctx.user?.id ?? null, input?.limit ?? 5);
+      }),
+
     get: publicProcedure
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => {

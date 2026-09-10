@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import BackButton from "@/components/BackButton";
 import ImagePicker from "@/components/ImagePicker";
+import { Checkbox } from "@/components/ui/checkbox";
 import { clearDraft, getDraft, saveDraft } from "@/lib/postDraft";
 
 const DRAFT_SAVE_DELAY_MS = 1500;
@@ -231,12 +232,10 @@ export default function WritePostPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
+              <Checkbox
                 id="anonymous"
                 checked={isAnonymous}
-                onChange={(e) => setIsAnonymous(e.target.checked)}
-                className="rounded border-border"
+                onCheckedChange={(checked) => setIsAnonymous(checked === true)}
               />
               <label htmlFor="anonymous" className="text-sm cursor-pointer">
                 익명으로 작성
