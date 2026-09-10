@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,7 @@ import {
   UtensilsCrossed,
   ChevronRight,
   ChevronLeft,
+  Bell,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
@@ -28,6 +29,8 @@ import { useLocation } from "wouter";
 import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
 import Avatar from "@/components/Avatar";
 import { roleLabel } from "@/lib/role";
+import { formatDistanceToNow } from "date-fns";
+import { ko } from "date-fns/locale";
 
 const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
   { color: "dark", label: "오로라 틸", swatch: "#107872" },
@@ -38,12 +41,12 @@ const THEME_COLORS: { color: ThemeColor; label: string; swatch: string }[] = [
   { color: "amber", label: "오커", swatch: "#b8863f" },
 ];
 
-type MenuView = "root" | "profile" | "chat" | "search" | "settings";
+type MenuView = "root" | "profile" | "chat" | "search" | "settings" | "notifications";
 
 export default function TopLeftMenu({ showFloatingButton = true }: { showFloatingButton?: boolean }) {
   const { user, logout, refresh } = useAuth();
   const { themeColor, setThemeColor } = useThemeColor();
-  const { isOpen, setOpen: setIsOpen, openMenu: openMenuCtx } = useMenu();
+  const { isOpen, setOpen: setIsOpen, openMenu: openMenuCtx, pendingTarget, clearPendingTarget } = useMenu();
   const [, navigate] = useLocation();
   const [view, setView] = useState<MenuView>("root");
 
@@ -51,6 +54,47 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [passwordInputs, setPasswordInputs] = useState({ current: "", new: "" });
+
+  const utils = trpc.useUtils();
+  const { data: notifications } = trpc.notifications.list.useQuery(
+    { limit: 30 },
+    { enabled: !!user }
+  );
+  const { data: unreadNotifications } = trpc.notifications.unreadCount.useQuery(undefined, {
+    enabled: !!user,
+    refetchInterval: 60_000,
+  });
+
+  const markReadMutation = trpc.notifications.markRead.useMutation({
+    onSuccess: () => {
+      utils.notifications.list.invalidate();
+      utils.notifications.unreadCount.invalidate();
+    },
+  });
+
+  const markAllReadMutation = trpc.notifications.markAllRead.useMutation({
+    onSuccess: () => {
+      utils.notifications.list.invalidate();
+      utils.notifications.unreadCount.invalidate();
+    },
+  });
+
+  const updateNotifyPrefsMutation = trpc.auth.updateNotificationPrefs.useMutation({
+    onSuccess: () => {
+      refresh();
+      toast.success("알림 설정이 저장되었습니다");
+    },
+    onError: (error) => toast.error(error.message || "설정 저장에 실패했습니다"),
+  });
+
+  /** 알림을 누르면 읽음 처리하고 linkUrl로 이동한다. */
+  const openNotification = (notification: { id: number; linkUrl: string | null; isRead: boolean }) => {
+    if (!notification.isRead) markReadMutation.mutate({ id: notification.id });
+    if (notification.linkUrl) {
+      setIsOpen(false);
+      navigate(notification.linkUrl);
+    }
+  };
 
   const logoutMutation = trpc.auth.logout.useMutation({
     onSuccess: () => {
@@ -170,11 +214,20 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
     openMenuCtx();
   };
 
+  // 상단바 알림 아이콘처럼 바깥에서 특정 화면을 지정해 연 경우 그 화면으로 전환한다.
+  useEffect(() => {
+    if (isOpen && pendingTarget) {
+      setView(pendingTarget);
+      clearPendingTarget();
+    }
+  }, [isOpen, pendingTarget, clearPendingTarget]);
+
   // 비로그인 상태에서는 클로그인 페이지 자체 헤더가 로그인 버튼을 제공하므로 떠있는 메뉴 버튼은 숨긴다.
   if (!user) return null;
 
   const ROOT_ITEMS: { key: MenuView; label: string; icon: typeof User; badge?: number }[] = [
     { key: "profile", label: "마이페이지", icon: User },
+    { key: "notifications", label: "알림", icon: Bell, badge: unreadNotifications || 0 },
     { key: "chat", label: "채팅", icon: MessageCircle, badge: unreadCount || 0 },
     { key: "search", label: "사용자 검색", icon: Search },
     { key: "settings", label: "설정", icon: Settings },
@@ -183,6 +236,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
   const titleMap: Record<MenuView, string> = {
     root: "메뉴",
     profile: "마이페이지",
+    notifications: "알림",
     chat: "채팅",
     search: "사용자 검색",
     settings: "설정",
@@ -604,6 +658,60 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
               </div>
             )}
 
+            {/* 알림함 */}
+            {view === "notifications" && (
+              <div className="p-5">
+                {!notifications || notifications.length === 0 ? (
+                  <p className="text-sm text-center py-10" style={{ color: "var(--text-muted)" }}>
+                    아직 받은 알림이 없어요
+                  </p>
+                ) : (
+                  <div className="space-y-1">
+                    {!!unreadNotifications && unreadNotifications > 0 && (
+                      <button
+                        onClick={() => markAllReadMutation.mutate()}
+                        disabled={markAllReadMutation.isPending}
+                        className="text-xs mb-2 hover:underline"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        모두 읽음으로 표시
+                      </button>
+                    )}
+                    {notifications.map((notification) => (
+                      <button
+                        key={notification.id}
+                        onClick={() => openNotification(notification)}
+                        className="w-full text-left px-3 py-3 rounded-xl hover:bg-black/5 transition-colors flex gap-2.5"
+                      >
+                        {/* 안 읽음 표시 — 빨간 뱃지 대신 primary 색 작은 점 */}
+                        <span
+                          aria-hidden={notification.isRead}
+                          className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: notification.isRead ? "transparent" : "var(--accent-color)" }}
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span
+                            className="block text-sm font-semibold"
+                            style={{ color: notification.isRead ? "var(--text-normal)" : "var(--text-strong)" }}
+                          >
+                            {notification.title}
+                          </span>
+                          {notification.body && (
+                            <span className="block text-xs mt-0.5 truncate" style={{ color: "var(--text-muted)" }}>
+                              {notification.body}
+                            </span>
+                          )}
+                          <span className="block text-[11px] mt-1" style={{ color: "var(--text-muted)" }}>
+                            {formatDistanceToNow(new Date(notification.createdAt), { locale: ko, addSuffix: true })}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* 설정 */}
             {view === "settings" && (
               <div className="p-5 space-y-5">
@@ -637,21 +745,42 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                 </div>
 
                 <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
-                  <label className="text-sm font-semibold block mb-2" style={{ color: "var(--text-strong)" }}>
-                    알림 설정
+                  <label className="text-sm font-semibold block mb-1" style={{ color: "var(--text-strong)" }}>
+                    알림 수신 동의
                   </label>
-                  <div className="space-y-2">
-                    <label className="flex items-center gap-2" style={{ color: "var(--text-normal)" }}>
-                      <input type="checkbox" defaultChecked className="rounded" />
-                      새 댓글 알림
+                  <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+                    두 항목 모두 선택이며 언제든 바꿀 수 있어요.
+                  </p>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-2.5 cursor-pointer" style={{ color: "var(--text-normal)" }}>
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded"
+                        checked={user.notifyPost}
+                        disabled={updateNotifyPrefsMutation.isPending}
+                        onChange={(e) => updateNotifyPrefsMutation.mutate({ notifyPost: e.target.checked })}
+                      />
+                      <span className="text-sm leading-snug">
+                        활동 알림
+                        <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                          내 글의 댓글·추천 알림
+                        </span>
+                      </span>
                     </label>
-                    <label className="flex items-center gap-2" style={{ color: "var(--text-normal)" }}>
-                      <input type="checkbox" defaultChecked className="rounded" />
-                      새 게시글 알림
-                    </label>
-                    <label className="flex items-center gap-2" style={{ color: "var(--text-normal)" }}>
-                      <input type="checkbox" defaultChecked className="rounded" />
-                      메시지 알림
+                    <label className="flex items-start gap-2.5 cursor-pointer" style={{ color: "var(--text-normal)" }}>
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 rounded"
+                        checked={user.notifyMarketing}
+                        disabled={updateNotifyPrefsMutation.isPending}
+                        onChange={(e) => updateNotifyPrefsMutation.mutate({ notifyMarketing: e.target.checked })}
+                      />
+                      <span className="text-sm leading-snug">
+                        광고성 정보
+                        <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                          이벤트·제휴 소식 알림
+                        </span>
+                      </span>
                     </label>
                   </div>
                 </div>

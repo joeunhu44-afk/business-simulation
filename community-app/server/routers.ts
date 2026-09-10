@@ -70,6 +70,35 @@ async function logBlockedAttempt(data: {
   }
 }
 
+/**
+ * 내 글에 달린 활동(댓글/좋아요)을 글쓴이에게 알린다.
+ * - 글쓴이가 활동 알림(notifyPost)에 동의한 경우에만 쌓는다.
+ * - 자기 글에 자기가 단 댓글/좋아요는 알리지 않는다.
+ * - 알림 생성 실패가 댓글/좋아요 자체를 막으면 안 되므로 오류는 로그만 남긴다.
+ */
+async function notifyPostActivity(params: {
+  postAuthorId: number;
+  actorId: number;
+  type: 'post_comment' | 'post_like';
+  postId: number;
+  postTitle: string;
+}) {
+  const { postAuthorId, actorId, type, postId, postTitle } = params;
+  if (postAuthorId === actorId) return;
+  try {
+    if (!(await db.hasPostNotifyConsent(postAuthorId))) return;
+    await db.createNotification({
+      userId: postAuthorId,
+      type,
+      title: type === 'post_comment' ? '내 글에 새 댓글이 달렸어요' : '내 글이 추천을 받았어요',
+      body: postTitle,
+      linkUrl: `/post/${postId}`,
+    });
+  } catch (error) {
+    console.warn('[Notification] 활동 알림 생성 실패:', error);
+  }
+}
+
 // Admin procedure - only admin users can access
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin' && ctx.user.role !== 'owner') {
@@ -96,6 +125,9 @@ export const appRouter = router({
         email: z.string().email('올바른 이메일 형식이 아닙니다'),
         password: z.string().min(4, '비밀번호는 최소 4자 이상이어야 합니다'),
         name: z.string().regex(STUDENT_NAME_REGEX, STUDENT_NAME_MESSAGE),
+        // 둘 다 선택 동의 — 미동의여도 가입이 되어야 하므로 기본값 false
+        notifyPost: z.boolean().default(false),
+        notifyMarketing: z.boolean().default(false),
       }))
       .mutation(async ({ input, ctx }) => {
         const existing = await db.getUserByEmail(input.email);
@@ -107,6 +139,8 @@ export const appRouter = router({
           email: input.email,
           passwordHash,
           name: input.name,
+          notifyPost: input.notifyPost,
+          notifyMarketing: input.notifyMarketing,
         });
         if (!user) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '회원가입에 실패했습니다' });
@@ -145,6 +179,8 @@ export const appRouter = router({
       .input(z.object({
         token: z.string(),
         name: z.string().regex(STUDENT_NAME_REGEX, STUDENT_NAME_MESSAGE),
+        notifyPost: z.boolean().default(false),
+        notifyMarketing: z.boolean().default(false),
       }))
       .mutation(async ({ input, ctx }) => {
         let pending;
@@ -168,6 +204,8 @@ export const appRouter = router({
           providerUserId: pending.providerUserId,
           email: pending.email,
           name: input.name,
+          notifyPost: input.notifyPost,
+          notifyMarketing: input.notifyMarketing,
         });
         if (!user) {
           throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: '회원가입에 실패했습니다' });
@@ -199,6 +237,17 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const url = await uploadImageDataUrl(input.dataUrl, `avatars/${ctx.user.id}`);
         return db.updateUserAvatarImage(ctx.user.id, url);
+      }),
+
+    /** 알림 수신 동의를 켜고 끈다. 동의 시각은 db 레이어에서 함께 기록된다. */
+    updateNotificationPrefs: protectedProcedure
+      .input(z.object({
+        notifyPost: z.boolean().optional(),
+        notifyMarketing: z.boolean().optional(),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        await db.updateNotificationPrefs(ctx.user.id, input);
+        return { success: true };
       }),
 
     /** 프로필 사진을 지우고 이모지/이니셜 기본 아바타로 되돌린다. */
@@ -389,13 +438,25 @@ export const appRouter = router({
           throw new TRPCError({ code: 'BAD_REQUEST', message: BLOCKED_MESSAGE });
         }
 
-        return db.createComment({
+        const created = await db.createComment({
           postId: input.postId,
           userId: ctx.user.id,
           content: input.content,
           isAnonymous: input.isAnonymous,
           parentCommentId: input.parentCommentId,
         });
+
+        const post = await db.getPostById(input.postId);
+        if (post) {
+          await notifyPostActivity({
+            postAuthorId: post.userId,
+            actorId: ctx.user.id,
+            type: 'post_comment',
+            postId: post.id,
+            postTitle: post.title,
+          });
+        }
+        return created;
       }),
     
     delete: protectedProcedure
@@ -421,10 +482,22 @@ export const appRouter = router({
         if (hasLiked) {
           await db.removePostLike(input.postId, ctx.user.id);
           return { liked: false };
-        } else {
-          await db.addPostLike(input.postId, ctx.user.id);
-          return { liked: true };
         }
+
+        await db.addPostLike(input.postId, ctx.user.id);
+        // 좋아요를 취소했다 다시 누르면 알림이 반복될 수 있지만, 알림함에서
+        // 최신순으로 묶여 보이는 정도라 별도 중복 억제는 두지 않았다.
+        const post = await db.getPostById(input.postId);
+        if (post) {
+          await notifyPostActivity({
+            postAuthorId: post.userId,
+            actorId: ctx.user.id,
+            type: 'post_like',
+            postId: post.id,
+            postTitle: post.title,
+          });
+        }
+        return { liked: true };
       }),
     
     toggleCommentLike: protectedProcedure
@@ -491,6 +564,50 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         return db.updateReportStatus(input.id, input.status, input.adminNotes);
+      }),
+  }),
+
+  // 앱 내 알림함
+  notifications: router({
+    list: protectedProcedure
+      .input(z.object({ limit: z.number().default(30), offset: z.number().default(0) }))
+      .query(async ({ input, ctx }) => {
+        return db.getNotifications(ctx.user.id, input.limit, input.offset);
+      }),
+
+    unreadCount: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUnreadNotificationCount(ctx.user.id);
+    }),
+
+    markRead: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        // userId 조건이 함께 걸려 있어 남의 알림은 읽음 처리되지 않는다
+        await db.markNotificationRead(input.id, ctx.user.id);
+        return { success: true };
+      }),
+
+    markAllRead: protectedProcedure.mutation(async ({ ctx }) => {
+      await db.markAllNotificationsRead(ctx.user.id);
+      return { success: true };
+    }),
+
+    /** 광고성 알림 발송 — 관리자만, 그리고 수신 동의자에게만 전달된다. */
+    sendMarketing: adminProcedure
+      .input(z.object({
+        title: z.string().min(1).max(255),
+        body: z.string().max(2000).optional(),
+        linkUrl: z.string().max(1024).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const userIds = await db.getMarketingOptInUserIds();
+        await db.createNotificationsForUsers(userIds, {
+          type: 'marketing',
+          title: input.title,
+          body: input.body,
+          linkUrl: input.linkUrl,
+        });
+        return { sentCount: userIds.length };
       }),
   }),
 

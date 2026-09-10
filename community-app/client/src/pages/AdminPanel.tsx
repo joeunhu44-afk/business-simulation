@@ -42,6 +42,7 @@ const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label
     tabs: [
       { key: 'announcements', label: '공지사항' },
       { key: 'news', label: '뉴스' },
+      { key: 'push', label: '알림 발송' },
     ],
   },
 ];
@@ -143,6 +144,7 @@ export default function AdminPanel() {
             {activeTab === 'reports' && <ReportsTab />}
             {activeTab === 'announcements' && <AnnouncementsTab />}
             {activeTab === 'news' && <NewsTab />}
+            {activeTab === 'push' && <MarketingNotificationTab />}
             {activeTab === 'inquiries' && <InquiriesTab />}
             {activeTab === 'blocked' && <BlockedAttemptsTab />}
           </div>
@@ -1224,6 +1226,64 @@ function AdBannersTab() {
               )}
             </div>
           ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function MarketingNotificationTab() {
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+
+  const sendMutation = trpc.notifications.sendMarketing.useMutation({
+    onSuccess: (result) => {
+      toast.success(`${result.sentCount}명에게 발송되었습니다`);
+      setTitle('');
+      setBody('');
+      setLinkUrl('');
+    },
+    onError: (error) => toast.error(error.message || '발송에 실패했습니다'),
+  });
+
+  const handleSend = () => {
+    if (!title.trim()) {
+      toast.error('제목을 입력해주세요');
+      return;
+    }
+    if (!window.confirm('광고성 정보 수신에 동의한 사용자 전원에게 발송됩니다. 계속할까요?')) return;
+    sendMutation.mutate({
+      title: title.trim(),
+      body: body.trim() || undefined,
+      linkUrl: linkUrl.trim() || undefined,
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card className="card-elevated p-6 bg-secondary">
+        <h3 className="font-semibold mb-1">광고성 알림 발송</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          광고성 정보 수신에 <span className="font-semibold">동의한 사용자에게만</span> 전달됩니다.
+          동의하지 않은 사용자에게는 발송되지 않습니다.
+        </p>
+        <div className="space-y-3">
+          <Input placeholder="제목" value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Textarea
+            placeholder="내용 (선택)"
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            className="min-h-24"
+          />
+          <Input
+            placeholder="이동할 링크 (선택, 예: /board/free)"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+          />
+          <Button onClick={handleSend} disabled={sendMutation.isPending} className="w-full">
+            {sendMutation.isPending ? '발송 중...' : '동의자에게 발송'}
+          </Button>
         </div>
       </Card>
     </div>
