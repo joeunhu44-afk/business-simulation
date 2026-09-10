@@ -43,7 +43,7 @@ const FEATURES = [
  * 추천 요약 블록을 게시판 목록 위에 둘지 아래에 둘지. 홈의 주인공은 게시판
  * 목록이므로 이 값 하나만 바꾸면 배치를 통째로 뒤집을 수 있게 해뒀다.
  */
-const RECOMMENDED_PLACEMENT: "above" | "below" = "below";
+const RECOMMENDED_PLACEMENT: "above" | "below" = "above";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
