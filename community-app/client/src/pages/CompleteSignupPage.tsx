@@ -71,6 +71,19 @@ export default function CompleteSignupPage() {
             />
           </div>
           <NotifyConsentFields value={consent} onChange={setConsent} disabled={completeMutation.isPending} />
+          {/* 소셜 가입도 같은 동의 안내를 받아야 한다 */}
+          <p className="text-xs leading-5" style={{ color: "var(--text-muted)" }}>
+            가입을 완료하면{" "}
+            <a href="/terms" className="underline underline-offset-2" style={{ color: "var(--accent-color)" }}>
+              이용약관
+            </a>
+            과{" "}
+            <a href="/privacy" className="underline underline-offset-2" style={{ color: "var(--accent-color)" }}>
+              개인정보처리방침
+            </a>
+            에 동의하는 것으로 봅니다.
+          </p>
+
           <Button type="submit" className="w-full h-11 mt-1" disabled={completeMutation.isPending}>
             가입 완료
           </Button>

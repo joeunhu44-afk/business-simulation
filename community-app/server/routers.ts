@@ -1,7 +1,7 @@
 import { COOKIE_NAME, ONE_YEAR_MS, AVATAR_EMOJI_OPTIONS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, approvedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as db from "./db";
@@ -166,7 +166,13 @@ export const appRouter = router({
           throw new TRPCError({ code: 'UNAUTHORIZED', message: '이메일 또는 비밀번호가 올바르지 않습니다' });
         }
         if (user.status === 'blocked') {
-          throw new TRPCError({ code: 'FORBIDDEN', message: '이용이 제한된 계정입니다' });
+          // 가입 거절로 막힌 계정이면 관리자가 남긴 사유를 함께 보여준다.
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: user.approvalNote
+              ? `이용이 제한된 계정입니다 (사유: ${user.approvalNote})`
+              : '이용이 제한된 계정입니다',
+          });
         }
         await db.touchLastSignedIn(user.id, 'email');
         const sessionToken = await createSessionToken(user.id);
@@ -349,7 +355,7 @@ export const appRouter = router({
         return post;
       }),
     
-    create: protectedProcedure
+    create: approvedProcedure
       .input(z.object({
         boardId: z.number(),
         title: z.string().min(1).max(255),
@@ -380,7 +386,7 @@ export const appRouter = router({
         });
       }),
 
-    update: protectedProcedure
+    update: approvedProcedure
       .input(z.object({
         id: z.number(),
         title: z.string().min(1).max(255).optional(),
@@ -398,7 +404,7 @@ export const appRouter = router({
         return db.updatePost(id, data);
       }),
     
-    delete: protectedProcedure
+    delete: approvedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const post = await db.getPostById(input.id);
@@ -429,7 +435,7 @@ export const appRouter = router({
         return db.getCommentsByPost(input.postId);
       }),
     
-    create: protectedProcedure
+    create: approvedProcedure
       .input(z.object({
         postId: z.number(),
         content: z.string().min(1),
@@ -469,7 +475,7 @@ export const appRouter = router({
         return created;
       }),
     
-    delete: protectedProcedure
+    delete: approvedProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const comment = await db.getCommentById(input.id);
@@ -484,7 +490,7 @@ export const appRouter = router({
 
   // 추천(좋아요) 관련 API
   likes: router({
-    togglePostLike: protectedProcedure
+    togglePostLike: approvedProcedure
       .input(z.object({ postId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const hasLiked = await db.hasUserLikedPost(input.postId, ctx.user.id);
@@ -510,7 +516,7 @@ export const appRouter = router({
         return { liked: true };
       }),
     
-    toggleCommentLike: protectedProcedure
+    toggleCommentLike: approvedProcedure
       .input(z.object({ commentId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         const hasLiked = await db.hasUserLikedComment(input.commentId, ctx.user.id);
@@ -539,7 +545,7 @@ export const appRouter = router({
 
   // 신고 관련 API
   reports: router({
-    create: protectedProcedure
+    create: approvedProcedure
       .input(z.object({
         targetType: z.enum(['post', 'comment']),
         targetId: z.number(),
@@ -758,7 +764,7 @@ export const appRouter = router({
 
   // 이미지 업로드 (게시글 첨부 등, 프로필 사진은 auth.updateAvatarPhoto 사용)
   media: router({
-    uploadPostImage: protectedProcedure
+    uploadPostImage: approvedProcedure
       .input(z.object({ dataUrl: z.string() }))
       .mutation(async ({ input, ctx }) => {
         const url = await uploadImageDataUrl(input.dataUrl, `posts/${ctx.user.id}`);
@@ -867,6 +873,57 @@ export const appRouter = router({
           return db.getAllUsers(input.limit, input.offset);
         }),
       
+      /** 승인 대기 목록 — 관리자가 학번·이름을 보고 재학생인지 판단한다. */
+      pending: adminProcedure.query(async () => {
+        return db.getPendingUsers();
+      }),
+
+      /** 탭 뱃지에 쓰는 대기 인원 수. 목록 전체를 받지 않아도 되게 따로 둔다. */
+      pendingCount: adminProcedure.query(async () => {
+        return db.countPendingUsers();
+      }),
+
+      /**
+       * 가입 승인/거절. 거절해도 계정은 지우지 않고 blocked로 남긴다 —
+       * 같은 이메일로 곧바로 재가입해 대기열을 다시 채우는 걸 막기 위해서다.
+       */
+      decideApproval: adminProcedure
+        .input(z.object({
+          userId: z.number(),
+          decision: z.enum(['approve', 'reject']),
+          note: z.string().max(200).optional(),
+        }))
+        .mutation(async ({ input }) => {
+          const target = await db.getUserById(input.userId);
+          if (!target) throw new TRPCError({ code: 'NOT_FOUND' });
+          if (target.status !== 'pending') {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: '이미 처리된 가입 신청입니다' });
+          }
+
+          const approved = input.decision === 'approve';
+          await db.setUserApproval(input.userId, approved ? 'active' : 'blocked', input.note ?? null);
+
+          // 승인 알림은 수신 동의와 무관하게 항상 보낸다(계정 상태 안내라서).
+          // 거절은 인앱 알림으로 전달할 수 없다 — blocked 계정은 createContext에서
+          // 로그아웃으로 취급되어 알림함 자체를 못 연다. 거절 사유는 로그인 시점에
+          // 안내하므로(auth.login) 여기서는 알림을 만들지 않는다.
+          if (approved) {
+            try {
+              await db.createNotification({
+                userId: input.userId,
+                type: 'announcement',
+                title: '가입이 승인되었습니다',
+                body: '이제 글쓰기와 댓글 등 모든 기능을 이용할 수 있어요',
+                linkUrl: '/',
+              });
+            } catch (error) {
+              console.warn('[Approval] 승인 알림 생성 실패:', error);
+            }
+          }
+
+          return { success: true } as const;
+        }),
+
       updateRole: adminProcedure
         .input(z.object({
           userId: z.number(),
@@ -936,7 +993,7 @@ export const appRouter = router({
 
   // 계정 검색
   users: router({
-    search: protectedProcedure
+    search: approvedProcedure
       .input(z.object({ query: z.string().min(1).max(100) }))
       .query(async ({ input, ctx }) => {
         return db.searchUsers(input.query.trim(), ctx.user.id, 20);
@@ -946,7 +1003,7 @@ export const appRouter = router({
   // 개인 채팅
   chat: router({
     // 대화 시작(또는 기존 대화 반환)
-    startConversation: protectedProcedure
+    startConversation: approvedProcedure
       .input(z.object({ targetUserId: z.number() }))
       .mutation(async ({ input, ctx }) => {
         if (input.targetUserId === ctx.user.id) {
@@ -998,7 +1055,7 @@ export const appRouter = router({
         return { success: true } as const;
       }),
     // 메시지 전송
-    sendMessage: protectedProcedure
+    sendMessage: approvedProcedure
       .input(z.object({ conversationId: z.number(), content: z.string().min(1).max(2000) }))
       .mutation(async ({ input, ctx }) => {
         const conv = await db.getConversationById(input.conversationId);

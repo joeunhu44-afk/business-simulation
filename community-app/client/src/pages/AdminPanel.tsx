@@ -17,7 +17,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { SYSTEM_REPORTER_USER_ID } from "@shared/const";
 
 const ADMIN_CATEGORIES: { key: string; label: string; tabs: { key: string; label: string }[] }[] = [
-  { key: 'user', label: '사용자', tabs: [{ key: 'users', label: '회원 관리' }] },
+  {
+    key: 'user',
+    label: '사용자',
+    tabs: [
+      { key: 'approvals', label: '가입 승인' },
+      { key: 'users', label: '회원 관리' },
+    ],
+  },
   {
     key: 'content',
     label: '콘텐츠',
@@ -61,6 +68,11 @@ export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState(ADMIN_CATEGORIES[0].tabs[0].key);
 
   const currentCategory = ADMIN_CATEGORIES.find((c) => c.key === activeCategory) ?? ADMIN_CATEGORIES[0];
+
+  // 대기 인원은 탭을 열지 않아도 보여야 놓치지 않는다.
+  const { data: pendingCount } = trpc.admin.users.pendingCount.useQuery(undefined, {
+    enabled: isAdminRole(user?.role),
+  });
 
   const handleSelectCategory = (categoryKey: string) => {
     const category = ADMIN_CATEGORIES.find((c) => c.key === categoryKey);
@@ -131,12 +143,21 @@ export default function AdminPanel() {
                   className="shrink-0"
                 >
                   {tab.label}
+                  {tab.key === 'approvals' && !!pendingCount && (
+                    <span
+                      className="ml-1.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold tabular-nums"
+                      style={{ backgroundColor: 'var(--accent-color)', color: '#fff' }}
+                    >
+                      {pendingCount}
+                    </span>
+                  )}
                 </Button>
               ))}
             </div>
           )}
 
           <div>
+            {activeTab === 'approvals' && <ApprovalsTab />}
             {activeTab === 'users' && <UsersTab />}
             {activeTab === 'boards' && <BoardsTab />}
             {activeTab === 'posts' && <PostsTab />}
@@ -150,6 +171,97 @@ export default function AdminPanel() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * 가입 승인 탭. 학번+이름·가입 수단·이메일·가입 시각을 보고 재학생인지 판단한다.
+ * 거절은 계정을 지우지 않고 차단 처리하므로, 사유를 남기면 그 사람이 다시 로그인할 때 보인다.
+ */
+function ApprovalsTab() {
+  const utils = trpc.useUtils();
+  const { data: pending, isLoading } = trpc.admin.users.pending.useQuery();
+  const [notes, setNotes] = useState<Record<number, string>>({});
+
+  const decide = trpc.admin.users.decideApproval.useMutation({
+    onSuccess: (_result, variables) => {
+      toast.success(variables.decision === 'approve' ? '가입을 승인했습니다' : '가입을 거절했습니다');
+      utils.admin.users.pending.invalidate();
+      utils.admin.users.pendingCount.invalidate();
+      utils.admin.users.list.invalidate();
+    },
+    onError: (error) => toast.error(error.message || '처리에 실패했습니다'),
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-12">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!pending || pending.length === 0) {
+    return (
+      <Card className="card-elevated p-10 text-center">
+        <p className="text-sm text-muted-foreground">승인을 기다리는 가입 신청이 없습니다.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        승인 대기 {pending.length}명 · 학번과 이름이 실제 재학생과 맞는지 확인한 뒤 처리해주세요.
+      </p>
+      {pending.map((applicant) => (
+        <Card key={applicant.id} className="card-elevated p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-[15px]" style={{ color: 'var(--text-strong)' }}>
+                {applicant.name || '(이름 없음)'}
+              </p>
+              <p className="mt-0.5 text-[13px] text-muted-foreground break-all">
+                {applicant.email || '이메일 없음'} · {applicant.loginMethod || '알 수 없음'} 가입
+              </p>
+              <p className="mt-0.5 text-[12px] text-muted-foreground">
+                {formatDistanceToNow(new Date(applicant.createdAt), { locale: ko, addSuffix: true })} 신청
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                size="sm"
+                disabled={decide.isPending}
+                onClick={() => decide.mutate({ userId: applicant.id, decision: 'approve' })}
+              >
+                승인
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={decide.isPending}
+                onClick={() =>
+                  decide.mutate({
+                    userId: applicant.id,
+                    decision: 'reject',
+                    note: notes[applicant.id]?.trim() || undefined,
+                  })
+                }
+              >
+                거절
+              </Button>
+            </div>
+          </div>
+          <Input
+            value={notes[applicant.id] ?? ''}
+            onChange={(e) => setNotes((prev) => ({ ...prev, [applicant.id]: e.target.value }))}
+            placeholder="거절 사유 (선택) — 거절 시 본인이 로그인할 때 보입니다"
+            maxLength={200}
+            className="mt-3 h-9 text-[13px]"
+          />
+        </Card>
+      ))}
     </div>
   );
 }

@@ -54,7 +54,20 @@ async function handleProviderResult(
   const existing = await db.getAuthIdentity(provider, result.providerUserId);
 
   if (existing) {
-    // 이미 가입된 사용자 -> 바로 로그인 처리
+    // 차단(가입 거절 포함) 계정은 세션을 발급하지 않는다. 발급해봤자 createContext에서
+    // 로그아웃 취급되어 "로그인했는데 로그인이 안 된" 상태로 보일 뿐이라, 로그인 화면으로
+    // 사유와 함께 돌려보낸다.
+    const existingUser = await db.getUserById(existing.userId);
+    if (existingUser?.status === "blocked") {
+      const url = new URL("/login", ENV.appUrl);
+      url.searchParams.set("error", "blocked");
+      if (existingUser.approvalNote) url.searchParams.set("reason", existingUser.approvalNote);
+      res.redirect(302, url.pathname + url.search);
+      return;
+    }
+
+    // 이미 가입된 사용자 -> 바로 로그인 처리 (승인 대기 상태여도 로그인은 되고,
+    // 클라이언트가 "승인 대기 중" 안내를 보여준다)
     await db.touchLastSignedIn(existing.userId, provider);
     const sessionToken = await createSessionToken(existing.userId);
     finish(res, { kind: "login", sessionToken }, req);

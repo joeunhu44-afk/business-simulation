@@ -27,13 +27,27 @@ export const users = mysqlTable("users", {
   /** owner("조물주")는 OWNER_EMAIL 계정에게만 자동으로 부여되는 최상위 권한. 딱 한 명뿐이고
    *  아무도(본인 포함) UI로 바꿀 수 없다 — 로그인할 때마다 이메일이 일치하는지로만 결정된다. */
   role: mysqlEnum("role", ["user", "admin", "owner"]).default("user").notNull(),
-  status: mysqlEnum("status", ["active", "blocked"]).default("active").notNull(),
+  /** pending = 관리자 승인 대기(재학생 확인 전). 신규 가입자는 모두 여기서 시작한다.
+   *  기본값이 active인 이유는 이 컬럼이 생기기 전부터 있던 계정들이 마이그레이션
+   *  이후에도 그대로 활동할 수 있어야 하기 때문 — 신규 가입은 코드에서 명시적으로
+   *  pending을 넣는다(server/_core/approval.ts). */
+  status: mysqlEnum("status", ["active", "blocked", "pending"]).default("active").notNull(),
+  /** 승인 거절 사유 등 상태 변경에 대한 관리자 메모. 거절 알림 본문으로도 쓰인다. */
+  approvalNote: varchar("approvalNote", { length: 255 }),
   /** 내 글에 달린 댓글·좋아요 등 활동 알림 수신 동의 (선택). 동의 시각도 함께 남긴다. */
   notifyPost: boolean("notifyPost").default(false).notNull(),
   notifyPostAt: timestamp("notifyPostAt"),
   /** 광고·이벤트 등 광고성 정보 수신 동의 (선택). 미동의여도 가입·이용에 제한이 없다. */
   notifyMarketing: boolean("notifyMarketing").default(false).notNull(),
   notifyMarketingAt: timestamp("notifyMarketingAt"),
+  /** 이용약관·개인정보처리방침 동의 시각과 동의한 문서 버전(shared/legal.ts).
+   *  개정 후 재동의가 필요할 때 "이 버전에 동의하지 않은 사용자"를 골라내기 위해
+   *  시각뿐 아니라 버전도 함께 남긴다. 두 문서는 따로 개정될 수 있어 각각 기록한다.
+   *  이 컬럼이 생기기 전에 가입한 계정은 NULL이다(= 동의 기록 없음). */
+  termsAgreedAt: timestamp("termsAgreedAt"),
+  termsVersion: varchar("termsVersion", { length: 32 }),
+  privacyAgreedAt: timestamp("privacyAgreedAt"),
+  privacyVersion: varchar("privacyVersion", { length: 32 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

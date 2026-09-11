@@ -15,3 +15,5 @@ export const SYSTEM_REPORTER_USER_ID = 0;
 
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
+/** 승인 대기(pending) 계정이 활동성 기능을 호출했을 때. 클라이언트가 그대로 보여준다. */
+export const NOT_APPROVED_ERR_MSG = '관리자 승인 후 이용할 수 있습니다';
