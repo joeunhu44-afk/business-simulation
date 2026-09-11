@@ -5,6 +5,7 @@ import path from "node:path";
 import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { resolveInitialStatus } from "./_core/approval";
+import { PRIVACY_VERSION, TERMS_VERSION } from "@shared/legal";
 import {
   buildBoardAffinity,
   hasEnoughActivity,
@@ -107,6 +108,12 @@ export async function createUserWithPassword(data: {
     loginMethod: "email",
     role,
     status,
+    // 가입 화면에서 두 문서 링크와 함께 "가입 시 동의" 문구를 노출하므로,
+    // 계정 생성 시점을 동의 시점으로 기록한다.
+    termsAgreedAt: now,
+    termsVersion: TERMS_VERSION,
+    privacyAgreedAt: now,
+    privacyVersion: PRIVACY_VERSION,
     notifyPost: data.notifyPost ?? false,
     notifyPostAt: data.notifyPost ? now : null,
     notifyMarketing: data.notifyMarketing ?? false,
@@ -141,6 +148,12 @@ export async function createUserFromOAuth(data: {
     loginMethod: data.provider,
     role,
     status,
+    // 가입 화면에서 두 문서 링크와 함께 "가입 시 동의" 문구를 노출하므로,
+    // 계정 생성 시점을 동의 시점으로 기록한다.
+    termsAgreedAt: now,
+    termsVersion: TERMS_VERSION,
+    privacyAgreedAt: now,
+    privacyVersion: PRIVACY_VERSION,
     notifyPost: data.notifyPost ?? false,
     notifyPostAt: data.notifyPost ? now : null,
     notifyMarketing: data.notifyMarketing ?? false,

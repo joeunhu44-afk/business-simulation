@@ -826,6 +826,37 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                     </label>
                   </div>
                 </div>
+
+                {/* 약관·방침은 설정에서 상시 찾아볼 수 있어야 한다 */}
+                <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
+                  <label className="text-sm font-semibold block mb-2" style={{ color: "var(--text-strong)" }}>
+                    약관 및 정책
+                  </label>
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        navigate("/terms");
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-2 -mx-2 text-sm transition-colors hover:bg-black/[0.04]"
+                      style={{ color: "var(--text-normal)" }}
+                    >
+                      이용약관
+                      <ChevronRight className="h-4 w-4" style={{ color: "var(--text-muted)" }} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsOpen(false);
+                        navigate("/privacy");
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-2 -mx-2 text-sm transition-colors hover:bg-black/[0.04]"
+                      style={{ color: "var(--text-normal)" }}
+                    >
+                      개인정보처리방침
+                      <ChevronRight className="h-4 w-4" style={{ color: "var(--text-muted)" }} />
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

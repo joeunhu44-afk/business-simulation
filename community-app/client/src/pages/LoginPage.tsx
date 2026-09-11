@@ -199,6 +199,22 @@ export default function LoginPage() {
               <NotifyConsentFields value={consent} onChange={setConsent} disabled={isPending} />
             )}
 
+            {/* 가입 자체가 두 문서에 대한 동의이므로, 버튼 바로 위에서 링크와 함께 알린다.
+                (동의 시각·문서 버전은 서버에서 계정 생성 시 기록한다) */}
+            {mode === "signup" && (
+              <p className="text-xs leading-5" style={{ color: "var(--text-muted)" }}>
+                회원가입을 하면{" "}
+                <a href="/terms" className="underline underline-offset-2" style={{ color: "var(--accent-color)" }}>
+                  이용약관
+                </a>
+                과{" "}
+                <a href="/privacy" className="underline underline-offset-2" style={{ color: "var(--accent-color)" }}>
+                  개인정보처리방침
+                </a>
+                에 동의하는 것으로 봅니다.
+              </p>
+            )}
+
             <Button type="submit" className="w-full h-11 mt-1" disabled={isPending}>
               {mode === "login" ? "로그인" : "회원가입"}
             </Button>

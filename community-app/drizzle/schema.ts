@@ -40,6 +40,14 @@ export const users = mysqlTable("users", {
   /** 광고·이벤트 등 광고성 정보 수신 동의 (선택). 미동의여도 가입·이용에 제한이 없다. */
   notifyMarketing: boolean("notifyMarketing").default(false).notNull(),
   notifyMarketingAt: timestamp("notifyMarketingAt"),
+  /** 이용약관·개인정보처리방침 동의 시각과 동의한 문서 버전(shared/legal.ts).
+   *  개정 후 재동의가 필요할 때 "이 버전에 동의하지 않은 사용자"를 골라내기 위해
+   *  시각뿐 아니라 버전도 함께 남긴다. 두 문서는 따로 개정될 수 있어 각각 기록한다.
+   *  이 컬럼이 생기기 전에 가입한 계정은 NULL이다(= 동의 기록 없음). */
+  termsAgreedAt: timestamp("termsAgreedAt"),
+  termsVersion: varchar("termsVersion", { length: 32 }),
+  privacyAgreedAt: timestamp("privacyAgreedAt"),
+  privacyVersion: varchar("privacyVersion", { length: 32 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),

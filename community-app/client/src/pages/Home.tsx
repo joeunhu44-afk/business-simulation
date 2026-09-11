@@ -16,6 +16,7 @@ import HomeSpaceBackground from "@/components/HomeSpaceBackground";
 import { isAdminRole } from "@/lib/role";
 import AdBannerCarousel from "@/components/AdBannerCarousel";
 import NotificationBell from "@/components/NotificationBell";
+import SiteFooter from "@/components/SiteFooter";
 
 const QUICK_LINKS: {
   key: string;
@@ -150,6 +151,8 @@ export default function Home() {
             </Button>
           </Reveal>
         </div>
+
+        <SiteFooter />
       </div>
     );
   }
@@ -276,6 +279,8 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      <SiteFooter />
     </div>
   );
 }
