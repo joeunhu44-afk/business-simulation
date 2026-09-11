@@ -90,6 +90,30 @@ describe("회원 탈퇴", () => {
     expect(del).toHaveBeenCalledWith("https://cdn.example.com/avatars/abc/1.png");
   });
 
+  it("기본값은 글을 남긴다 (대화 맥락 보존)", async () => {
+    vi.spyOn(db, "withdrawUser").mockResolvedValue({ avatarImageUrl: null });
+    const softDelete = vi.spyOn(db, "softDeleteUserContent").mockResolvedValue({ imageUrls: [] });
+
+    const caller = appRouter.createCaller(ctxFor());
+    await caller.auth.withdraw({ confirm: WITHDRAW_CONFIRM_TEXT });
+
+    expect(softDelete).not.toHaveBeenCalled();
+  });
+
+  it("선택하면 내가 쓴 글·댓글도 함께 지우고 첨부 이미지를 정리한다", async () => {
+    vi.spyOn(db, "withdrawUser").mockResolvedValue({ avatarImageUrl: null });
+    const softDelete = vi
+      .spyOn(db, "softDeleteUserContent")
+      .mockResolvedValue({ imageUrls: ["https://x/uploads/posts/a/1.png"] });
+    const delMany = vi.spyOn(media, "deleteUploadsByUrl").mockResolvedValue(undefined);
+
+    const caller = appRouter.createCaller(ctxFor({ id: 42 }));
+    await caller.auth.withdraw({ confirm: WITHDRAW_CONFIRM_TEXT, deleteContent: true });
+
+    expect(softDelete).toHaveBeenCalledWith(42);
+    expect(delMany).toHaveBeenCalledWith(["https://x/uploads/posts/a/1.png"]);
+  });
+
   it("비로그인은 탈퇴를 호출할 수 없다", async () => {
     const anon: TrpcContext = {
       user: null,

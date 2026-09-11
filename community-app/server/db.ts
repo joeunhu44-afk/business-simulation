@@ -1150,6 +1150,36 @@ export async function getUserActivity(userId: number) {
  *
  * 반환값의 avatarImageUrl은 호출부가 업로드 파일까지 정리할 수 있도록 돌려주는 것이다.
  */
+/**
+ * 탈퇴하면서 본인이 쓴 글·댓글도 함께 지운다.
+ *
+ * 글 삭제와 같은 soft delete(deletedAt)를 쓴다 — 다른 사람의 댓글이 달려 있을 수 있고,
+ * 신고 처리 기록과도 연결돼 있어 행을 즉시 지우면 참조가 깨진다.
+ * 첨부 이미지 URL은 호출부가 저장소 정리에 쓰도록 함께 돌려준다.
+ */
+export async function softDeleteUserContent(userId: number): Promise<{ imageUrls: string[] }> {
+  const db = await getDb();
+  if (!db) return { imageUrls: [] };
+
+  const myPosts = await db
+    .select({ id: posts.id, images: posts.images })
+    .from(posts)
+    .where(and(eq(posts.userId, userId), isNull(posts.deletedAt)));
+
+  const now = new Date();
+  await db.update(posts).set({ deletedAt: now }).where(and(eq(posts.userId, userId), isNull(posts.deletedAt)));
+  await db.update(comments).set({ deletedAt: now }).where(and(eq(comments.userId, userId), isNull(comments.deletedAt)));
+
+  const imageUrls: string[] = [];
+  for (const row of myPosts) {
+    const normalized = normalizePostImages(row) as { images?: unknown };
+    if (Array.isArray(normalized.images)) {
+      for (const url of normalized.images) if (typeof url === "string") imageUrls.push(url);
+    }
+  }
+  return { imageUrls };
+}
+
 export async function withdrawUser(userId: number): Promise<{ avatarImageUrl: string | null }> {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

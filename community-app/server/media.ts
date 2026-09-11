@@ -6,13 +6,25 @@ import { ENV } from "./_core/env";
 import { storageDelete, storageKeyFromUrl, storagePut } from "./storage";
 import { localStorageDelete, localStorageKeyFromUrl, localStoragePut } from "./localStorage";
 
+/**
+ * 업로드 파일에 접근할 때 쓰는 주소. 저장소가 R2든 로컬 디스크든 항상 앱을 거치게 한다
+ * (server/_core/mediaRoutes.ts에서 로그인 여부를 확인한다). R2 공개 URL을 그대로
+ * 저장하면 앱을 우회해 누구나 열 수 있다.
+ */
+export function mediaUrlFor(key: string): string {
+  const base = ENV.appUrl.replace(/\/+$/, "");
+  return `${base}/uploads/${key.replace(/^\/+/, "")}`;
+}
+
 export async function putUpload(
   key: string,
   data: Buffer,
   contentType: string
 ): Promise<{ key: string; url: string }> {
   if (ENV.s3.endpoint && ENV.s3.bucket) {
-    return storagePut(key, data, contentType);
+    const put = await storagePut(key, data, contentType);
+    // storagePut이 돌려주는 공개 URL 대신 앱 경유 주소를 저장한다.
+    return { key: put.key, url: mediaUrlFor(put.key) };
   }
   return localStoragePut(key, data);
 }
@@ -30,13 +42,14 @@ function usingObjectStorage(): boolean {
 export async function deleteUploadByUrl(url: string | null | undefined): Promise<void> {
   if (!url) return;
   try {
+    // 앱 경유 주소(/uploads/<key>)가 기본이고, 예전에 저장된 R2 공개 URL도 함께 인식한다.
+    const key = localStorageKeyFromUrl(url) ?? storageKeyFromUrl(url);
+    if (!key) return;
     if (usingObjectStorage()) {
-      const key = storageKeyFromUrl(url);
-      if (key) await storageDelete(key);
+      await storageDelete(key);
       return;
     }
-    const key = localStorageKeyFromUrl(url);
-    if (key) await localStorageDelete(key);
+    await localStorageDelete(key);
   } catch (error) {
     console.warn("[Media] 업로드 파일 삭제 실패:", url, error);
   }

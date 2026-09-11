@@ -5,6 +5,7 @@ import net from "net";
 import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerAuthRoutes } from "./auth/routes";
+import { registerMediaRoutes } from "./mediaRoutes";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
@@ -42,8 +43,9 @@ async function startServer() {
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  // S3/R2를 설정하지 않았을 때 로컬 디스크(Railway Volume)에 저장한 업로드 파일 서빙
-  app.use("/uploads", express.static(path.resolve(ENV.uploadDir)));
+  // 업로드 파일은 인증을 거쳐야 한다. express.static으로 열어두면 주소만 알면
+  // 로그인 없이 누구나 볼 수 있어, 익명 글에 올린 사진도 링크가 새면 그대로 열렸다.
+  registerMediaRoutes(app);
   registerAuthRoutes(app);
   // tRPC API
   app.use(

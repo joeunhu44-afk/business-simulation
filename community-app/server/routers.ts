@@ -307,11 +307,21 @@ export const appRouter = router({
      * 되는 것을 막는다.
      */
     withdraw: protectedProcedure
-      .input(z.object({ confirm: z.literal(WITHDRAW_CONFIRM_TEXT) }))
-      .mutation(async ({ ctx }) => {
+      .input(z.object({
+        confirm: z.literal(WITHDRAW_CONFIRM_TEXT),
+        /** 내가 쓴 글·댓글도 함께 지울지. 기본값은 남기기 — 대화 맥락이 끊기지 않게. */
+        deleteContent: z.boolean().default(false),
+      }))
+      .mutation(async ({ input, ctx }) => {
         // 조물주가 탈퇴하면 아무도 가입 승인을 할 수 없게 되어 서비스가 잠긴다.
         if (ctx.user.role === 'owner') {
           throw new TRPCError({ code: 'FORBIDDEN', message: '조물주 계정은 탈퇴할 수 없습니다' });
+        }
+
+        // 계정 정보를 지우기 전에 글부터 처리한다 — userId로 찾아야 하기 때문이다.
+        if (input.deleteContent) {
+          const { imageUrls } = await db.softDeleteUserContent(ctx.user.id);
+          await deleteUploadsByUrl(imageUrls);
         }
 
         const { avatarImageUrl } = await db.withdrawUser(ctx.user.id);

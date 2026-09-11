@@ -73,6 +73,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
   const [nameInput, setNameInput] = useState("");
   const [passwordInputs, setPasswordInputs] = useState({ current: "", new: "" });
   const [withdrawInput, setWithdrawInput] = useState("");
+  const [withdrawDeleteContent, setWithdrawDeleteContent] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: notifications } = trpc.notifications.list.useQuery(
@@ -926,10 +927,24 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                   <label className="text-sm font-semibold block mb-1" style={{ color: "var(--text-strong)" }}>
                     회원 탈퇴
                   </label>
-                  <p className="text-xs mb-2 leading-5" style={{ color: "var(--text-muted)" }}>
-                    이름·이메일·프로필 사진이 삭제되고 다시 로그인할 수 없습니다. 작성한 글과 댓글은 남으며,
-                    작성자는 알 수 없게 표시됩니다. 되돌릴 수 없어요.
+                  <p className="text-xs mb-2.5 leading-5" style={{ color: "var(--text-muted)" }}>
+                    이름·이메일·프로필 사진이 삭제되고 다시 로그인할 수 없습니다. 되돌릴 수 없어요.
                   </p>
+                  <label className="mb-2.5 flex items-start gap-2.5 cursor-pointer">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={withdrawDeleteContent}
+                      onCheckedChange={(checked) => setWithdrawDeleteContent(checked === true)}
+                    />
+                    <span className="leading-tight">
+                      <span className="block text-[13px] font-medium" style={{ color: "var(--text-normal)" }}>
+                        내가 쓴 글과 댓글도 함께 삭제
+                      </span>
+                      <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                        체크하지 않으면 글은 남고 작성자만 알 수 없게 표시됩니다
+                      </span>
+                    </span>
+                  </label>
                   <Input
                     value={withdrawInput}
                     onChange={(e) => setWithdrawInput(e.target.value)}
@@ -939,7 +954,12 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                   <Button
                     variant="outline"
                     disabled={withdrawInput !== WITHDRAW_CONFIRM_TEXT || withdrawMutation.isPending}
-                    onClick={() => withdrawMutation.mutate({ confirm: WITHDRAW_CONFIRM_TEXT })}
+                    onClick={() =>
+                      withdrawMutation.mutate({
+                        confirm: WITHDRAW_CONFIRM_TEXT,
+                        deleteContent: withdrawDeleteContent,
+                      })
+                    }
                     className="w-full"
                   >
                     {withdrawMutation.isPending ? "처리 중..." : "탈퇴하기"}
