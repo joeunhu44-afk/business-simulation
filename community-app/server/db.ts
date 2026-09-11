@@ -4,6 +4,7 @@ import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "node:path";
 import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
+import { resolveInitialStatus } from "./_core/approval";
 import {
   buildBoardAffinity,
   hasEnoughActivity,
@@ -95,6 +96,8 @@ export async function createUserWithPassword(data: {
   if (!db) throw new Error("Database not available");
 
   const role = isOwnerEmail(data.email) ? "owner" : "user";
+  // 신규 가입자는 원칙적으로 승인 대기. 예외 판단은 approval.ts 한 곳에서만 한다.
+  const status = resolveInitialStatus({ email: data.email, role });
   const now = new Date();
 
   const [result] = await db.insert(users).values({
@@ -103,6 +106,7 @@ export async function createUserWithPassword(data: {
     name: data.name,
     loginMethod: "email",
     role,
+    status,
     notifyPost: data.notifyPost ?? false,
     notifyPostAt: data.notifyPost ? now : null,
     notifyMarketing: data.notifyMarketing ?? false,
@@ -128,6 +132,7 @@ export async function createUserFromOAuth(data: {
   if (!db) throw new Error("Database not available");
 
   const role = isOwnerEmail(data.email) ? "owner" : "user";
+  const status = resolveInitialStatus({ email: data.email, role });
   const now = new Date();
 
   const [result] = await db.insert(users).values({
@@ -135,6 +140,7 @@ export async function createUserFromOAuth(data: {
     name: data.name,
     loginMethod: data.provider,
     role,
+    status,
     notifyPost: data.notifyPost ?? false,
     notifyPostAt: data.notifyPost ? now : null,
     notifyMarketing: data.notifyMarketing ?? false,
@@ -969,6 +975,54 @@ export async function getUserById(id: number) {
   if (!db) return undefined;
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result.length > 0 ? result[0] : undefined;
+}
+
+/**
+ * 승인 대기 중인 가입 신청 목록. 오래 기다린 사람이 위로 오도록 가입 순으로 정렬한다.
+ */
+export async function getPendingUsers(limit: number = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      loginMethod: users.loginMethod,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.status, "pending"))
+    .orderBy(asc(users.createdAt))
+    .limit(limit);
+}
+
+/** 승인 대기 인원 수 — 관리자 탭의 뱃지에 쓴다. */
+export async function countPendingUsers(): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const [row] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(users)
+    .where(eq(users.status, "pending"));
+  return Number(row?.count ?? 0);
+}
+
+/**
+ * 가입 승인/거절. 거절은 계정을 지우지 않고 blocked로 남긴다 — 같은 이메일로
+ * 곧바로 재가입해 승인 대기열을 다시 채우는 것을 막고, 누가 왜 거절됐는지 기록이 남는다.
+ */
+export async function setUserApproval(
+  userId: number,
+  status: "active" | "blocked",
+  note?: string | null
+) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return db
+    .update(users)
+    .set({ status, approvalNote: note ?? null })
+    .where(eq(users.id, userId));
 }
 
 export async function updateUserRole(id: number, role: 'user' | 'admin') {

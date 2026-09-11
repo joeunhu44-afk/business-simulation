@@ -21,6 +21,7 @@ import { MenuProvider } from "./contexts/MenuContext";
 import TopLeftMenu from "./components/TopLeftMenu";
 import AnimatedBackground from "./components/AnimatedBackground";
 import ScrollEdgeFade from "./components/ScrollEdgeFade";
+import PendingApprovalBanner from "./components/PendingApprovalBanner";
 
 function Router() {
   return (
@@ -53,6 +54,8 @@ function App() {
             <TooltipProvider>
               <AnimatedBackground />
               <Toaster />
+              {/* 승인 대기 안내는 전역으로 한 번만 — 페이지가 늘어나도 빠지지 않게 */}
+              <PendingApprovalBanner />
               <Router />
               <ScrollEdgeFade />
               {/* 메뉴 패널은 전역으로 마운트하되, 떠있는 버튼은 끄고 헤더 인라인 버튼(HeaderMenuButton)으로 여다 */}

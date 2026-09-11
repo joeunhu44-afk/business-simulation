@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import NotifyConsentFields, { EMPTY_NOTIFY_CONSENT } from "@/components/NotifyConsentFields";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -78,6 +78,16 @@ function OAuthButtons() {
 
 export default function LoginPage() {
   const [, navigate] = useLocation();
+  // 소셜 로그인은 서버에서 리다이렉트로 돌아오므로, 차단(가입 거절) 사유를
+  // 쿼리스트링으로 받아 한 번만 띄운다.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") !== "blocked") return;
+    const reason = params.get("reason");
+    toast.error(reason ? `이용이 제한된 계정입니다 (사유: ${reason})` : "이용이 제한된 계정입니다");
+    window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
