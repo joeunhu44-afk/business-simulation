@@ -29,7 +29,7 @@ import { Input } from "@/components/ui/input";
 import { useThemeColor, type ThemeColor } from "@/contexts/ThemeColorContext";
 import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
-import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
+import { AVATAR_EMOJI_OPTIONS, WITHDRAW_CONFIRM_TEXT } from "@shared/const";
 import Avatar from "@/components/Avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { roleLabel } from "@/lib/role";
@@ -68,6 +68,7 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [passwordInputs, setPasswordInputs] = useState({ current: "", new: "" });
+  const [withdrawInput, setWithdrawInput] = useState("");
 
   const utils = trpc.useUtils();
   const { data: notifications } = trpc.notifications.list.useQuery(
@@ -134,6 +135,15 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
     onError: (error) => toast.error(error.message || "비밀번호 변경 실패"),
   });
 
+  const withdrawMutation = trpc.auth.withdraw.useMutation({
+    onSuccess: () => {
+      toast.success("탈퇴가 완료되었습니다");
+      // 세션이 이미 끊겼으므로 전체 새로고침으로 초기 상태로 되돌린다.
+      window.location.href = "/";
+    },
+    onError: (error) => toast.error(error.message || "탈퇴에 실패했습니다"),
+  });
+
   const updateAvatarMutation = trpc.auth.updateAvatar.useMutation({
     onSuccess: (_data, variables) => {
       toast.success(variables.avatarEmoji ? "프로필 아이콘이 변경되었습니다" : "기본 프로필로 되돌렸습니다");
@@ -189,7 +199,16 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
       toast.error("새 비밀번호를 입력하세요");
       return;
     }
-    updatePasswordMutation.mutate({ currentPassword: "", newPassword: passwordInputs.new });
+    // 비밀번호가 설정된 계정은 서버가 현재 비밀번호를 반드시 요구한다.
+    // (소셜 전용 계정은 아직 비밀번호가 없어 새로 설정하는 것이므로 생략한다)
+    if (user?.hasPassword && !passwordInputs.current) {
+      toast.error("현재 비밀번호를 입력하세요");
+      return;
+    }
+    updatePasswordMutation.mutate({
+      currentPassword: passwordInputs.current || undefined,
+      newPassword: passwordInputs.new,
+    });
   };
 
   const { data: unreadCount } = trpc.chat.unreadCount.useQuery(undefined, {
@@ -519,13 +538,24 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                 </div>
 
                 <div className="pt-2 border-t" style={{ borderColor: "var(--border-color)" }}>
-                  <label className="text-sm font-semibold mt-3 block" style={{ color: "var(--text-strong)" }}>비밀번호 변경</label>
+                  <label className="text-sm font-semibold mt-3 block" style={{ color: "var(--text-strong)" }}>
+                    {user.hasPassword ? "비밀번호 변경" : "비밀번호 설정"}
+                  </label>
+                  {user.hasPassword && (
+                    <Input
+                      type="password"
+                      placeholder="현재 비밀번호"
+                      value={passwordInputs.current}
+                      onChange={(e) => setPasswordInputs({ ...passwordInputs, current: e.target.value })}
+                      className="mb-2 mt-2"
+                    />
+                  )}
                   <Input
                     type="password"
                     placeholder="새 비밀번호"
                     value={passwordInputs.new}
                     onChange={(e) => setPasswordInputs({ ...passwordInputs, new: e.target.value })}
-                    className="mb-2 mt-2"
+                    className={`mb-2 ${user.hasPassword ? "" : "mt-2"}`}
                   />
                   <Button
                     onClick={handlePasswordChange}
@@ -856,6 +886,31 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                       <ChevronRight className="h-4 w-4" style={{ color: "var(--text-muted)" }} />
                     </button>
                   </div>
+                </div>
+
+                {/* 탈퇴는 되돌릴 수 없어 맨 아래에 두고, 확인 문구를 정확히 입력해야 눌린다. */}
+                <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
+                  <label className="text-sm font-semibold block mb-1" style={{ color: "var(--text-strong)" }}>
+                    회원 탈퇴
+                  </label>
+                  <p className="text-xs mb-2 leading-5" style={{ color: "var(--text-muted)" }}>
+                    이름·이메일·프로필 사진이 삭제되고 다시 로그인할 수 없습니다. 작성한 글과 댓글은 남으며,
+                    작성자는 알 수 없게 표시됩니다. 되돌릴 수 없어요.
+                  </p>
+                  <Input
+                    value={withdrawInput}
+                    onChange={(e) => setWithdrawInput(e.target.value)}
+                    placeholder={`확인을 위해 "${WITHDRAW_CONFIRM_TEXT}"를 입력하세요`}
+                    className="mb-2 h-9 text-[13px]"
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={withdrawInput !== WITHDRAW_CONFIRM_TEXT || withdrawMutation.isPending}
+                    onClick={() => withdrawMutation.mutate({ confirm: WITHDRAW_CONFIRM_TEXT })}
+                    className="w-full"
+                  >
+                    {withdrawMutation.isPending ? "처리 중..." : "탈퇴하기"}
+                  </Button>
                 </div>
               </div>
             )}

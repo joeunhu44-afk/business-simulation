@@ -228,17 +228,57 @@ export async function deleteBoard(id: number) {
   return db.delete(boards).where(eq(boards.id, id));
 }
 
+export type WithAuthor<T> = Omit<T, "userId"> & {
+  /** 익명 글에는 null. 작성자를 역추적할 단서를 응답에 아예 싣지 않기 위해서다. */
+  userId: number | null;
+  /** 보는 사람이 작성자 본인인지. 익명 글이라 userId를 지워도 본인은 수정·삭제할 수 있어야 한다. */
+  isMine: boolean;
+  authorName: string | null;
+  authorAvatarEmoji: string | null;
+  authorAvatarImageUrl: string | null;
+};
+
 /**
- * 게시글/댓글 목록에 작성자 이름·아바타를 붙여준다. 익명 글은 서버에서부터
- * 작성자 정보를 null로 지워서, 응답 페이로드 자체에 익명 작성자 신원이
- * 노출되지 않도록 한다 (프론트에서 숨기는 게 아니라 애초에 안 보낸다).
+ * 게시글/댓글 목록에 작성자 정보를 붙인다.
+ *
+ * 익명 글은 이름·아바타뿐 아니라 **userId까지 응답에서 제거**한다. 이름만 지우고
+ * userId를 남겨두면, 같은 사람이 실명으로 쓴 글 하나만 있어도 userId를 열쇠로
+ * 익명 글의 작성자를 복원할 수 있다 — 로그인조차 필요 없는 공개 API에서 그대로
+ * 노출되므로 이름을 지우는 것만으로는 익명이 되지 않는다.
+ *
+ * 대신 본인 여부는 서버가 계산한 isMine으로 알려준다. 익명 글 작성자가 자기 글을
+ * 수정·삭제하는 경로는 그대로 유지된다.
+ *
+ * viewerId는 요청한 사용자의 id(비로그인이면 null). 작성자 판별 외에는 쓰지 않는다.
  */
 async function attachAuthors<T extends { userId: number; isAnonymous: boolean }>(
-  rows: T[]
-): Promise<(T & { authorName: string | null; authorAvatarEmoji: string | null; authorAvatarImageUrl: string | null })[]> {
+  rows: T[],
+  viewerId: number | null = null
+): Promise<WithAuthor<T>[]> {
+  const anonymize = (row: T): WithAuthor<T> => ({
+    ...row,
+    userId: null,
+    isMine: viewerId !== null && viewerId === row.userId,
+    authorName: null,
+    authorAvatarEmoji: null,
+    authorAvatarImageUrl: null,
+  });
+
   if (rows.length === 0) return [];
   const db = await getDb();
-  if (!db) return rows.map((r) => ({ ...r, authorName: null, authorAvatarEmoji: null, authorAvatarImageUrl: null }));
+  if (!db) {
+    return rows.map((row) =>
+      row.isAnonymous
+        ? anonymize(row)
+        : {
+            ...row,
+            isMine: viewerId !== null && viewerId === row.userId,
+            authorName: null,
+            authorAvatarEmoji: null,
+            authorAvatarImageUrl: null,
+          }
+    );
+  }
 
   const ids = Array.from(new Set(rows.map((r) => r.userId)));
   const authors = await db
@@ -248,10 +288,11 @@ async function attachAuthors<T extends { userId: number; isAnonymous: boolean }>
   const authorMap = new Map(authors.map((a) => [a.id, a]));
 
   return rows.map((row) => {
-    if (row.isAnonymous) return { ...row, authorName: null, authorAvatarEmoji: null, authorAvatarImageUrl: null };
+    if (row.isAnonymous) return anonymize(row);
     const author = authorMap.get(row.userId);
     return {
       ...row,
+      isMine: viewerId !== null && viewerId === row.userId,
       authorName: author?.name ?? null,
       authorAvatarEmoji: author?.avatarEmoji ?? null,
       authorAvatarImageUrl: author?.avatarImageUrl ?? null,
@@ -282,7 +323,7 @@ function normalizePostImages<T extends { images?: unknown }>(row: T): T {
 /**
  * 게시글 관련 쿼리
  */
-export async function getPostsByBoard(boardId: number, limit: number = 20, offset: number = 0, sortBy: 'latest' | 'popular' = 'latest', search?: string) {
+export async function getPostsByBoard(boardId: number, limit: number = 20, offset: number = 0, sortBy: 'latest' | 'popular' = 'latest', search?: string, viewerId: number | null = null) {
   const db = await getDb();
   if (!db) return [];
 
@@ -307,16 +348,62 @@ export async function getPostsByBoard(boardId: number, limit: number = 20, offse
     .orderBy(desc(posts.isNotice), orderBy, desc(posts.id))
     .limit(limit)
     .offset(offset);
-  return attachAuthors(rows.map(normalizePostImages));
+  return attachAuthors(rows.map(normalizePostImages), viewerId);
 }
 
-export async function getPostById(id: number) {
+export async function getPostById(id: number, viewerId: number | null = null) {
   const db = await getDb();
   if (!db) return undefined;
   const result = await db.select().from(posts).where(eq(posts.id, id)).limit(1);
   if (result.length === 0) return undefined;
-  const [withAuthor] = await attachAuthors(result.map(normalizePostImages));
+  const [withAuthor] = await attachAuthors(result.map(normalizePostImages), viewerId);
   return withAuthor;
+}
+
+/**
+ * 익명 글·댓글의 작성자 신원 조회 (조물주 전용 — routers.ts에서 권한을 건다).
+ *
+ * 괴롭힘 등 사안 조사를 위해 남겨둔 경로다. 일반 관리자에게도 열어두면 익명
+ * 게시판이 사실상 실명이 되므로 최상위 권한 한 명만 쓸 수 있게 한다.
+ */
+export async function getAnonymousAuthor(
+  targetType: "post" | "comment",
+  targetId: number
+): Promise<{ userId: number; name: string | null; email: string | null } | null> {
+  const db = await getDb();
+  if (!db) return null;
+
+  const [row] =
+    targetType === "post"
+      ? await db.select({ userId: posts.userId, isAnonymous: posts.isAnonymous }).from(posts).where(eq(posts.id, targetId)).limit(1)
+      : await db.select({ userId: comments.userId, isAnonymous: comments.isAnonymous }).from(comments).where(eq(comments.id, targetId)).limit(1);
+
+  if (!row) return null;
+
+  const [author] = await db
+    .select({ id: users.id, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.id, row.userId))
+    .limit(1);
+
+  if (!author) return null;
+  return { userId: author.id, name: author.name, email: author.email };
+}
+
+/**
+ * 서버 내부 전용 작성자 조회. getPostById는 익명 글의 userId를 지워서 돌려주므로,
+ * "내 글에 댓글이 달렸다" 같은 알림을 보내려면 원본 작성자를 따로 읽어야 한다.
+ * 이 값은 알림 대상 결정에만 쓰고 절대 응답에 실어 보내지 않는다.
+ */
+export async function getPostAuthorId(postId: number): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db
+    .select({ userId: posts.userId })
+    .from(posts)
+    .where(eq(posts.id, postId))
+    .limit(1);
+  return row?.userId ?? null;
 }
 
 export async function createPost(data: { boardId: number; userId: number; title: string; content: string; isAnonymous: boolean; images?: string[] }) {
@@ -349,7 +436,7 @@ export async function incrementPostViewCount(id: number) {
  * 한글은 MySQL 기본 파서로 토큰화가 잘 안 되므로(공백 기준), MATCH AGAINST
  * 대신 LIKE 부분일치를 쓴다 — 게시판별 검색(getPostsByBoard)과 동일한 방식.
  */
-export async function searchPosts(query: string, limit: number = 20, offset: number = 0) {
+export async function searchPosts(query: string, limit: number = 20, offset: number = 0, viewerId: number | null = null) {
   const db = await getDb();
   if (!db) return [];
   const rows = await db.select().from(posts)
@@ -363,7 +450,7 @@ export async function searchPosts(query: string, limit: number = 20, offset: num
     .orderBy(desc(posts.createdAt), desc(posts.id))
     .limit(limit)
     .offset(offset);
-  return attachAuthors(rows.map(normalizePostImages));
+  return attachAuthors(rows.map(normalizePostImages), viewerId);
 }
 
 /**
@@ -482,13 +569,13 @@ export async function getRecommendedPosts(userId: number | null, limit: number =
 /**
  * 댓글 관련 쿼리
  */
-export async function getCommentsByPost(postId: number) {
+export async function getCommentsByPost(postId: number, viewerId: number | null = null) {
   const db = await getDb();
   if (!db) return [];
   const rows = await db.select().from(comments)
     .where(and(eq(comments.postId, postId), isNull(comments.deletedAt)))
     .orderBy(asc(comments.createdAt));
-  return attachAuthors(rows);
+  return attachAuthors(rows, viewerId);
 }
 
 export async function getCommentById(id: number) {
@@ -981,6 +1068,45 @@ export async function getUserActivity(userId: number) {
       postId: likedCommentDetailMap.get(r.commentId)?.postId ?? null,
     })),
   };
+}
+
+/**
+ * 회원 탈퇴.
+ *
+ * 계정 행을 지우지 않고 개인정보만 비운다(soft delete). 행을 통째로 지우면 그 사람이
+ * 남긴 게시글·댓글·쪽지의 userId가 가리킬 곳이 없어져 남의 글로 보이거나 목록이 깨진다.
+ * 그래서 식별정보(이름·이메일·비밀번호·아바타·소셜 연동)만 제거하고 껍데기를 남긴다.
+ *
+ * 반환값의 avatarImageUrl은 호출부가 업로드 파일까지 정리할 수 있도록 돌려주는 것이다.
+ */
+export async function withdrawUser(userId: number): Promise<{ avatarImageUrl: string | null }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const existing = await getUserById(userId);
+  const avatarImageUrl = existing?.avatarImageUrl ?? null;
+
+  // 소셜 연동을 끊어야 같은 소셜 계정으로 다시 가입할 수 있다.
+  await db.delete(authIdentities).where(eq(authIdentities.userId, userId));
+
+  await db
+    .update(users)
+    .set({
+      name: null,
+      // 이메일은 unique 제약이 있어 null로 비워야 같은 주소로 재가입할 수 있다.
+      email: null,
+      passwordHash: null,
+      avatarEmoji: null,
+      avatarImageUrl: null,
+      loginMethod: null,
+      status: "blocked",
+      approvalNote: "회원 탈퇴",
+      notifyPost: false,
+      notifyMarketing: false,
+    })
+    .where(eq(users.id, userId));
+
+  return { avatarImageUrl };
 }
 
 export async function getUserById(id: number) {

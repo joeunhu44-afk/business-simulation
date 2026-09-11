@@ -99,6 +99,8 @@ describe("활동 알림 생성", () => {
   it("동의한 글쓴이에게 댓글 알림이 간다", async () => {
     vi.spyOn(db, "createComment").mockResolvedValue([{ insertId: 1 }] as never);
     vi.spyOn(db, "getPostById").mockResolvedValue(post as never);
+    // 익명 글은 getPostById가 userId를 지우므로 알림 대상은 내부 조회로 읽는다.
+    vi.spyOn(db, "getPostAuthorId").mockResolvedValue(post.userId);
     vi.spyOn(db, "hasPostNotifyConsent").mockResolvedValue(true);
     const createNotification = vi.spyOn(db, "createNotification").mockResolvedValue(undefined as never);
 
@@ -113,6 +115,8 @@ describe("활동 알림 생성", () => {
   it("동의하지 않은 글쓴이에게는 알림이 가지 않는다", async () => {
     vi.spyOn(db, "createComment").mockResolvedValue([{ insertId: 1 }] as never);
     vi.spyOn(db, "getPostById").mockResolvedValue(post as never);
+    // 익명 글은 getPostById가 userId를 지우므로 알림 대상은 내부 조회로 읽는다.
+    vi.spyOn(db, "getPostAuthorId").mockResolvedValue(post.userId);
     vi.spyOn(db, "hasPostNotifyConsent").mockResolvedValue(false);
     const createNotification = vi.spyOn(db, "createNotification").mockResolvedValue(undefined as never);
 
@@ -125,6 +129,8 @@ describe("활동 알림 생성", () => {
   it("내 글에 내가 댓글을 달면 알림이 가지 않는다", async () => {
     vi.spyOn(db, "createComment").mockResolvedValue([{ insertId: 1 }] as never);
     vi.spyOn(db, "getPostById").mockResolvedValue(post as never);
+    // 익명 글은 getPostById가 userId를 지우므로 알림 대상은 내부 조회로 읽는다.
+    vi.spyOn(db, "getPostAuthorId").mockResolvedValue(post.userId);
     const consent = vi.spyOn(db, "hasPostNotifyConsent").mockResolvedValue(true);
     const createNotification = vi.spyOn(db, "createNotification").mockResolvedValue(undefined as never);
 
@@ -140,6 +146,8 @@ describe("활동 알림 생성", () => {
     vi.spyOn(db, "hasUserLikedPost").mockResolvedValue(false as never);
     vi.spyOn(db, "addPostLike").mockResolvedValue(undefined as never);
     vi.spyOn(db, "getPostById").mockResolvedValue(post as never);
+    // 익명 글은 getPostById가 userId를 지우므로 알림 대상은 내부 조회로 읽는다.
+    vi.spyOn(db, "getPostAuthorId").mockResolvedValue(post.userId);
     vi.spyOn(db, "hasPostNotifyConsent").mockResolvedValue(true);
     const createNotification = vi.spyOn(db, "createNotification").mockResolvedValue(undefined as never);
 
@@ -165,6 +173,8 @@ describe("활동 알림 생성", () => {
   it("알림 생성이 실패해도 댓글 작성 자체는 성공한다", async () => {
     vi.spyOn(db, "createComment").mockResolvedValue([{ insertId: 1 }] as never);
     vi.spyOn(db, "getPostById").mockResolvedValue(post as never);
+    // 익명 글은 getPostById가 userId를 지우므로 알림 대상은 내부 조회로 읽는다.
+    vi.spyOn(db, "getPostAuthorId").mockResolvedValue(post.userId);
     vi.spyOn(db, "hasPostNotifyConsent").mockResolvedValue(true);
     vi.spyOn(db, "createNotification").mockRejectedValue(new Error("db down"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});

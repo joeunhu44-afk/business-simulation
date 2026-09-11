@@ -23,7 +23,8 @@ export default function Avatar({
   size = "h-9 w-9",
   textSize = "text-sm",
 }: {
-  userId: number;
+  /** 익명 글은 서버가 userId를 지워 보내므로 null이 올 수 있다(익명 분기에서 쓰이지 않는다). */
+  userId: number | null;
   isAnonymous: boolean;
   name?: string | null;
   avatarEmoji?: string | null;
@@ -39,13 +40,17 @@ export default function Avatar({
     );
   }
 
+  // 익명 분기에서 이미 반환했으므로 여기서는 userId가 있지만, 삭제된 작성자 등으로
+  // 비어 있어도 색상 계산이 깨지지 않도록 0으로 떨어뜨린다.
+  const toneSeed = userId ?? 0;
+
   if (avatarImageUrl) {
-    return <ImageAvatar key={avatarImageUrl} url={avatarImageUrl} userId={userId} name={name} avatarEmoji={avatarEmoji} size={size} textSize={textSize} />;
+    return <ImageAvatar key={avatarImageUrl} url={avatarImageUrl} userId={toneSeed} name={name} avatarEmoji={avatarEmoji} size={size} textSize={textSize} />;
   }
 
   const initial = getInitial(name);
   return (
-    <span className={`tone-badge ${toneClass(userId)} ${size} ${textSize} shrink-0`}>
+    <span className={`tone-badge ${toneClass(toneSeed)} ${size} ${textSize} shrink-0`}>
       {avatarEmoji || initial || <User className="h-[55%] w-[55%]" />}
     </span>
   );

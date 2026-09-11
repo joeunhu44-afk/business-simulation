@@ -168,7 +168,7 @@ export default function PostPage() {
                 <span>조회 {post.viewCount}</span>
               </div>
             </div>
-            {isAuthenticated && user?.id === post.userId && (
+            {isAuthenticated && post.isMine && (
               <div className="flex gap-2">
                 <a href={`/post/${post.id}/edit`}>
                   <Button variant="ghost" size="sm">
@@ -380,7 +380,7 @@ function CommentItem({
               </p>
             </div>
           </div>
-          {isAuthenticated && user?.id === comment.userId && (
+          {isAuthenticated && comment.isMine && (
             <Button
               variant="ghost"
               size="sm"

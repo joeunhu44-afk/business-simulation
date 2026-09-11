@@ -2,6 +2,7 @@
 // R2를 쓰는 경우 S3_ENDPOINT에 https://<account_id>.r2.cloudflarestorage.com 를 넣으면 된다.
 
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -96,4 +97,22 @@ export async function storageGetSignedUrl(
   const key = normalizeKey(relKey);
   const command = new GetObjectCommand({ Bucket: ENV.s3.bucket, Key: key });
   return getSignedUrl(getClient(), command, { expiresIn: expiresInSeconds });
+}
+
+/**
+ * 버킷에서 객체를 지운다. 이미 없는 키여도 S3/R2는 성공으로 응답하므로 호출부가
+ * 존재 여부를 먼저 확인할 필요는 없다.
+ */
+export async function storageDelete(relKey: string): Promise<void> {
+  const key = normalizeKey(relKey);
+  await getClient().send(
+    new DeleteObjectCommand({ Bucket: ENV.s3.bucket, Key: key })
+  );
+}
+
+/** 공개 URL에서 버킷 키를 되돌린다. 다른 도메인의 URL이면 null. */
+export function storageKeyFromUrl(url: string): string | null {
+  if (!ENV.s3.publicUrl) return null;
+  const base = `${ENV.s3.publicUrl.replace(/\/+$/, "")}/`;
+  return url.startsWith(base) ? url.slice(base.length) : null;
 }
