@@ -13,8 +13,9 @@
  *  3) 사실과 다른 보안 조치를 쓰지 않았습니다. 현재 코드에서 확인된 것은
  *     비밀번호 bcrypt 해시 저장, JWT 세션 쿠키, 관리자 권한 분리뿐입니다.
  *     암호화 저장·접속기록 보관 등은 구현되어 있지 않아 적지 않았습니다.
- *  4) 현재 코드에는 회원 탈퇴 기능과 업로드 파일 삭제 기능이 없습니다.
- *     문서에는 있는 그대로("문의로 처리", "파일은 삭제되지 않고 남음") 적었습니다.
+ *  4) 회원 탈퇴와 업로드 파일 삭제는 구현되어 있고 문서도 그에 맞게 쓰여 있습니다.
+ *     아직 남은 것: 업로드된 이미지는 주소를 알면 로그인 없이 접근할 수 있습니다
+ *     (서명 URL 미도입). 이 점은 제7조에 사실대로 적어두었습니다.
  */
 import LegalPage, { Blank, Bullets, SimpleTable, type LegalSection } from "./LegalPage";
 import { PRIVACY_EFFECTIVE_DATE, PRIVACY_VERSION } from "@shared/legal";

@@ -151,7 +151,9 @@ export default function PostPage() {
                 </a>
               )}
               <h1 className="text-3xl mb-4">{post.title}</h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {/* 390px에서 "약 3시간 전"이 "약 3시 / 간 전"으로 쪼개지던 문제 때문에
+                  각 조각에 whitespace-nowrap을 주고, 줄바꿈은 조각 사이에서만 일어나게 한다. */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-muted-foreground">
                 <Avatar
                   userId={post.userId}
                   isAnonymous={post.isAnonymous}
@@ -161,11 +163,12 @@ export default function PostPage() {
                   size="h-6 w-6"
                   textSize="text-xs"
                 />
-                <span>{post.isAnonymous ? '익명' : post.authorName || '사용자'}</span>
-                <span>·</span>
-                <span>{formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}</span>
-                <span>·</span>
-                <span>조회 {post.viewCount}</span>
+                <span className="whitespace-nowrap">{post.isAnonymous ? '익명' : post.authorName || '사용자'}</span>
+                <span aria-hidden="true">·</span>
+                <span className="whitespace-nowrap">
+                  {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
+                </span>
+
               </div>
             </div>
             {isAuthenticated && post.isMine && (
@@ -209,7 +212,7 @@ export default function PostPage() {
             </div>
           )}
 
-          <div className="flex items-center gap-4 pt-6 border-t border-border">
+          <div className="flex items-center gap-3 pt-6 border-t border-border">
             {isAuthenticated ? (
               <>
                 <Button
@@ -229,6 +232,11 @@ export default function PostPage() {
                 추천 {post.likeCount}
               </div>
             )}
+            {/* 조회수는 추천·신고와 같은 줄 오른쪽 끝에. 상단 메타에 두면 모바일에서
+                줄이 넘어가 "· 조회 210"이 다음 줄 맨 앞에 홀로 떨어진다. */}
+            <span className="ml-auto whitespace-nowrap text-[13px] text-muted-foreground">
+              조회 {post.viewCount}
+            </span>
           </div>
         </Card>
 
