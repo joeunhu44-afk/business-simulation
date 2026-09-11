@@ -202,6 +202,53 @@ export async function getBoards() {
   return db.select().from(boards).where(eq(boards.isActive, true)).orderBy(asc(boards.displayOrder));
 }
 
+/**
+ * 게시판 목록 + 각 게시판의 최신 글 한 건.
+ *
+ * 홈 화면이 게시판마다 posts.listByBoard를 따로 부르던 것을 대체한다(게시판 5개면
+ * 요청 5건, 10개면 10건이었다). 최신 글은 게시판별로 id가 가장 큰 한 건만 고르면
+ * 되므로, 서브쿼리로 그 id 목록을 구한 뒤 한 번에 조인한다.
+ *
+ * 익명 글의 제목은 그대로 보여주되 작성자 정보는 어차피 싣지 않는다.
+ */
+export async function getBoardsWithLatestPost() {
+  const db = await getDb();
+  if (!db) return [];
+
+  const boardRows = await db
+    .select()
+    .from(boards)
+    .where(eq(boards.isActive, true))
+    .orderBy(asc(boards.displayOrder));
+
+  if (boardRows.length === 0) return [];
+
+  // 게시판별 최신 글 id (삭제되지 않은 글 중 가장 큰 id)
+  const latestIdRows = await db
+    .select({ boardId: posts.boardId, latestId: sql<number>`MAX(${posts.id})` })
+    .from(posts)
+    .where(and(isNull(posts.deletedAt), inArray(posts.boardId, boardRows.map((b) => b.id))))
+    .groupBy(posts.boardId);
+
+  const latestIds = latestIdRows.map((r) => Number(r.latestId)).filter(Boolean);
+  const latestPosts = latestIds.length
+    ? await db
+        .select({
+          id: posts.id,
+          boardId: posts.boardId,
+          title: posts.title,
+          likeCount: posts.likeCount,
+          commentCount: posts.commentCount,
+          createdAt: posts.createdAt,
+        })
+        .from(posts)
+        .where(inArray(posts.id, latestIds))
+    : [];
+
+  const byBoard = new Map(latestPosts.map((p) => [p.boardId, p]));
+  return boardRows.map((board) => ({ ...board, latestPost: byBoard.get(board.id) ?? null }));
+}
+
 export async function getBoardBySlug(slug: string) {
   const db = await getDb();
   if (!db) return undefined;
@@ -569,12 +616,16 @@ export async function getRecommendedPosts(userId: number | null, limit: number =
 /**
  * 댓글 관련 쿼리
  */
-export async function getCommentsByPost(postId: number, viewerId: number | null = null) {
+/** 댓글 조회 상한. 인기 글의 댓글이 수백 개여도 한 번에 다 내려보내지 않는다. */
+const COMMENT_PAGE_LIMIT = 200;
+
+export async function getCommentsByPost(postId: number, viewerId: number | null = null, limit: number = COMMENT_PAGE_LIMIT) {
   const db = await getDb();
   if (!db) return [];
   const rows = await db.select().from(comments)
     .where(and(eq(comments.postId, postId), isNull(comments.deletedAt)))
-    .orderBy(asc(comments.createdAt));
+    .orderBy(asc(comments.createdAt))
+    .limit(limit);
   return attachAuthors(rows, viewerId);
 }
 
@@ -674,6 +725,26 @@ export async function removeCommentLike(commentId: number, userId: number) {
 /**
  * 신고 관련 쿼리
  */
+/** 같은 사람이 같은 대상을 이미 신고했는지. 중복 신고로 관리자 목록이 도배되는 것을 막는다. */
+export async function hasReported(
+  reporterUserId: number,
+  targetType: "post" | "comment",
+  targetId: number
+): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  const [row] = await db
+    .select({ id: reports.id })
+    .from(reports)
+    .where(and(
+      eq(reports.reporterUserId, reporterUserId),
+      eq(reports.targetType, targetType),
+      eq(reports.targetId, targetId),
+    ))
+    .limit(1);
+  return Boolean(row);
+}
+
 export async function createReport(data: { reporterUserId: number; targetType: 'post' | 'comment'; targetId: number; reason: string; description?: string }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");

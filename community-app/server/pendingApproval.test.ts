@@ -3,6 +3,7 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import * as db from "./db";
 import { NOT_APPROVED_ERR_MSG } from "@shared/const";
+import { resetRateLimits } from "./_core/rateLimit";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -37,6 +38,7 @@ const pendingCaller = () => appRouter.createCaller(createContext(userWith("pendi
 const activeCaller = () => appRouter.createCaller(createContext(userWith("active")));
 
 afterEach(() => {
+  resetRateLimits();
   vi.restoreAllMocks();
 });
 

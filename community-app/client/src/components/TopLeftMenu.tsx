@@ -22,11 +22,14 @@ import {
   ThumbsUp,
   Megaphone,
   Check,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { useThemeColor, type ThemeColor } from "@/contexts/ThemeColorContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
 import { AVATAR_EMOJI_OPTIONS, WITHDRAW_CONFIRM_TEXT } from "@shared/const";
@@ -60,6 +63,7 @@ type MenuView = "root" | "profile" | "chat" | "search" | "settings" | "notificat
 export default function TopLeftMenu({ showFloatingButton = true }: { showFloatingButton?: boolean }) {
   const { user, logout, refresh } = useAuth();
   const { themeColor, setThemeColor } = useThemeColor();
+  const { theme, toggleTheme } = useTheme();
   const { isOpen, setOpen: setIsOpen, openMenu: openMenuCtx, pendingTarget, clearPendingTarget } = useMenu();
   const [, navigate] = useLocation();
   const [view, setView] = useState<MenuView>("root");
@@ -817,6 +821,35 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                     })}
                   </div>
                 </div>
+
+                {/* 다크모드 CSS는 전부터 있었지만 켤 방법이 없어 죽은 코드였다. */}
+                {toggleTheme && (
+                  <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
+                    <label className="text-sm font-semibold block mb-2" style={{ color: "var(--text-strong)" }}>
+                      화면 모드
+                    </label>
+                    <button
+                      onClick={toggleTheme}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-2 -mx-2 text-sm transition-colors hover:bg-black/[0.04]"
+                      style={{ color: "var(--text-normal)" }}
+                    >
+                      <span className="flex items-center gap-2">
+                        {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                        {theme === "dark" ? "어두운 화면" : "밝은 화면"}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="relative h-5 w-9 shrink-0 rounded-full transition-colors"
+                        style={{ backgroundColor: theme === "dark" ? "var(--accent-color)" : "var(--bg-surface-2)" }}
+                      >
+                        <span
+                          className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
+                          style={{ left: theme === "dark" ? "1.125rem" : "0.125rem" }}
+                        />
+                      </span>
+                    </button>
+                  </div>
+                )}
 
                 <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
                   <label className="text-sm font-semibold block mb-1" style={{ color: "var(--text-strong)" }}>

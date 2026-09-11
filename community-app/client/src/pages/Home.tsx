@@ -48,7 +48,8 @@ const RECOMMENDED_PLACEMENT: "above" | "below" = "above";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
-  const { data: boards, isLoading: boardsLoading } = trpc.boards.list.useQuery();
+  // 게시판마다 최신 글을 따로 조회하면 게시판 수만큼 요청이 늘어난다. 한 번에 받는다.
+  const { data: boards, isLoading: boardsLoading } = trpc.boards.listWithLatest.useQuery();
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -251,7 +252,7 @@ export default function Home() {
               ) : boards && boards.length > 0 ? (
                 <div>
                   {boards.map((board) => (
-                    <BoardRow key={board.id} board={board} />
+                    <BoardRow key={board.id} board={board} latest={board.latestPost} />
                   ))}
                 </div>
               ) : (
@@ -416,9 +417,14 @@ function QuickLinksPanel() {
  * 좋아요/댓글 수를 같은 줄에 붙여서 한 눈에 활동성을 파악할 수 있게 한다
  * (설명은 최신 글이 없을 때만 대신 보여준다).
  */
-function BoardRow({ board }: { board: { id: number; slug: string; name: string; description: string | null } }) {
-  const { data: posts } = trpc.posts.listByBoard.useQuery({ boardId: board.id, limit: 1, sortBy: 'latest' });
-  const latest = posts?.[0];
+function BoardRow({
+  board,
+  latest,
+}: {
+  board: { id: number; slug: string; name: string; description: string | null };
+  /** 최신 글은 목록 쿼리에서 함께 받아온다 (행마다 따로 조회하지 않는다). */
+  latest: { title: string; likeCount: number; commentCount: number } | null;
+}) {
 
   // 작성 중인 임시저장 글 표시용. 항상 같은 크기의 점 자리를 예약해두고 색만
   // 켜고 끄는 방식이라(투명 vs 은은한 회색), 표시가 생겨도/사라져도 옆 요소의

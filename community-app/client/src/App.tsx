@@ -53,7 +53,8 @@ function App() {
   return (
     <ErrorBoundary>
       <ThemeColorProvider>
-        <ThemeProvider defaultTheme="light">
+        {/* switchable을 켜야 설정 화면의 다크모드 토글이 동작한다(안 켜면 .dark CSS가 죽은 코드가 된다) */}
+        <ThemeProvider defaultTheme="light" switchable>
           <MenuProvider>
             <TooltipProvider>
               <AnimatedBackground />

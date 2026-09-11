@@ -3,6 +3,7 @@ import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import * as db from "./db";
 import { ENV } from "./_core/env";
+import { resetRateLimits } from "./_core/rateLimit";
 
 // auth.signup은 세션 쿠키를 발급하므로 테스트에서도 서명 키가 필요하다.
 ENV.cookieSecret = ENV.cookieSecret || "test-secret-for-notifications-spec";
@@ -33,6 +34,7 @@ function createContext(overrides: Partial<AuthenticatedUser> = {}): TrpcContext 
 }
 
 afterEach(() => {
+  resetRateLimits();
   vi.restoreAllMocks();
 });
 

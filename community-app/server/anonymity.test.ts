@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { appRouter } from "./routers";
 import type { TrpcContext } from "./_core/context";
 import * as db from "./db";
+import { resetRateLimits } from "./_core/rateLimit";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -30,6 +31,7 @@ function ctxFor(user: AuthenticatedUser | null): TrpcContext {
 }
 
 afterEach(() => {
+  resetRateLimits();
   vi.restoreAllMocks();
 });
 

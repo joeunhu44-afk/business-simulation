@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, MessageCircle } from "lucide-react";
+import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, MessageCircle, X } from "lucide-react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -22,6 +22,8 @@ export default function PostPage() {
   const [commentContent, setCommentContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  /** 크게 보고 있는 첨부 이미지 index. null이면 닫힘. */
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const utils = trpc.useUtils();
   const { data: post, isLoading: postLoading } = trpc.posts.get.useQuery({ id: postId });
@@ -142,7 +144,9 @@ export default function PostPage() {
 
       <div className="container py-8 max-w-3xl">
         {/* Post */}
-        <Card className="card-elevated post-detail-card p-8 mb-8">
+        {/* 목록을 카드에서 리스트로 바꾼 방향에 맞춰 본문도 카드를 걷어낸다.
+            모바일에서 카드 테두리·안쪽 여백이 폭을 좁히기만 했다. */}
+        <div className="mb-8 pb-6 border-b border-border">
           <div className="flex items-start justify-between mb-4">
             <div className="flex-1 min-w-0">
               {board && (
@@ -198,16 +202,21 @@ export default function PostPage() {
 
           {post.images && post.images.length > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2 mb-8">
-              {post.images.map((url) => (
-                <a
+              {post.images.map((url, index) => (
+                // 새 탭으로 원본을 열면 돌아왔을 때 스크롤 위치를 잃는다. 같은 화면에서 크게 본다.
+                <button
                   key={url}
-                  href={url}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  type="button"
+                  onClick={() => setLightboxIndex(index)}
+                  aria-label={`첨부 이미지 ${index + 1} 크게 보기`}
                   className="block rounded-xl overflow-hidden border border-border aspect-square shadow-sm hover:shadow-md transition-shadow"
                 >
-                  <img src={url} alt="" className="h-full w-full object-cover" />
-                </a>
+                  <img
+                    src={url}
+                    alt={`첨부 이미지 ${index + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                </button>
               ))}
             </div>
           )}
@@ -238,7 +247,7 @@ export default function PostPage() {
               조회 {post.viewCount}
             </span>
           </div>
-        </Card>
+        </div>
 
         {/* Comments Section */}
         <div className="space-y-6">
@@ -313,6 +322,37 @@ export default function PostPage() {
           </div>
         </div>
       </div>
+
+      {/* 첨부 이미지 크게 보기. 배경이나 닫기를 누르면 닫히고, Esc로도 닫힌다. */}
+      {lightboxIndex !== null && post.images?.[lightboxIndex] && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="첨부 이미지 크게 보기"
+          tabIndex={-1}
+          ref={(el) => el?.focus()}
+          onClick={() => setLightboxIndex(null)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") setLightboxIndex(null);
+          }}
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
+        >
+          <button
+            type="button"
+            aria-label="닫기"
+            onClick={() => setLightboxIndex(null)}
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+          >
+            <X className="h-5 w-5" />
+          </button>
+          <img
+            src={post.images[lightboxIndex]}
+            alt={`첨부 이미지 ${lightboxIndex + 1}`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-full max-w-full rounded-lg object-contain"
+          />
+        </div>
+      )}
     </div>
   );
 }

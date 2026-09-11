@@ -3,6 +3,7 @@ import { appRouter } from "../routers";
 import type { TrpcContext } from "./context";
 import * as db from "../db";
 import { BLOCKED_MESSAGE, checkContent, normalizeAggressive, normalizeBasic } from "./moderation";
+import { resetRateLimits } from "./rateLimit";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
 
@@ -28,6 +29,7 @@ function createAuthContext(userId = 1): TrpcContext {
 }
 
 afterEach(() => {
+  resetRateLimits();
   vi.restoreAllMocks();
 });
 

@@ -116,7 +116,8 @@ export default function BoardPage() {
         </div>
 
         {/* Filters and Search */}
-        <div className="mb-6 flex gap-4 flex-col sm:flex-row">
+        {/* 모바일에서 검색창과 정렬이 세로로 쌓이면 첫 화면의 1/3을 먹는다. 한 줄로 붙인다. */}
+        <div className="mb-5 flex gap-2">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
@@ -133,7 +134,7 @@ export default function BoardPage() {
             setSortBy(value as 'latest' | 'popular');
             setPage(0);
           }}>
-            <SelectTrigger className="w-full sm:w-40">
+            <SelectTrigger className="w-[104px] shrink-0 sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -180,9 +181,9 @@ export default function BoardPage() {
                       {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
                     </span>
                     <span className="ml-auto flex items-center gap-2 shrink-0">
-                      <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>
-                      <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{post.commentCount}</span>
                       <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{post.likeCount}</span>
+                      <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{post.commentCount}</span>
+                      <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>
                     </span>
                   </div>
                 </div>

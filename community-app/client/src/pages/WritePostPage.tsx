@@ -177,7 +177,7 @@ export default function WritePostPage() {
       </nav>
 
       <div className="container py-8 max-w-3xl">
-        <Card className="card-elevated p-8">
+        <div>
           <div className="flex items-start justify-between gap-3 mb-8">
             <div>
               <span className="tag-pill mb-3 inline-flex">{board.name}</span>
@@ -266,7 +266,7 @@ export default function WritePostPage() {
               </Button>
             </div>
           </div>
-        </Card>
+        </div>
       </div>
     </div>
   );

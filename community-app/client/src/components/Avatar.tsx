@@ -90,7 +90,7 @@ function ImageAvatar({
 
   return (
     <span className={`tone-badge ${toneClass(userId)} ${size} shrink-0 overflow-hidden p-0`}>
-      <img src={url} alt="" className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      <img src={url} alt={name ? `${name} 프로필 사진` : "프로필 사진"} className="h-full w-full object-cover" onError={() => setFailed(true)} />
     </span>
   );
 }

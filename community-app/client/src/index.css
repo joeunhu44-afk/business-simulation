@@ -400,12 +400,6 @@
 
 /* 게시글 상세 카드 — 화면에 하나뿐이라 board-card보다 약한 블러 정도는
    부담 없이 더할 수 있다. */
-.post-detail-card {
-  background-color: var(--card);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
 /* 강조가 필요한 카드(광고 배너 등)의 입체감. card-elevated의 기본 그림자
    (0.04 알파)가 너무 옅어서 배경과 거의 구분이 안 됐던 걸, hover 부양감 +
    tap(active) 눌림 효과로 보강한다. card-elevated 다음에 선언돼 있어

@@ -9,6 +9,7 @@ import { hashPassword, verifyPassword } from "./_core/auth/password";
 import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/session";
 import { deleteUploadByUrl, deleteUploadsByUrl, putUpload, uploadScopeId } from "./media";
 import { checkContent, BLOCKED_MESSAGE } from "./_core/moderation";
+import { enforceRateLimit } from "./_core/rateLimit";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -348,6 +349,11 @@ export const appRouter = router({
       return db.getBoards();
     }),
 
+    /** 홈 화면용 — 게시판과 각 게시판의 최신 글을 한 번에 받아 요청 수를 줄인다. */
+    listWithLatest: publicProcedure.query(async () => {
+      return db.getBoardsWithLatestPost();
+    }),
+
     create: adminProcedure
       .input(z.object({
         name: z.string().min(1).max(100),
@@ -424,6 +430,7 @@ export const appRouter = router({
         images: z.array(z.string().url()).max(4).default([]),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('post', ctx.user.id);
         const verdict = await checkContent(`${input.title}\n${input.content}`);
         if (verdict.blocked) {
           await logBlockedAttempt({
@@ -509,6 +516,7 @@ export const appRouter = router({
         parentCommentId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('comment', ctx.user.id);
         const verdict = await checkContent(input.content);
         if (verdict.blocked) {
           await logBlockedAttempt({
@@ -623,6 +631,11 @@ export const appRouter = router({
         description: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('report', ctx.user.id);
+        // 같은 대상을 여러 번 신고해도 관리자 목록만 길어질 뿐이라 한 번으로 제한한다.
+        if (await db.hasReported(ctx.user.id, input.targetType, input.targetId)) {
+          throw new TRPCError({ code: 'CONFLICT', message: '이미 신고한 게시물입니다' });
+        }
         return db.createReport({
           reporterUserId: ctx.user.id,
           targetType: input.targetType,
@@ -804,6 +817,7 @@ export const appRouter = router({
         content: z.string().min(1),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('inquiry', ctx.user.id);
         return db.createInquiry({
           userId: ctx.user.id,
           category: input.category,
@@ -1159,6 +1173,7 @@ export const appRouter = router({
     sendMessage: approvedProcedure
       .input(z.object({ conversationId: z.number(), content: z.string().min(1).max(2000) }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('message', ctx.user.id);
         const conv = await db.getConversationById(input.conversationId);
         if (!conv || (conv.userAId !== ctx.user.id && conv.userBId !== ctx.user.id)) {
           throw new TRPCError({ code: 'FORBIDDEN', message: '접근 권한이 없습니다' });
