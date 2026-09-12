@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, Shield, ShieldCheck, ShieldOff, Users, FileText, AlertCircle, Megaphone, Search, ImagePlus, X, MousePointerClick, Eye, HardDrive } from "lucide-react";
 import { Link } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutput } from "@/lib/trpc";
 import { useRef, useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -838,6 +838,15 @@ function ReportsTab() {
     limit: 50,
   });
   const utils = trpc.useUtils();
+
+  const actMutation = trpc.reports.act.useMutation({
+    onSuccess: () => {
+      utils.reports.list.invalidate();
+      utils.admin.users.list.invalidate();
+    },
+    onError: (error) => toast.error(error.message || '처리에 실패했습니다'),
+  });
+
   const updateStatusMutation = trpc.reports.updateStatus.useMutation({
     onSuccess: () => {
       toast.success('신고 상태가 변경되었습니다');
@@ -876,41 +885,180 @@ function ReportsTab() {
       ) : (
         <div className="space-y-3">
           {reports.map((report) => (
-            <Card key={report.id} className="card-elevated p-5">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <span className="tag-pill">{REPORT_TARGET_LABELS[report.targetType] || report.targetType}</span>
-                {report.reporterUserId === SYSTEM_REPORTER_USER_ID && (
-                  <span className="shield-pill shield-pill-safe">자동 감지</span>
-                )}
-                <span className="text-sm font-semibold">{report.reason}</span>
-                {report.targetType === 'post' && (
-                  <a href={`/post/${report.targetId}`} target="_blank" rel="noopener noreferrer" className="text-xs accent-text hover:underline">
-                    게시글 보기 →
-                  </a>
-                )}
-              </div>
-              {report.description && (
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-3">{report.description}</p>
-              )}
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
-                  {formatDistanceToNow(new Date(report.createdAt), { locale: ko, addSuffix: true })}
-                </span>
-                <select
-                  value={report.status}
-                  onChange={(e) => updateStatusMutation.mutate({ id: report.id, status: e.target.value as any })}
-                  className="px-2 py-1 rounded border border-border text-sm"
-                >
-                  <option value="pending">대기</option>
-                  <option value="resolved">해결</option>
-                  <option value="dismissed">무시</option>
-                </select>
-              </div>
-            </Card>
+            <ReportCard
+              key={report.id}
+              report={report}
+              onAct={(action) => actMutation.mutate({ id: report.id, action })}
+              onChangeStatus={(status) => updateStatusMutation.mutate({ id: report.id, status })}
+              isActing={actMutation.isPending && actMutation.variables?.id === report.id}
+            />
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+type ReportRow = RouterOutput['reports']['list'][number];
+
+/**
+ * 신고 한 건.
+ *
+ * 예전에는 신고 사유만 보여줘서, 정작 어떤 글이 문제인지 확인할 수도 조치할 수도 없었다.
+ * 이제 신고당한 내용을 카드 안에서 바로 읽고 여기서 삭제·차단까지 끝낼 수 있다.
+ */
+function ReportCard({
+  report,
+  onAct,
+  onChangeStatus,
+  isActing,
+}: {
+  report: ReportRow;
+  onAct: (action: 'delete_content' | 'block_author' | 'resolve' | 'dismiss') => void;
+  onChangeStatus: (status: 'pending' | 'resolved' | 'dismissed') => void;
+  isActing: boolean;
+}) {
+  const target = report.target;
+  const isComment = report.targetType === 'comment';
+  const isAuto = report.reporterUserId === SYSTEM_REPORTER_USER_ID;
+
+  const confirmAct = (action: 'delete_content' | 'block_author', message: string) => {
+    if (window.confirm(message)) onAct(action);
+  };
+
+  return (
+    <Card className="card-elevated p-5">
+      {/* 머리말: 무엇이 · 왜 신고됐는지 */}
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
+        <span className="tag-pill">{REPORT_TARGET_LABELS[report.targetType] || report.targetType}</span>
+        {isAuto && <span className="shield-pill shield-pill-safe">자동 감지</span>}
+        <span className="text-sm font-semibold">{report.reason}</span>
+        <span className="text-xs text-muted-foreground">
+          · 신고자 {isAuto ? '자동 필터' : report.reporterName ?? '알 수 없음'}
+        </span>
+      </div>
+
+      {report.description && (
+        <p className="text-sm text-muted-foreground whitespace-pre-wrap mb-3">{report.description}</p>
+      )}
+
+      {/* 신고당한 내용 */}
+      {!target ? (
+        <div className="rounded-lg border border-border p-4 mb-3" style={{ backgroundColor: 'var(--bg-surface-2)' }}>
+          <p className="text-sm text-muted-foreground">
+            신고된 {isComment ? '댓글' : '게시글'}을 찾을 수 없습니다 (영구 삭제되었을 수 있습니다).
+          </p>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-border p-4 mb-3" style={{ backgroundColor: 'var(--bg-surface-2)' }}>
+          <div className="flex items-center gap-2 flex-wrap mb-2 text-xs text-muted-foreground">
+            {target.boardName && <span>{target.boardName}</span>}
+            <span>
+              작성자 {target.isAnonymous ? '익명' : target.authorName ?? '알 수 없음'}
+            </span>
+            {target.createdAt && (
+              <span>{formatDistanceToNow(new Date(target.createdAt), { locale: ko, addSuffix: true })}</span>
+            )}
+            {!target.exists && <span className="font-semibold text-destructive">이미 삭제됨</span>}
+          </div>
+
+          {target.postTitle && (
+            <p className="text-sm font-semibold mb-1">
+              {isComment ? `${target.postTitle} (글)` : target.postTitle}
+            </p>
+          )}
+
+          {target.content && (
+            <p className="text-sm whitespace-pre-wrap line-clamp-6" style={{ color: 'var(--text-normal)' }}>
+              {target.content}
+            </p>
+          )}
+
+          {target.images.length > 0 && (
+            <div className="flex gap-2 mt-3 flex-wrap">
+              {target.images.map((url: string) => (
+                <img
+                  key={url}
+                  src={url}
+                  alt="신고된 첨부 이미지"
+                  className="h-20 w-20 rounded-md border border-border object-cover"
+                />
+              ))}
+            </div>
+          )}
+
+          {target.postId && (
+            <a
+              href={`/post/${target.postId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block mt-3 text-xs accent-text hover:underline"
+            >
+              원문에서 보기 →
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* 조치 */}
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="text-xs text-muted-foreground">
+          신고 {formatDistanceToNow(new Date(report.createdAt), { locale: ko, addSuffix: true })}
+        </span>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {report.status === 'pending' && (
+            <>
+              {target?.exists && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={isActing}
+                  onClick={() =>
+                    confirmAct(
+                      'delete_content',
+                      `이 ${isComment ? '댓글' : '게시글'}을 삭제할까요? 작성자에게는 보이지 않게 됩니다.`
+                    )
+                  }
+                >
+                  {isComment ? '댓글' : '게시글'} 삭제
+                </Button>
+              )}
+              {target && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={isActing}
+                  onClick={() =>
+                    confirmAct(
+                      'block_author',
+                      target.isAnonymous
+                        ? '익명 작성자를 차단할까요? 누구인지는 표시되지 않지만 해당 계정의 이용이 제한됩니다.'
+                        : `${target.authorName ?? '작성자'} 계정을 차단할까요? 로그인과 서비스 이용이 제한됩니다.`
+                    )
+                  }
+                >
+                  작성자 차단
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" disabled={isActing} onClick={() => onAct('dismiss')}>
+                문제 없음
+              </Button>
+            </>
+          )}
+
+          <select
+            value={report.status}
+            onChange={(e) => onChangeStatus(e.target.value as 'pending' | 'resolved' | 'dismissed')}
+            className="px-2 py-1 rounded border border-border text-sm"
+          >
+            <option value="pending">대기</option>
+            <option value="resolved">해결</option>
+            <option value="dismissed">무시</option>
+          </select>
+        </div>
+      </div>
+    </Card>
   );
 }
 

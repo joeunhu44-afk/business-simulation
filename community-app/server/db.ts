@@ -6,6 +6,7 @@ import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, 
 import { ENV } from './_core/env';
 import { resolveInitialStatus } from "./_core/approval";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@shared/legal";
+import { SYSTEM_REPORTER_USER_ID } from "@shared/const";
 import {
   buildBoardAffinity,
   hasEnoughActivity,
@@ -353,7 +354,7 @@ async function attachAuthors<T extends { userId: number; isAnonymous: boolean }>
  * 이 경우 동작하지 않아 select 결과의 `images`가 배열이 아니라 "[]" 같은 문자열로
  * 온다. MySQL/MariaDB 어느 쪽에서 읽어도 항상 배열이 되도록 여기서 직접 정규화한다.
  */
-function normalizePostImages<T extends { images?: unknown }>(row: T): T {
+export function normalizePostImages<T extends { images?: unknown }>(row: T): T {
   if (typeof (row as any).images === "string") {
     try {
       return { ...row, images: JSON.parse((row as any).images) };
@@ -751,11 +752,163 @@ export async function createReport(data: { reporterUserId: number; targetType: '
   return db.insert(reports).values(data);
 }
 
-export async function getReports(status?: 'pending' | 'resolved' | 'dismissed', limit: number = 20, offset: number = 0) {
+/** 신고 카드에 함께 보여줄, 신고당한 대상의 실제 내용. */
+export type ReportTarget = {
+  /** 아직 삭제되지 않고 남아 있는가. false면 관리자가 더 할 일이 없다. */
+  exists: boolean;
+  /** 열어볼 게시글 번호. 댓글 신고면 그 댓글이 달린 글. */
+  postId: number | null;
+  boardName: string | null;
+  /** 게시글 제목. 댓글 신고면 댓글이 달린 글의 제목. */
+  postTitle: string | null;
+  /** 신고당한 본문 그 자체 (게시글 본문 또는 댓글 내용). */
+  content: string | null;
+  /** 게시글에 첨부된 이미지. 댓글에는 첨부가 없다. */
+  images: string[];
+  isAnonymous: boolean;
+  /**
+   * 작성자. 익명 글·댓글이면 null이다 — 익명 확인은 조물주 전용 경로(revealAnonymousAuthor)로만
+   * 가능해야 하므로, 신고 목록에서 일반 관리자에게 흘리지 않는다.
+   */
+  authorUserId: number | null;
+  authorName: string | null;
+  createdAt: Date | null;
+};
+
+export type ReportWithTarget = typeof reports.$inferSelect & {
+  reporterName: string | null;
+  target: ReportTarget | null;
+};
+
+/**
+ * 신고 목록 + 신고당한 대상의 내용.
+ *
+ * 예전에는 신고 행만 돌려줬다. 관리자 화면에 "신고 사유"만 뜨고 정작 어떤 글·댓글이
+ * 문제인지는 안 보여서, 신고를 받아도 확인하거나 조치할 방법이 없었다.
+ *
+ * 대상은 게시글/댓글 두 종류뿐이라 신고 건마다 조회하지 않고 종류별로 한 번씩만
+ * 모아서 가져온다 (목록 50건이어도 쿼리는 최대 5번).
+ */
+export async function getReports(
+  status?: 'pending' | 'resolved' | 'dismissed',
+  limit: number = 20,
+  offset: number = 0
+): Promise<ReportWithTarget[]> {
   const db = await getDb();
   if (!db) return [];
+
   const query = status ? db.select().from(reports).where(eq(reports.status, status)) : db.select().from(reports);
-  return query.orderBy(desc(reports.createdAt)).limit(limit).offset(offset);
+  const rows = await query.orderBy(desc(reports.createdAt)).limit(limit).offset(offset);
+  if (rows.length === 0) return [];
+
+  const postIds = rows.filter(r => r.targetType === 'post').map(r => r.targetId);
+  const commentIds = rows.filter(r => r.targetType === 'comment').map(r => r.targetId);
+
+  // MariaDB에서는 json 컬럼이 문자열로 내려오므로 images를 반드시 정규화한다.
+  const postRows = postIds.length
+    ? (await db.select().from(posts).where(inArray(posts.id, postIds))).map(normalizePostImages)
+    : [];
+  const commentRows = commentIds.length
+    ? await db.select().from(comments).where(inArray(comments.id, commentIds))
+    : [];
+
+  // 댓글 신고는 그 댓글이 달린 글까지 알아야 관리자가 맥락을 보고 판단할 수 있다.
+  const parentPostIds = commentRows.map(c => c.postId).filter(id => !postIds.includes(id));
+  const parentRows = parentPostIds.length
+    ? (await db.select().from(posts).where(inArray(posts.id, parentPostIds))).map(normalizePostImages)
+    : [];
+
+  const postById = new Map([...postRows, ...parentRows].map(p => [p.id, p]));
+  const commentById = new Map(commentRows.map(c => [c.id, c]));
+
+  const allPosts = Array.from(postById.values());
+  const boardIds = Array.from(new Set(allPosts.map(p => p.boardId)));
+  const boardRows = boardIds.length
+    ? await db.select().from(boards).where(inArray(boards.id, boardIds))
+    : [];
+  const boardNameById = new Map(boardRows.map(b => [b.id, b.name]));
+
+  // 작성자와 신고자 이름을 한 번에 가져온다 (익명 글의 작성자는 아래에서 걸러낸다).
+  const userIds = Array.from(new Set([
+    ...rows.map(r => r.reporterUserId),
+    ...allPosts.map(p => p.userId),
+    ...commentRows.map(c => c.userId),
+  ])).filter(id => id !== SYSTEM_REPORTER_USER_ID);
+  const userRows = userIds.length
+    ? await db.select({ id: users.id, name: users.name }).from(users).where(inArray(users.id, userIds))
+    : [];
+  const userNameById = new Map(userRows.map(u => [u.id, u.name]));
+
+  return rows.map(report => {
+    let target: ReportTarget | null = null;
+
+    if (report.targetType === 'post') {
+      const post = postById.get(report.targetId);
+      if (post) {
+        target = {
+          exists: post.deletedAt === null,
+          postId: post.id,
+          boardName: boardNameById.get(post.boardId) ?? null,
+          postTitle: post.title,
+          content: post.content,
+          images: Array.isArray(post.images) ? post.images : [],
+          isAnonymous: post.isAnonymous,
+          authorUserId: post.isAnonymous ? null : post.userId,
+          authorName: post.isAnonymous ? null : userNameById.get(post.userId) ?? null,
+          createdAt: post.createdAt,
+        };
+      }
+    } else {
+      const comment = commentById.get(report.targetId);
+      if (comment) {
+        const parent = postById.get(comment.postId);
+        target = {
+          exists: comment.deletedAt === null,
+          postId: comment.postId,
+          boardName: parent ? boardNameById.get(parent.boardId) ?? null : null,
+          postTitle: parent?.title ?? null,
+          content: comment.content,
+          images: [],
+          isAnonymous: comment.isAnonymous,
+          authorUserId: comment.isAnonymous ? null : comment.userId,
+          authorName: comment.isAnonymous ? null : userNameById.get(comment.userId) ?? null,
+          createdAt: comment.createdAt,
+        };
+      }
+    }
+
+    return {
+      ...report,
+      reporterName: userNameById.get(report.reporterUserId) ?? null,
+      target,
+    };
+  });
+}
+
+/**
+ * 신고당한 글·댓글의 작성자 id. 익명이어도 돌려준다 — 서버 내부에서 차단 조치에만 쓰고
+ * 관리자 화면으로는 내보내지 않는다 (누구인지 모른 채로 차단할 수 있어야 한다).
+ */
+export async function getReportTargetAuthorId(
+  targetType: 'post' | 'comment',
+  targetId: number
+): Promise<number | null> {
+  const db = await getDb();
+  if (!db) return null;
+  if (targetType === 'post') {
+    const [row] = await db.select({ userId: posts.userId }).from(posts).where(eq(posts.id, targetId)).limit(1);
+    return row?.userId ?? null;
+  }
+  const [row] = await db.select({ userId: comments.userId }).from(comments).where(eq(comments.id, targetId)).limit(1);
+  return row?.userId ?? null;
+}
+
+/** 신고 한 건. 조치 전에 대상 종류·번호를 확인하는 용도. */
+export async function getReportById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const [row] = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+  return row ?? null;
 }
 
 export async function updateReportStatus(id: number, status: 'pending' | 'resolved' | 'dismissed', adminNotes?: string) {
