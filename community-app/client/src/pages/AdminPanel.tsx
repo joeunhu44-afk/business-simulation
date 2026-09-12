@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, Shield, ShieldCheck, ShieldOff, Users, FileText, AlertCircle, Megaphone, Search, ImagePlus, X, MousePointerClick, Eye } from "lucide-react";
+import { Loader2, Shield, ShieldCheck, ShieldOff, Users, FileText, AlertCircle, Megaphone, Search, ImagePlus, X, MousePointerClick, Eye, HardDrive } from "lucide-react";
 import { Link } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { useRef, useState, type ReactNode } from "react";
@@ -113,7 +113,9 @@ export default function AdminPanel() {
       </nav>
 
       <div className="container py-8">
-        <h1 className="section-heading text-3xl mb-8">관리자 패널</h1>
+        <h1 className="section-heading text-3xl mb-4">관리자 패널</h1>
+
+        <StorageNotice />
 
         <div className="space-y-4">
           {/* 1단계: 카테고리 */}
@@ -179,6 +181,46 @@ export default function AdminPanel() {
  * 가입 승인 탭. 학번+이름·가입 수단·이메일·가입 시각을 보고 재학생인지 판단한다.
  * 거절은 계정을 지우지 않고 차단 처리하므로, 사유를 남기면 그 사람이 다시 로그인할 때 보인다.
  */
+/**
+ * 업로드 파일 저장 위치 안내.
+ *
+ * 임시 디스크에 쌓이고 있으면 재배포 한 번에 프로필/게시물 사진이 전부 사라진다.
+ * 문제가 있을 때만 눈에 띄게 띄우고, 정상이면 한 줄로 조용히 보여준다.
+ */
+function StorageNotice() {
+  const { data } = trpc.admin.storageStatus.useQuery();
+  if (!data) return null;
+
+  if (data.persistent) {
+    return (
+      <p className="mb-6 flex items-center gap-2 text-[13px]" style={{ color: 'var(--text-muted)' }}>
+        <HardDrive className="h-3.5 w-3.5 shrink-0" />
+        <span>{data.summary}</span>
+      </p>
+    );
+  }
+
+  return (
+    <div
+      className="mb-6 rounded-xl border p-4"
+      style={{ borderColor: 'var(--destructive, #dc2626)', backgroundColor: 'rgba(220, 38, 38, 0.06)' }}
+    >
+      <div className="flex items-start gap-3">
+        <AlertCircle className="h-5 w-5 shrink-0" style={{ color: '#dc2626' }} />
+        <div className="space-y-1">
+          <p className="font-semibold text-[14px]" style={{ color: '#dc2626' }}>
+            업로드된 사진이 재배포 시 사라지는 상태입니다
+          </p>
+          <p className="text-[13px]" style={{ color: 'var(--text-normal)' }}>{data.summary}</p>
+          {data.remedy && (
+            <p className="text-[13px]" style={{ color: 'var(--text-muted)' }}>{data.remedy}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ApprovalsTab() {
   const utils = trpc.useUtils();
   const { data: pending, isLoading } = trpc.admin.users.pending.useQuery();

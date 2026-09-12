@@ -52,8 +52,16 @@ export const ENV = {
 
   /**
    * 업로드 파일을 저장할 로컬 디스크 경로 (S3를 설정하지 않았을 때 사용).
-   * Railway에서는 Volume을 이 경로에 마운트해야 재배포/재시작 후에도 파일이 남는다.
-   * 로컬 개발에서는 프로젝트 루트의 uploads/ 폴더를 기본값으로 쓴다.
+   *
+   * 컨테이너의 일반 디스크는 재배포할 때마다 통째로 새로 만들어진다. 그 위에 파일을
+   * 저장하면 배포 한 번에 프로필 사진과 게시물 사진이 전부 사라진다. 파일이 남으려면
+   * Volume(영구 디스크)을 붙이거나 S3/R2를 설정해야 한다.
+   *
+   * Railway에서 Volume을 붙이면 RAILWAY_VOLUME_MOUNT_PATH가 자동으로 채워지므로,
+   * UPLOAD_DIR을 따로 설정하지 않아도 그 경로를 쓰도록 했다 (설정 빠뜨림 방지).
    */
-  uploadDir: process.env.UPLOAD_DIR ?? "uploads",
+  uploadDir: process.env.UPLOAD_DIR || process.env.RAILWAY_VOLUME_MOUNT_PATH || "uploads",
+
+  /** 배포 플랫폼이 알려주는 영구 디스크 마운트 경로. 없으면 영구 디스크가 없다는 뜻. */
+  volumeMountPath: process.env.RAILWAY_VOLUME_MOUNT_PATH ?? "",
 };

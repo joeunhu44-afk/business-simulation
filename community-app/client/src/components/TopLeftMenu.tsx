@@ -22,14 +22,17 @@ import {
   ThumbsUp,
   Megaphone,
   Check,
+  Moon,
+  Sun,
 } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { Input } from "@/components/ui/input";
 import { useThemeColor, type ThemeColor } from "@/contexts/ThemeColorContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useMenu } from "@/contexts/MenuContext";
 import { useLocation } from "wouter";
-import { AVATAR_EMOJI_OPTIONS } from "@shared/const";
+import { AVATAR_EMOJI_OPTIONS, WITHDRAW_CONFIRM_TEXT } from "@shared/const";
 import Avatar from "@/components/Avatar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { roleLabel } from "@/lib/role";
@@ -60,6 +63,7 @@ type MenuView = "root" | "profile" | "chat" | "search" | "settings" | "notificat
 export default function TopLeftMenu({ showFloatingButton = true }: { showFloatingButton?: boolean }) {
   const { user, logout, refresh } = useAuth();
   const { themeColor, setThemeColor } = useThemeColor();
+  const { theme, toggleTheme } = useTheme();
   const { isOpen, setOpen: setIsOpen, openMenu: openMenuCtx, pendingTarget, clearPendingTarget } = useMenu();
   const [, navigate] = useLocation();
   const [view, setView] = useState<MenuView>("root");
@@ -68,6 +72,8 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [nameInput, setNameInput] = useState("");
   const [passwordInputs, setPasswordInputs] = useState({ current: "", new: "" });
+  const [withdrawInput, setWithdrawInput] = useState("");
+  const [withdrawDeleteContent, setWithdrawDeleteContent] = useState(false);
 
   const utils = trpc.useUtils();
   const { data: notifications } = trpc.notifications.list.useQuery(
@@ -134,6 +140,15 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
     onError: (error) => toast.error(error.message || "비밀번호 변경 실패"),
   });
 
+  const withdrawMutation = trpc.auth.withdraw.useMutation({
+    onSuccess: () => {
+      toast.success("탈퇴가 완료되었습니다");
+      // 세션이 이미 끊겼으므로 전체 새로고침으로 초기 상태로 되돌린다.
+      window.location.href = "/";
+    },
+    onError: (error) => toast.error(error.message || "탈퇴에 실패했습니다"),
+  });
+
   const updateAvatarMutation = trpc.auth.updateAvatar.useMutation({
     onSuccess: (_data, variables) => {
       toast.success(variables.avatarEmoji ? "프로필 아이콘이 변경되었습니다" : "기본 프로필로 되돌렸습니다");
@@ -189,7 +204,16 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
       toast.error("새 비밀번호를 입력하세요");
       return;
     }
-    updatePasswordMutation.mutate({ currentPassword: "", newPassword: passwordInputs.new });
+    // 비밀번호가 설정된 계정은 서버가 현재 비밀번호를 반드시 요구한다.
+    // (소셜 전용 계정은 아직 비밀번호가 없어 새로 설정하는 것이므로 생략한다)
+    if (user?.hasPassword && !passwordInputs.current) {
+      toast.error("현재 비밀번호를 입력하세요");
+      return;
+    }
+    updatePasswordMutation.mutate({
+      currentPassword: passwordInputs.current || undefined,
+      newPassword: passwordInputs.new,
+    });
   };
 
   const { data: unreadCount } = trpc.chat.unreadCount.useQuery(undefined, {
@@ -519,13 +543,24 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                 </div>
 
                 <div className="pt-2 border-t" style={{ borderColor: "var(--border-color)" }}>
-                  <label className="text-sm font-semibold mt-3 block" style={{ color: "var(--text-strong)" }}>비밀번호 변경</label>
+                  <label className="text-sm font-semibold mt-3 block" style={{ color: "var(--text-strong)" }}>
+                    {user.hasPassword ? "비밀번호 변경" : "비밀번호 설정"}
+                  </label>
+                  {user.hasPassword && (
+                    <Input
+                      type="password"
+                      placeholder="현재 비밀번호"
+                      value={passwordInputs.current}
+                      onChange={(e) => setPasswordInputs({ ...passwordInputs, current: e.target.value })}
+                      className="mb-2 mt-2"
+                    />
+                  )}
                   <Input
                     type="password"
                     placeholder="새 비밀번호"
                     value={passwordInputs.new}
                     onChange={(e) => setPasswordInputs({ ...passwordInputs, new: e.target.value })}
-                    className="mb-2 mt-2"
+                    className={`mb-2 ${user.hasPassword ? "" : "mt-2"}`}
                   />
                   <Button
                     onClick={handlePasswordChange}
@@ -788,6 +823,35 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                   </div>
                 </div>
 
+                {/* 다크모드 CSS는 전부터 있었지만 켤 방법이 없어 죽은 코드였다. */}
+                {toggleTheme && (
+                  <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
+                    <label className="text-sm font-semibold block mb-2" style={{ color: "var(--text-strong)" }}>
+                      화면 모드
+                    </label>
+                    <button
+                      onClick={toggleTheme}
+                      className="flex w-full items-center justify-between rounded-lg px-2 py-2 -mx-2 text-sm transition-colors hover:bg-black/[0.04]"
+                      style={{ color: "var(--text-normal)" }}
+                    >
+                      <span className="flex items-center gap-2">
+                        {theme === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                        {theme === "dark" ? "어두운 화면" : "밝은 화면"}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className="relative h-5 w-9 shrink-0 rounded-full transition-colors"
+                        style={{ backgroundColor: theme === "dark" ? "var(--accent-color)" : "var(--bg-surface-2)" }}
+                      >
+                        <span
+                          className="absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all"
+                          style={{ left: theme === "dark" ? "1.125rem" : "0.125rem" }}
+                        />
+                      </span>
+                    </button>
+                  </div>
+                )}
+
                 <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
                   <label className="text-sm font-semibold block mb-1" style={{ color: "var(--text-strong)" }}>
                     알림 수신 동의
@@ -856,6 +920,50 @@ export default function TopLeftMenu({ showFloatingButton = true }: { showFloatin
                       <ChevronRight className="h-4 w-4" style={{ color: "var(--text-muted)" }} />
                     </button>
                   </div>
+                </div>
+
+                {/* 탈퇴는 되돌릴 수 없어 맨 아래에 두고, 확인 문구를 정확히 입력해야 눌린다. */}
+                <div className="border-t pt-4" style={{ borderColor: "var(--border-color)" }}>
+                  <label className="text-sm font-semibold block mb-1" style={{ color: "var(--text-strong)" }}>
+                    회원 탈퇴
+                  </label>
+                  <p className="text-xs mb-2.5 leading-5" style={{ color: "var(--text-muted)" }}>
+                    이름·이메일·프로필 사진이 삭제되고 다시 로그인할 수 없습니다. 되돌릴 수 없어요.
+                  </p>
+                  <label className="mb-2.5 flex items-start gap-2.5 cursor-pointer">
+                    <Checkbox
+                      className="mt-0.5"
+                      checked={withdrawDeleteContent}
+                      onCheckedChange={(checked) => setWithdrawDeleteContent(checked === true)}
+                    />
+                    <span className="leading-tight">
+                      <span className="block text-[13px] font-medium" style={{ color: "var(--text-normal)" }}>
+                        내가 쓴 글과 댓글도 함께 삭제
+                      </span>
+                      <span className="block text-xs" style={{ color: "var(--text-muted)" }}>
+                        체크하지 않으면 글은 남고 작성자만 알 수 없게 표시됩니다
+                      </span>
+                    </span>
+                  </label>
+                  <Input
+                    value={withdrawInput}
+                    onChange={(e) => setWithdrawInput(e.target.value)}
+                    placeholder={`확인을 위해 "${WITHDRAW_CONFIRM_TEXT}"를 입력하세요`}
+                    className="mb-2 h-9 text-[13px]"
+                  />
+                  <Button
+                    variant="outline"
+                    disabled={withdrawInput !== WITHDRAW_CONFIRM_TEXT || withdrawMutation.isPending}
+                    onClick={() =>
+                      withdrawMutation.mutate({
+                        confirm: WITHDRAW_CONFIRM_TEXT,
+                        deleteContent: withdrawDeleteContent,
+                      })
+                    }
+                    className="w-full"
+                  >
+                    {withdrawMutation.isPending ? "처리 중..." : "탈퇴하기"}
+                  </Button>
                 </div>
               </div>
             )}

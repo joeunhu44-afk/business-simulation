@@ -31,3 +31,26 @@ export async function localStoragePut(
   const base = ENV.appUrl.replace(/\/+$/, "");
   return { key, url: `${base}/uploads/${key}` };
 }
+
+/** 로컬 디스크에서 파일을 지운다. 이미 없으면 조용히 넘어간다. */
+export async function localStorageDelete(relKey: string): Promise<void> {
+  const key = normalizeKey(relKey);
+  // key에 ".."가 섞이면 업로드 디렉터리 밖 파일을 지울 수 있으므로, 정규화한 경로가
+  // 업로드 디렉터리 안에 있는지 반드시 확인한다.
+  const root = path.resolve(ENV.uploadDir);
+  const filePath = path.resolve(root, key);
+  if (filePath !== root && !filePath.startsWith(root + path.sep)) return;
+
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+}
+
+/** /uploads/<key> 형태의 URL에서 키를 되돌린다. 형식이 다르면 null. */
+export function localStorageKeyFromUrl(url: string): string | null {
+  const marker = "/uploads/";
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : url.slice(idx + marker.length);
+}

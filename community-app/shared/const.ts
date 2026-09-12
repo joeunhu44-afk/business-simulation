@@ -17,3 +17,6 @@ export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';
 /** 승인 대기(pending) 계정이 활동성 기능을 호출했을 때. 클라이언트가 그대로 보여준다. */
 export const NOT_APPROVED_ERR_MSG = '관리자 승인 후 이용할 수 있습니다';
+
+/** 회원 탈퇴 시 사용자가 그대로 입력해야 하는 확인 문구. 오조작 방지용. */
+export const WITHDRAW_CONFIRM_TEXT = "탈퇴하겠습니다";

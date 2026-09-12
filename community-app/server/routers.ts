@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS, AVATAR_EMOJI_OPTIONS } from "@shared/const";
+import { COOKIE_NAME, ONE_YEAR_MS, AVATAR_EMOJI_OPTIONS, WITHDRAW_CONFIRM_TEXT } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure, approvedProcedure } from "./_core/trpc";
@@ -7,8 +7,10 @@ import { TRPCError } from "@trpc/server";
 import * as db from "./db";
 import { hashPassword, verifyPassword } from "./_core/auth/password";
 import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/session";
-import { putUpload } from "./media";
+import { deleteUploadByUrl, deleteUploadsByUrl, putUpload, uploadScopeId } from "./media";
 import { checkContent, BLOCKED_MESSAGE } from "./_core/moderation";
+import { enforceRateLimit } from "./_core/rateLimit";
+import { describeStorage } from "./_core/storageHealth";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -99,6 +101,11 @@ async function notifyPostActivity(params: {
   }
 }
 
+/** owner는 admin의 상위 권한이므로 관리자 판정에 항상 포함한다. */
+function isAdminRole(role: string | null | undefined): boolean {
+  return role === 'admin' || role === 'owner';
+}
+
 // Admin procedure - only admin users can access
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== 'admin' && ctx.user.role !== 'owner') {
@@ -107,10 +114,35 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   return next({ ctx });
 });
 
+/**
+ * 조물주(owner) 전용. 일반 admin에게도 열면 안 되는 동작에만 쓴다.
+ * 현재는 익명 작성자 신원 조회 하나뿐이다 — 익명 게시판의 익명성은 운영진 다수가
+ * 들여다볼 수 있는 순간 사실상 사라지므로, 최상위 권한 한 명으로 제한한다.
+ */
+const ownerProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (ctx.user.role !== 'owner') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: '조물주만 사용할 수 있는 기능입니다' });
+  }
+  return next({ ctx });
+});
+
+/**
+ * 클라이언트로 내보내는 사용자 정보.
+ *
+ * ctx.user는 users 행 전체라서 그대로 돌려주면 비밀번호 해시까지 브라우저로 나간다.
+ * 해시는 클라이언트가 쓸 일이 전혀 없고, 유출되면 오프라인 대입 공격의 재료가 되므로
+ * 응답에서 지운다. 대신 UI가 필요로 하는 "비밀번호가 설정된 계정인가"만 불리언으로 준다
+ * (소셜 전용 계정은 현재 비밀번호 입력을 요구하지 않아야 하므로 이 구분이 필요하다).
+ */
+function toPublicUser<T extends { passwordHash: string | null }>(user: T) {
+  const { passwordHash, ...rest } = user;
+  return { ...rest, hasPassword: Boolean(passwordHash) };
+}
+
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(opts => (opts.ctx.user ? toPublicUser(opts.ctx.user) : null)),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -147,7 +179,7 @@ export const appRouter = router({
         }
         const sessionToken = await createSessionToken(user.id);
         issueSession(ctx, sessionToken);
-        return user;
+        return toPublicUser(user);
       }),
 
     /** 이메일/비밀번호 로그인 */
@@ -177,7 +209,7 @@ export const appRouter = router({
         await db.touchLastSignedIn(user.id, 'email');
         const sessionToken = await createSessionToken(user.id);
         issueSession(ctx, sessionToken);
-        return user;
+        return toPublicUser(user);
       }),
 
     /** 소셜 로그인 최초 사용자가 학번+이름을 입력해 가입을 완료 */
@@ -202,7 +234,8 @@ export const appRouter = router({
           await db.touchLastSignedIn(alreadyLinked.userId, pending.provider);
           const sessionToken = await createSessionToken(alreadyLinked.userId);
           issueSession(ctx, sessionToken);
-          return db.getUserById(alreadyLinked.userId);
+          const linkedUser = await db.getUserById(alreadyLinked.userId);
+          return linkedUser ? toPublicUser(linkedUser) : null;
         }
 
         const user = await db.createUserFromOAuth({
@@ -218,7 +251,7 @@ export const appRouter = router({
         }
         const sessionToken = await createSessionToken(user.id);
         issueSession(ctx, sessionToken);
-        return user;
+        return toPublicUser(user);
       }),
 
     updateName: protectedProcedure
@@ -241,8 +274,12 @@ export const appRouter = router({
     updateAvatarPhoto: protectedProcedure
       .input(z.object({ dataUrl: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        const url = await uploadImageDataUrl(input.dataUrl, `avatars/${ctx.user.id}`);
-        return db.updateUserAvatarImage(ctx.user.id, url);
+        const previousUrl = ctx.user.avatarImageUrl;
+        const url = await uploadImageDataUrl(input.dataUrl, `avatars/${uploadScopeId(ctx.user.id)}`);
+        const result = await db.updateUserAvatarImage(ctx.user.id, url);
+        // 새 사진이 자리를 잡은 뒤에 이전 파일을 지운다(실패해도 교체는 이미 끝났다).
+        await deleteUploadByUrl(previousUrl);
+        return result;
       }),
 
     /** 알림 수신 동의를 켜고 끈다. 동의 시각은 db 레이어에서 함께 기록된다. */
@@ -258,8 +295,43 @@ export const appRouter = router({
 
     /** 프로필 사진을 지우고 이모지/이니셜 기본 아바타로 되돌린다. */
     removeAvatarPhoto: protectedProcedure.mutation(async ({ ctx }) => {
-      return db.updateUserAvatarImage(ctx.user.id, null);
+      const previousUrl = ctx.user.avatarImageUrl;
+      const result = await db.updateUserAvatarImage(ctx.user.id, null);
+      await deleteUploadByUrl(previousUrl);
+      return result;
     }),
+
+    /**
+     * 회원 탈퇴. 승인 대기 상태에서도 할 수 있어야 하므로 protectedProcedure를 쓴다.
+     *
+     * 확인 문구를 정확히 입력해야만 진행되게 해서, 실수로 눌러 되돌릴 수 없는 상태가
+     * 되는 것을 막는다.
+     */
+    withdraw: protectedProcedure
+      .input(z.object({
+        confirm: z.literal(WITHDRAW_CONFIRM_TEXT),
+        /** 내가 쓴 글·댓글도 함께 지울지. 기본값은 남기기 — 대화 맥락이 끊기지 않게. */
+        deleteContent: z.boolean().default(false),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        // 조물주가 탈퇴하면 아무도 가입 승인을 할 수 없게 되어 서비스가 잠긴다.
+        if (ctx.user.role === 'owner') {
+          throw new TRPCError({ code: 'FORBIDDEN', message: '조물주 계정은 탈퇴할 수 없습니다' });
+        }
+
+        // 계정 정보를 지우기 전에 글부터 처리한다 — userId로 찾아야 하기 때문이다.
+        if (input.deleteContent) {
+          const { imageUrls } = await db.softDeleteUserContent(ctx.user.id);
+          await deleteUploadsByUrl(imageUrls);
+        }
+
+        const { avatarImageUrl } = await db.withdrawUser(ctx.user.id);
+        await deleteUploadByUrl(avatarImageUrl);
+
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
+        return { success: true } as const;
+      }),
 
     updatePassword: protectedProcedure
       .input(z.object({
@@ -286,6 +358,11 @@ export const appRouter = router({
   boards: router({
     list: publicProcedure.query(async () => {
       return db.getBoards();
+    }),
+
+    /** 홈 화면용 — 게시판과 각 게시판의 최신 글을 한 번에 받아 요청 수를 줄인다. */
+    listWithLatest: publicProcedure.query(async () => {
+      return db.getBoardsWithLatestPost();
     }),
 
     create: adminProcedure
@@ -329,8 +406,8 @@ export const appRouter = router({
         sortBy: z.enum(['latest', 'popular']).default('latest'),
         search: z.string().optional(),
       }))
-      .query(async ({ input }) => {
-        return db.getPostsByBoard(input.boardId, input.limit, input.offset, input.sortBy, input.search);
+      .query(async ({ input, ctx }) => {
+        return db.getPostsByBoard(input.boardId, input.limit, input.offset, input.sortBy, input.search, ctx.user?.id ?? null);
       }),
     
     /**
@@ -345,8 +422,8 @@ export const appRouter = router({
 
     get: publicProcedure
       .input(z.object({ id: z.number() }))
-      .query(async ({ input }) => {
-        const post = await db.getPostById(input.id);
+      .query(async ({ input, ctx }) => {
+        const post = await db.getPostById(input.id, ctx.user?.id ?? null);
         if (!post) throw new TRPCError({ code: 'NOT_FOUND' });
         
         // Increment view count
@@ -364,6 +441,7 @@ export const appRouter = router({
         images: z.array(z.string().url()).max(4).default([]),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('post', ctx.user.id);
         const verdict = await checkContent(`${input.title}\n${input.content}`);
         if (verdict.blocked) {
           await logBlockedAttempt({
@@ -396,7 +474,9 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const post = await db.getPostById(input.id);
         if (!post) throw new TRPCError({ code: 'NOT_FOUND' });
-        if (post.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+        // 익명 글은 응답에서 userId가 지워지므로 원본 작성자를 내부 조회로 확인한다.
+        const authorId = await db.getPostAuthorId(input.id);
+        if (authorId !== ctx.user.id && !isAdminRole(ctx.user.role)) {
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
         
@@ -409,11 +489,15 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const post = await db.getPostById(input.id);
         if (!post) throw new TRPCError({ code: 'NOT_FOUND' });
-        if (post.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+        const authorId = await db.getPostAuthorId(input.id);
+        if (authorId !== ctx.user.id && !isAdminRole(ctx.user.role)) {
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
-        
-        return db.deletePost(input.id);
+
+        const result = await db.deletePost(input.id);
+        // 글이 지워지면 첨부 이미지도 저장소에서 정리한다.
+        await deleteUploadsByUrl(post.images ?? []);
+        return result;
       }),
     
     search: publicProcedure
@@ -422,8 +506,8 @@ export const appRouter = router({
         limit: z.number().default(20),
         offset: z.number().default(0),
       }))
-      .query(async ({ input }) => {
-        return db.searchPosts(input.query, input.limit, input.offset);
+      .query(async ({ input, ctx }) => {
+        return db.searchPosts(input.query, input.limit, input.offset, ctx.user?.id ?? null);
       }),
   }),
 
@@ -431,8 +515,8 @@ export const appRouter = router({
   comments: router({
     listByPost: publicProcedure
       .input(z.object({ postId: z.number() }))
-      .query(async ({ input }) => {
-        return db.getCommentsByPost(input.postId);
+      .query(async ({ input, ctx }) => {
+        return db.getCommentsByPost(input.postId, ctx.user?.id ?? null);
       }),
     
     create: approvedProcedure
@@ -443,6 +527,7 @@ export const appRouter = router({
         parentCommentId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('comment', ctx.user.id);
         const verdict = await checkContent(input.content);
         if (verdict.blocked) {
           await logBlockedAttempt({
@@ -462,10 +547,12 @@ export const appRouter = router({
           parentCommentId: input.parentCommentId,
         });
 
+        // 익명 글은 응답에서 userId가 지워지므로 작성자를 내부 조회로 따로 읽는다.
         const post = await db.getPostById(input.postId);
-        if (post) {
+        const postAuthorId = await db.getPostAuthorId(input.postId);
+        if (post && postAuthorId !== null) {
           await notifyPostActivity({
-            postAuthorId: post.userId,
+            postAuthorId,
             actorId: ctx.user.id,
             type: 'post_comment',
             postId: post.id,
@@ -480,7 +567,7 @@ export const appRouter = router({
       .mutation(async ({ input, ctx }) => {
         const comment = await db.getCommentById(input.id);
         if (!comment) throw new TRPCError({ code: 'NOT_FOUND' });
-        if (comment.userId !== ctx.user.id && ctx.user.role !== 'admin') {
+        if (comment.userId !== ctx.user.id && !isAdminRole(ctx.user.role)) {
           throw new TRPCError({ code: 'FORBIDDEN' });
         }
         
@@ -503,10 +590,12 @@ export const appRouter = router({
         await db.addPostLike(input.postId, ctx.user.id);
         // 좋아요를 취소했다 다시 누르면 알림이 반복될 수 있지만, 알림함에서
         // 최신순으로 묶여 보이는 정도라 별도 중복 억제는 두지 않았다.
+        // 익명 글은 응답에서 userId가 지워지므로 작성자를 내부 조회로 따로 읽는다.
         const post = await db.getPostById(input.postId);
-        if (post) {
+        const postAuthorId = await db.getPostAuthorId(input.postId);
+        if (post && postAuthorId !== null) {
           await notifyPostActivity({
-            postAuthorId: post.userId,
+            postAuthorId,
             actorId: ctx.user.id,
             type: 'post_like',
             postId: post.id,
@@ -553,6 +642,11 @@ export const appRouter = router({
         description: z.string().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('report', ctx.user.id);
+        // 같은 대상을 여러 번 신고해도 관리자 목록만 길어질 뿐이라 한 번으로 제한한다.
+        if (await db.hasReported(ctx.user.id, input.targetType, input.targetId)) {
+          throw new TRPCError({ code: 'CONFLICT', message: '이미 신고한 게시물입니다' });
+        }
         return db.createReport({
           reporterUserId: ctx.user.id,
           targetType: input.targetType,
@@ -734,6 +828,7 @@ export const appRouter = router({
         content: z.string().min(1),
       }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('inquiry', ctx.user.id);
         return db.createInquiry({
           userId: ctx.user.id,
           category: input.category,
@@ -767,7 +862,7 @@ export const appRouter = router({
     uploadPostImage: approvedProcedure
       .input(z.object({ dataUrl: z.string() }))
       .mutation(async ({ input, ctx }) => {
-        const url = await uploadImageDataUrl(input.dataUrl, `posts/${ctx.user.id}`);
+        const url = await uploadImageDataUrl(input.dataUrl, `posts/${uploadScopeId(ctx.user.id)}`);
         return { url };
       }),
 
@@ -863,6 +958,22 @@ export const appRouter = router({
 
   // 관리자 API
   admin: router({
+    /**
+     * 업로드 파일 저장 위치가 안전한지(재배포 후에도 남는지) 알려준다.
+     *
+     * 잘못 설정돼 있으면 부팅 로그에도 경고가 찍히지만, 로그를 볼 일이 없는
+     * 운영자가 대부분이라 관리자 화면에서도 바로 보이게 했다.
+     */
+    storageStatus: adminProcedure.query(() => {
+      const health = describeStorage();
+      return {
+        mode: health.mode,
+        persistent: health.persistent,
+        summary: health.summary,
+        remedy: health.remedy,
+      };
+    }),
+
     users: router({
       list: adminProcedure
         .input(z.object({
@@ -873,6 +984,37 @@ export const appRouter = router({
           return db.getAllUsers(input.limit, input.offset);
         }),
       
+      /**
+       * 익명 글·댓글의 작성자 확인 (조물주 전용).
+       *
+       * 괴롭힘 조사 등 꼭 필요한 경우를 위한 경로이며, 조회 사실 자체가 기록으로
+       * 남도록 moderationLogs에 남긴다 — 권한자가 마음대로 들여다봤는지 나중에
+       * 확인할 수 있어야 견제가 된다.
+       */
+      revealAnonymousAuthor: ownerProcedure
+        .input(z.object({
+          targetType: z.enum(['post', 'comment']),
+          targetId: z.number(),
+          reason: z.string().min(2).max(200),
+        }))
+        .mutation(async ({ input, ctx }) => {
+          const author = await db.getAnonymousAuthor(input.targetType, input.targetId);
+          if (!author) throw new TRPCError({ code: 'NOT_FOUND', message: '대상을 찾을 수 없습니다' });
+
+          try {
+            await db.createModerationLog({
+              userId: ctx.user.id,
+              targetType: input.targetType,
+              content: `익명 작성자 조회: ${input.targetType} #${input.targetId} -> userId ${author.userId}`,
+              reason: `조회 사유: ${input.reason}`,
+            });
+          } catch (error) {
+            console.warn('[Reveal] 익명 조회 기록 실패:', error);
+          }
+
+          return author;
+        }),
+
       /** 승인 대기 목록 — 관리자가 학번·이름을 보고 재학생인지 판단한다. */
       pending: adminProcedure.query(async () => {
         return db.getPendingUsers();
@@ -1058,6 +1200,7 @@ export const appRouter = router({
     sendMessage: approvedProcedure
       .input(z.object({ conversationId: z.number(), content: z.string().min(1).max(2000) }))
       .mutation(async ({ input, ctx }) => {
+        enforceRateLimit('message', ctx.user.id);
         const conv = await db.getConversationById(input.conversationId);
         if (!conv || (conv.userAId !== ctx.user.id && conv.userBId !== ctx.user.id)) {
           throw new TRPCError({ code: 'FORBIDDEN', message: '접근 권한이 없습니다' });

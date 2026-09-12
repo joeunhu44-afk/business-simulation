@@ -1,14 +1,16 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { Link, useLocation } from "wouter";
-import { Loader2, MessageCircle, ChevronLeft } from "lucide-react";
+import { Loader2, MessageCircle, ChevronLeft, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
 import Avatar from "@/components/Avatar";
+import { useMenu } from "@/contexts/MenuContext";
 export default function ChatList() {
+  const { openMenu } = useMenu();
   const { user, loading: authLoading } = useAuth({ redirectOnUnauthenticated: true });
   const [, navigate] = useLocation();
 
@@ -54,8 +56,13 @@ export default function ChatList() {
             <MessageCircle className="h-12 w-12 mx-auto mb-4 opacity-40" />
             <p className="text-muted-foreground">아직 대화가 없습니다</p>
             <p className="text-sm text-muted-foreground mt-1">
-              왼쪽 상단 메뉴의 검색에서 사용자를 찾아 채팅을 시작해보세요
+              같은 학교 친구를 찾아 쪽지를 보내보세요
             </p>
+            {/* 설명만 두면 사용자가 메뉴를 직접 열어 검색을 찾아가야 한다. 바로 갈 수 있게 한다. */}
+            <Button className="mt-4" onClick={() => openMenu("search")}>
+              <Search className="h-4 w-4" />
+              사용자 검색
+            </Button>
           </div>
         ) : (
           <div className="space-y-1.5">

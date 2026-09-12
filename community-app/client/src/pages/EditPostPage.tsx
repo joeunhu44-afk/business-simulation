@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useParams, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
+import { isAdminRole } from "@/lib/role";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import HeaderMenuButton from "@/components/HeaderMenuButton";
@@ -83,7 +84,8 @@ export default function EditPostPage() {
     );
   }
 
-  if (post.userId !== user?.id && user?.role !== "admin") {
+  // 익명 글은 userId가 응답에서 지워지므로 서버가 계산한 isMine으로 판별한다.
+  if (!post.isMine && !isAdminRole(user?.role)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

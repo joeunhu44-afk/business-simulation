@@ -140,9 +140,9 @@ function SearchPostsResults({ query }: { query: string }) {
                 {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
               </span>
               <span className="ml-auto flex items-center gap-2 shrink-0">
-                <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>
-                <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{post.commentCount || 0}</span>
                 <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{post.likeCount || 0}</span>
+                <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{post.commentCount || 0}</span>
+                <span className="inline-flex items-center gap-0.5"><Eye className="h-3 w-3" />{post.viewCount}</span>
               </span>
             </div>
           </div>
