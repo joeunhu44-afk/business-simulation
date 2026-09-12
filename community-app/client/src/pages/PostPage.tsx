@@ -2,7 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, MessageCircle, X } from "lucide-react";
+import { Loader2, ThumbsUp, Trash2, Edit2, Reply, ArrowLeft, MessageCircle, X, ImageOff } from "lucide-react";
 import { useParams } from "wouter";
 import { trpc } from "@/lib/trpc";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -204,19 +204,12 @@ export default function PostPage() {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-2 mb-8">
               {post.images.map((url, index) => (
                 // 새 탭으로 원본을 열면 돌아왔을 때 스크롤 위치를 잃는다. 같은 화면에서 크게 본다.
-                <button
+                <PostImage
                   key={url}
-                  type="button"
-                  onClick={() => setLightboxIndex(index)}
-                  aria-label={`첨부 이미지 ${index + 1} 크게 보기`}
-                  className="block rounded-xl overflow-hidden border border-border aspect-square shadow-sm hover:shadow-md transition-shadow"
-                >
-                  <img
-                    src={url}
-                    alt={`첨부 이미지 ${index + 1}`}
-                    className="h-full w-full object-cover"
-                  />
-                </button>
+                  url={url}
+                  index={index}
+                  onOpen={() => setLightboxIndex(index)}
+                />
               ))}
             </div>
           )}
@@ -354,6 +347,46 @@ export default function PostPage() {
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * 첨부 이미지 한 장.
+ *
+ * 파일이 사라졌거나(과거에 임시 디스크에 저장된 사진) 권한이 없어 못 불러오는 경우,
+ * 브라우저 기본 깨진 이미지 아이콘 대신 이유를 적어 보여준다.
+ */
+function PostImage({ url, index, onOpen }: { url: string; index: number; onOpen: () => void }) {
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center gap-1.5 rounded-xl border border-border aspect-square p-3 text-center"
+        style={{ backgroundColor: 'var(--bg-surface-2)' }}
+      >
+        <ImageOff className="h-5 w-5" style={{ color: 'var(--text-muted)' }} />
+        <span className="text-[12px] leading-tight" style={{ color: 'var(--text-muted)' }}>
+          이미지를 불러올 수 없어요
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`첨부 이미지 ${index + 1} 크게 보기`}
+      className="block rounded-xl overflow-hidden border border-border aspect-square shadow-sm hover:shadow-md transition-shadow"
+    >
+      <img
+        src={url}
+        alt={`첨부 이미지 ${index + 1}`}
+        className="h-full w-full object-cover"
+        onError={() => setFailed(true)}
+      />
+    </button>
   );
 }
 

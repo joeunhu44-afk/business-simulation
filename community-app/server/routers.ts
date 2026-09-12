@@ -10,6 +10,7 @@ import { createSessionToken, verifyPendingSignupToken } from "./_core/auth/sessi
 import { deleteUploadByUrl, deleteUploadsByUrl, putUpload, uploadScopeId } from "./media";
 import { checkContent, BLOCKED_MESSAGE } from "./_core/moderation";
 import { enforceRateLimit } from "./_core/rateLimit";
+import { describeStorage } from "./_core/storageHealth";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -957,6 +958,22 @@ export const appRouter = router({
 
   // 관리자 API
   admin: router({
+    /**
+     * 업로드 파일 저장 위치가 안전한지(재배포 후에도 남는지) 알려준다.
+     *
+     * 잘못 설정돼 있으면 부팅 로그에도 경고가 찍히지만, 로그를 볼 일이 없는
+     * 운영자가 대부분이라 관리자 화면에서도 바로 보이게 했다.
+     */
+    storageStatus: adminProcedure.query(() => {
+      const health = describeStorage();
+      return {
+        mode: health.mode,
+        persistent: health.persistent,
+        summary: health.summary,
+        remedy: health.remedy,
+      };
+    }),
+
     users: router({
       list: adminProcedure
         .input(z.object({

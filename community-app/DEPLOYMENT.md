@@ -55,17 +55,51 @@ Railway를 쓰면 MySQL 플러그인을 추가하는 것만으로 `DATABASE_URL`
 
 ---
 
-## 3. 파일/이미지 스토리지 — Cloudflare R2 (권장)
+## 3. 업로드 파일 보관 — 재배포해도 사진이 남게 하기
 
-R2는 트래픽(egress) 비용이 없어서 커뮤니티 앱처럼 이미지가 많이 조회되는 서비스에 유리합니다.
+> **가장 흔한 사고**: 아무 설정 없이 배포하면 업로드 파일이 컨테이너의 일반 디스크에 쌓입니다.
+> Railway는 배포할 때마다 컨테이너를 새로 만들기 때문에, 배포 한 번에 프로필 사진과
+> 게시물 사진이 **전부** 사라집니다. DB는 별도 서비스라 글과 계정은 그대로 남고
+> 사진만 깨져 보이기 때문에 "DB가 초기화됐다"고 오해하기 쉽습니다.
+>
+> 아래 A · B 중 **하나는 반드시** 해야 합니다. 둘 다 안 돼 있으면 서버 부팅 로그와
+> 관리자 패널 상단에 빨간 경고가 뜹니다.
+
+### A. Railway Volume (간단 — 추가 계정 불필요, 권장)
+
+1. Railway → 해당 서비스 → **Settings → Volumes → + New Volume**
+2. Mount path를 `/data` 로 지정하고 생성
+3. 재배포 (Volume을 붙이면 서비스가 자동으로 재시작됩니다)
+
+`UPLOAD_DIR`은 **비워두면 됩니다.** Volume을 붙이면 Railway가 `RAILWAY_VOLUME_MOUNT_PATH`를
+자동으로 넣어주고, 앱이 그 경로를 업로드 폴더로 사용합니다.
+(직접 지정하고 싶으면 `UPLOAD_DIR`을 마운트 경로와 똑같이 설정하세요.)
+
+확인 방법: 관리자 패널 상단에 `영구 디스크(/data)에 저장합니다` 라고 나오면 정상입니다.
+
+한계: Volume은 서비스 인스턴스 한 대에 붙습니다. 나중에 서버를 여러 대로 늘리거나
+이미지 트래픽이 많아지면 B로 옮기는 게 좋습니다.
+
+### B. Cloudflare R2 (확장성 — 트래픽 비용 없음)
 
 1. https://dash.cloudflare.com → R2 → 버킷 생성
-2. 버킷 설정 → "Public Access" 활성화 (또는 커스텀 도메인 연결) → 여기서 나온 URL을 `S3_PUBLIC_URL`에 입력
-3. "R2 API 토큰 관리"에서 API 토큰 생성 → Access Key ID/Secret을 `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`에 입력
-4. 버킷 개요 페이지에서 "S3 API" endpoint(`https://<account_id>.r2.cloudflarestorage.com`)를 `S3_ENDPOINT`에 입력
-5. `S3_BUCKET`에 버킷 이름 입력, `S3_REGION`은 `auto`로 둡니다
+2. **버킷은 비공개로 둡니다.** Public Access를 켜면 안 됩니다 — 이 앱은 로그인한
+   사용자에게만 짧게 유효한 서명 URL을 발급해 사진을 보여주는데, 버킷이 공개되어
+   있으면 주소만 아는 사람이 그 통제를 우회할 수 있습니다.
+3. "R2 API 토큰 관리"에서 토큰 생성 → Access Key ID/Secret을
+   `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`에 입력
+4. 버킷 개요의 "S3 API" endpoint(`https://<account_id>.r2.cloudflarestorage.com`)를
+   `S3_ENDPOINT`에 입력
+5. `S3_BUCKET`에 버킷 이름, `S3_REGION`은 `auto`
 
-AWS S3를 쓰고 싶다면 `S3_ENDPOINT`를 비워두고(AWS 기본 엔드포인트 사용하도록 `server/storage.ts`의 `S3Client` 생성부만 리전 기반으로 소폭 수정) 나머지 값을 AWS 것으로 채우면 됩니다.
+AWS S3를 쓰려면 `S3_ENDPOINT`를 비우고(`server/storage.ts`의 `S3Client` 생성부를
+리전 기반으로 소폭 수정) 나머지를 AWS 값으로 채우면 됩니다.
+
+### 이미 사라진 사진은?
+
+파일 자체가 없어진 것이라 복구할 수 없습니다. DB에는 주소만 남아 있어서 해당 게시물에는
+"이미지를 불러올 수 없어요" 안내가 표시됩니다. 위 설정을 마친 뒤 새로 올린 사진부터는
+재배포해도 유지됩니다.
 
 ---
 
@@ -97,5 +131,6 @@ Railway 서비스 설정 → Settings → Networking → Custom Domain에 원하
 - [ ] `DATABASE_URL` 연결 + `pnpm db:push` 실행
 - [ ] `OWNER_EMAIL`에 본인 이메일 입력 (해당 이메일로 가입 시 자동 admin)
 - [ ] 최소 하나 이상의 로그인 수단(소셜 또는 이메일) 동작 확인
-- [ ] R2/S3 버킷 연결 및 공개 URL 확인
+- [ ] **업로드 보관 설정** — Railway Volume 추가(권장) 또는 R2 연결
+      → 관리자 패널 상단에 빨간 경고가 없는지 확인
 - [ ] 커스텀 도메인 연결 + `APP_URL` 갱신 + OAuth redirect URI 재확인

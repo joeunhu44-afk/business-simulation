@@ -11,6 +11,7 @@ import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { ENV } from "./env";
 import { runMigrations } from "../db";
+import { warnIfEphemeralStorage } from "./storageHealth";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -37,6 +38,9 @@ async function startServer() {
   if (process.env.NODE_ENV === "production") {
     await runMigrations();
   }
+
+  // 업로드 파일이 재배포 때 사라지는 위치에 쌓이고 있으면 여기서 알린다.
+  warnIfEphemeralStorage();
 
   const app = express();
   const server = createServer(app);
