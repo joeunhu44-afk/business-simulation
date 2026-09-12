@@ -675,6 +675,57 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return db.updateReportStatus(input.id, input.status, input.adminNotes);
       }),
+
+    /**
+     * 신고 처리 — 조치와 상태 변경을 한 번에.
+     *
+     * 예전에는 상태를 '해결'로 바꾸는 것밖에 못 해서, 정작 문제되는 글은 그대로 남았다.
+     * 여기서 바로 삭제하거나 작성자를 차단할 수 있게 한다.
+     */
+    act: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        action: z.enum(['delete_content', 'block_author', 'resolve', 'dismiss']),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const report = await db.getReportById(input.id);
+        if (!report) throw new TRPCError({ code: 'NOT_FOUND', message: '신고를 찾을 수 없습니다' });
+
+        if (input.action === 'delete_content') {
+          if (report.targetType === 'post') {
+            await db.deletePost(report.targetId);
+          } else {
+            await db.deleteComment(report.targetId);
+          }
+        }
+
+        if (input.action === 'block_author') {
+          // 익명 글이어도 차단은 된다. 작성자가 누구인지는 화면에 내보내지 않으므로
+          // 관리자는 신원을 모른 채로 조치만 하게 된다 (익명 확인은 조물주 전용).
+          const authorId = await db.getReportTargetAuthorId(report.targetType, report.targetId);
+          if (!authorId) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: '작성자를 찾을 수 없습니다 (이미 삭제된 계정일 수 있습니다)' });
+          }
+          const author = await db.getUserById(authorId);
+          if (!author) {
+            throw new TRPCError({ code: 'NOT_FOUND', message: '작성자를 찾을 수 없습니다' });
+          }
+          if (author.id === ctx.user.id) {
+            throw new TRPCError({ code: 'BAD_REQUEST', message: '자기 자신은 차단할 수 없습니다' });
+          }
+          if (author.role === 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '조물주는 차단할 수 없습니다' });
+          }
+          if (author.role === 'admin' && ctx.user.role !== 'owner') {
+            throw new TRPCError({ code: 'FORBIDDEN', message: '다른 관리자는 조물주만 차단할 수 있습니다' });
+          }
+          await db.updateUserStatus(author.id, 'blocked');
+        }
+
+        const status = input.action === 'dismiss' ? 'dismissed' : 'resolved';
+        await db.updateReportStatus(input.id, status);
+        return { success: true, status };
+      }),
   }),
 
   // 앱 내 알림함
