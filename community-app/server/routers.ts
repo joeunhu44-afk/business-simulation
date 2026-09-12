@@ -360,9 +360,32 @@ export const appRouter = router({
       return db.getBoards();
     }),
 
-    /** 홈 화면용 — 게시판과 각 게시판의 최신 글을 한 번에 받아 요청 수를 줄인다. */
-    listWithLatest: publicProcedure.query(async () => {
-      return db.getBoardsWithLatestPost();
+    /**
+     * 홈 화면용 — 게시판과 각 게시판의 최신 글을 한 번에 받아 요청 수를 줄인다.
+     * 로그인 상태면 즐겨찾기 여부(isFavorite)가 함께 오고, 즐겨찾기가 위로 정렬된다.
+     */
+    listWithLatest: publicProcedure.query(async ({ ctx }) => {
+      return db.getBoardsWithLatestPost(ctx.user?.id ?? null);
+    }),
+
+    /**
+     * 게시판 즐겨찾기 켜기/끄기.
+     *
+     * 승인 대기 중(pending)인 사용자도 쓸 수 있게 protectedProcedure를 쓴다 — 글을
+     * 쓰는 게 아니라 내 화면 정렬을 바꾸는 개인 설정이고, 승인 전에도 글은 읽을 수
+     * 있으므로 막을 이유가 없다.
+     */
+    toggleFavorite: protectedProcedure
+      .input(z.object({ boardId: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        const board = await db.getBoardById(input.boardId);
+        if (!board) throw new TRPCError({ code: 'NOT_FOUND', message: '게시판을 찾을 수 없습니다' });
+        return db.toggleBoardFavorite(ctx.user.id, input.boardId);
+      }),
+
+    /** 내가 즐겨찾기한 게시판 id 목록. */
+    favorites: protectedProcedure.query(async ({ ctx }) => {
+      return db.getFavoriteBoardIds(ctx.user.id);
     }),
 
     create: adminProcedure
