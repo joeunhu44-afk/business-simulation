@@ -94,6 +94,25 @@ export type Board = typeof boards.$inferSelect;
 export type InsertBoard = typeof boards.$inferInsert;
 
 /**
+ * 게시판 즐겨찾기.
+ *
+ * 홈 목록에서 즐겨찾기한 게시판을 위로 올리는 용도이자, 추천 알고리즘의 가장 강한
+ * 입력이기도 하다 — 활동 이력에서 "짐작한" 관심사보다 본인이 직접 고른 쪽이 정확하다.
+ */
+export const boardFavorites = mysqlTable("boardFavorites", {
+  id: bigint("id", { mode: "number" }).autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  boardId: int("boardId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => ({
+  // 별을 빠르게 두 번 누르면 행이 둘 생겨 해제가 안 되는 것처럼 보인다. DB에서 막는다.
+  uniqueFavorite: unique("boardFavorites_user_board_unique").on(table.userId, table.boardId),
+}));
+
+export type BoardFavorite = typeof boardFavorites.$inferSelect;
+export type InsertBoardFavorite = typeof boardFavorites.$inferInsert;
+
+/**
  * 게시글 테이블
  * 익명 옵션 포함
  */
@@ -385,6 +404,18 @@ export const authIdentitiesRelations = relations(authIdentities, ({ one }) => ({
 
 export const boardsRelations = relations(boards, ({ many }) => ({
   posts: many(posts),
+  favorites: many(boardFavorites),
+}));
+
+export const boardFavoritesRelations = relations(boardFavorites, ({ one }) => ({
+  board: one(boards, {
+    fields: [boardFavorites.boardId],
+    references: [boards.id],
+  }),
+  user: one(users, {
+    fields: [boardFavorites.userId],
+    references: [users.id],
+  }),
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({

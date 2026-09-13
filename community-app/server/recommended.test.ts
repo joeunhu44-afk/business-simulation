@@ -34,7 +34,7 @@ afterEach(() => {
 
 describe("posts.recommended", () => {
   it("비로그인 사용자는 userId 없이(=인기글로) 조회한다", async () => {
-    const spy = vi.spyOn(db, "getRecommendedPosts").mockResolvedValue([] as never);
+    const spy = vi.spyOn(db, "getRecommendedPosts").mockResolvedValue({ personalized: false, items: [] } as never);
 
     const caller = appRouter.createCaller(createContext(null));
     await caller.posts.recommended({ limit: 5 });
@@ -43,7 +43,7 @@ describe("posts.recommended", () => {
   });
 
   it("로그인 사용자는 자신의 id로 조회한다 (개인화 판단은 서버가 한다)", async () => {
-    const spy = vi.spyOn(db, "getRecommendedPosts").mockResolvedValue([] as never);
+    const spy = vi.spyOn(db, "getRecommendedPosts").mockResolvedValue({ personalized: false, items: [] } as never);
 
     const caller = appRouter.createCaller(createContext(loggedInUser(42)));
     await caller.posts.recommended({ limit: 5 });
@@ -52,7 +52,7 @@ describe("posts.recommended", () => {
   });
 
   it("입력을 생략하면 기본 5개를 요청한다", async () => {
-    const spy = vi.spyOn(db, "getRecommendedPosts").mockResolvedValue([] as never);
+    const spy = vi.spyOn(db, "getRecommendedPosts").mockResolvedValue({ personalized: false, items: [] } as never);
 
     const caller = appRouter.createCaller(createContext(null));
     await caller.posts.recommended();
@@ -60,15 +60,30 @@ describe("posts.recommended", () => {
     expect(spy).toHaveBeenCalledWith(null, 5);
   });
 
-  it("추천할 글이 없으면 빈 배열을 그대로 돌려준다 (홈에서 영역이 숨겨진다)", async () => {
-    vi.spyOn(db, "getRecommendedPosts").mockResolvedValue([] as never);
+  it("추천할 글이 없으면 빈 목록을 그대로 돌려준다 (홈에서 영역이 숨겨진다)", async () => {
+    vi.spyOn(db, "getRecommendedPosts").mockResolvedValue({ personalized: false, items: [] } as never);
 
     const caller = appRouter.createCaller(createContext(null));
-    await expect(caller.posts.recommended({ limit: 5 })).resolves.toEqual([]);
+    await expect(caller.posts.recommended({ limit: 5 })).resolves.toEqual({
+      personalized: false,
+      items: [],
+    });
+  });
+
+  it("개인화 여부를 화면에 그대로 전달한다 (제목을 '추천'으로 바꿔 달기 위해)", async () => {
+    vi.spyOn(db, "getRecommendedPosts").mockResolvedValue({
+      personalized: true,
+      items: [],
+    } as never);
+
+    const caller = appRouter.createCaller(createContext(loggedInUser(42)));
+    const result = await caller.posts.recommended({ limit: 5 });
+
+    expect(result.personalized).toBe(true);
   });
 
   it("limit 상한을 넘기면 거부한다", async () => {
-    vi.spyOn(db, "getRecommendedPosts").mockResolvedValue([] as never);
+    vi.spyOn(db, "getRecommendedPosts").mockResolvedValue({ personalized: false, items: [] } as never);
 
     const caller = appRouter.createCaller(createContext(null));
     await expect(caller.posts.recommended({ limit: 50 })).rejects.toThrow();

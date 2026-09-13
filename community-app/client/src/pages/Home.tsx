@@ -1,7 +1,7 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ThumbsUp } from "lucide-react";
+import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ThumbsUp, Star } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
 import { trpc } from "@/lib/trpc";
@@ -17,6 +17,7 @@ import { isAdminRole } from "@/lib/role";
 import AdBannerCarousel from "@/components/AdBannerCarousel";
 import NotificationBell from "@/components/NotificationBell";
 import SiteFooter from "@/components/SiteFooter";
+import { toast } from "sonner";
 
 const QUICK_LINKS: {
   key: string;
@@ -52,6 +53,11 @@ export default function Home() {
   const { data: boards, isLoading: boardsLoading } = trpc.boards.listWithLatest.useQuery();
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
+  // "즐겨찾기만 보기" 토글. 즐겨찾기가 하나도 없으면 버튼 자체를 띄우지 않는다.
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+
+  const favoriteCount = boards?.filter((b) => b.isFavorite).length ?? 0;
+  const visibleBoards = favoritesOnly ? boards?.filter((b) => b.isFavorite) : boards;
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -244,14 +250,35 @@ export default function Home() {
 
             {/* Boards List — 홈의 주인공 */}
             <div>
-              <h2 className="section-heading mb-3 text-2xl">게시판</h2>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h2 className="section-heading text-2xl">게시판</h2>
+                {favoriteCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFavoritesOnly((v) => !v)}
+                    aria-pressed={favoritesOnly}
+                    className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors"
+                    style={
+                      favoritesOnly
+                        ? { borderColor: "var(--accent-color)", color: "var(--accent-color)", backgroundColor: "var(--accent-soft)" }
+                        : { borderColor: "var(--border-color)", color: "var(--text-muted)" }
+                    }
+                  >
+                    <Star
+                      className="h-3.5 w-3.5"
+                      fill={favoritesOnly ? "currentColor" : "none"}
+                    />
+                    즐겨찾기 {favoriteCount}
+                  </button>
+                )}
+              </div>
               {boardsLoading ? (
                 <div className="cosmic-empty flex justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : boards && boards.length > 0 ? (
+              ) : visibleBoards && visibleBoards.length > 0 ? (
                 <div>
-                  {boards.map((board) => (
+                  {visibleBoards.map((board) => (
                     <BoardRow key={board.id} board={board} latest={board.latestPost} />
                   ))}
                 </div>
@@ -303,17 +330,28 @@ function RecommendedSection() {
 
   // 로딩 중에는 자리를 잡아두지 않는다. 어차피 추천이 없으면 영역이 사라지는데
   // 스켈레톤을 깔면 그때마다 게시판 목록이 밀려 올라온다.
-  if (isLoading || !recommended || recommended.length < MIN_RECOMMENDED) return null;
+  if (isLoading || !recommended || recommended.items.length < MIN_RECOMMENDED) return null;
+
+  // 같은 알고리즘이지만 개인화가 켜졌는지에 따라 이름을 달리 붙인다. "인기있는 글"로만
+  // 적어두면 내 관심사가 반영되고 있다는 걸 알 방법이 없다.
+  const personalized = recommended.personalized;
 
   return (
     // 게시판 목록의 곁다리 요약임을 드러내는 옅은 톤 블록. 제목도 accent 바가 붙는
     // section-heading이 아니라 작은 라벨을 써서, 아래 "게시판"보다 한 단계 낮게 둔다.
     <div className="rounded-xl bg-[var(--bg-surface-2)] px-3 py-3 sm:px-4">
-      <h2 className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
-        지금 인기있는 글
-      </h2>
+      <div className="mb-1.5 flex items-baseline justify-between gap-2">
+        <h2 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
+          {personalized ? "회원님을 위한 추천" : "지금 인기있는 글"}
+        </h2>
+        {personalized && (
+          <span className="shrink-0 text-[11px] text-muted-foreground/80">
+            관심 게시판 반영됨
+          </span>
+        )}
+      </div>
       <div>
-        {recommended.map((post, index) => (
+        {recommended.items.map((post, index) => (
           <RecommendedRow key={post.id} post={post} rank={index + 1} />
         ))}
       </div>
@@ -421,10 +459,40 @@ function BoardRow({
   board,
   latest,
 }: {
-  board: { id: number; slug: string; name: string; description: string | null };
+  board: { id: number; slug: string; name: string; description: string | null; isFavorite: boolean };
   /** 최신 글은 목록 쿼리에서 함께 받아온다 (행마다 따로 조회하지 않는다). */
   latest: { title: string; likeCount: number; commentCount: number } | null;
 }) {
+  const { isAuthenticated } = useAuth();
+  const utils = trpc.useUtils();
+
+  // 별을 누른 순간 바로 채워지게 하고(낙관적 갱신), 실패하면 되돌린다. 서버 응답을
+  // 기다렸다 바꾸면 목록이 위로 재정렬되는 것과 겹쳐 눌린 건지 아닌지 헷갈린다.
+  const [favorite, setFavorite] = useState(board.isFavorite);
+  useEffect(() => {
+    setFavorite(board.isFavorite);
+  }, [board.isFavorite]);
+
+  const toggleFavorite = trpc.boards.toggleFavorite.useMutation({
+    onSuccess: (result) => {
+      setFavorite(result.favorited);
+      // 목록 순서(즐겨찾기가 위)와 추천 결과가 모두 즐겨찾기에 영향을 받는다.
+      utils.boards.listWithLatest.invalidate();
+      utils.posts.recommended.invalidate();
+    },
+    onError: () => {
+      setFavorite(board.isFavorite);
+      toast.error("즐겨찾기를 변경하지 못했어요");
+    },
+  });
+
+  const handleToggleFavorite = (e: React.MouseEvent) => {
+    // 행 전체가 링크라서 막지 않으면 게시판으로 이동해버린다.
+    e.preventDefault();
+    e.stopPropagation();
+    setFavorite((v) => !v);
+    toggleFavorite.mutate({ boardId: board.id });
+  };
 
   // 작성 중인 임시저장 글 표시용. 항상 같은 크기의 점 자리를 예약해두고 색만
   // 켜고 끄는 방식이라(투명 vs 은은한 회색), 표시가 생겨도/사라져도 옆 요소의
@@ -453,6 +521,22 @@ function BoardRow({
           <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{latest.likeCount}</span>
           <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
         </span>
+      )}
+      {isAuthenticated && (
+        <button
+          type="button"
+          onClick={handleToggleFavorite}
+          aria-pressed={favorite}
+          aria-label={`${board.name} 즐겨찾기 ${favorite ? "해제" : "추가"}`}
+          title={favorite ? "즐겨찾기 해제" : "즐겨찾기에 추가"}
+          className="-m-1.5 shrink-0 rounded-full p-1.5 transition-colors hover:bg-secondary"
+        >
+          <Star
+            className="h-4 w-4 transition-colors"
+            fill={favorite ? "currentColor" : "none"}
+            style={{ color: favorite ? "var(--accent-color)" : "var(--text-muted)" }}
+          />
+        </button>
       )}
       <span
         aria-hidden={!draftHere}

@@ -120,6 +120,13 @@
       "when": 1789121962482,
       "tag": "0016_blushing_amazoness",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1789220933037,
+      "tag": "0017_clever_argent",
+      "breakpoints": true
     }
   ]
 }

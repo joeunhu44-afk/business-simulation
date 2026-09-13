@@ -2,7 +2,7 @@ import { eq, and, or, like, isNull, desc, asc, sql, inArray, gt, lt } from "driz
 import { drizzle } from "drizzle-orm/mysql2";
 import { migrate } from "drizzle-orm/mysql2/migrator";
 import path from "node:path";
-import { InsertUser, users, authIdentities, boards, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs, notifications } from "../drizzle/schema";
+import { InsertUser, users, authIdentities, boards, boardFavorites, posts, comments, postLikes, commentLikes, reports, announcements, news, inquiries, conversations, messages, adBanners, moderationLogs, notifications } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { resolveInitialStatus } from "./_core/approval";
 import { PRIVACY_VERSION, TERMS_VERSION } from "@shared/legal";
@@ -11,6 +11,7 @@ import {
   buildBoardAffinity,
   hasEnoughActivity,
   rankPosts,
+  type BoardActivity,
   type BoardAffinity,
 } from "./_core/ranking";
 
@@ -212,7 +213,7 @@ export async function getBoards() {
  *
  * 익명 글의 제목은 그대로 보여주되 작성자 정보는 어차피 싣지 않는다.
  */
-export async function getBoardsWithLatestPost() {
+export async function getBoardsWithLatestPost(viewerId: number | null = null) {
   const db = await getDb();
   if (!db) return [];
 
@@ -247,7 +248,68 @@ export async function getBoardsWithLatestPost() {
     : [];
 
   const byBoard = new Map(latestPosts.map((p) => [p.boardId, p]));
-  return boardRows.map((board) => ({ ...board, latestPost: byBoard.get(board.id) ?? null }));
+
+  // 즐겨찾기한 게시판은 목록 위로 올린다. 비로그인이면 빈 집합이라 순서가 그대로다.
+  const favoriteIds = viewerId === null ? new Set<number>() : new Set(await getFavoriteBoardIds(viewerId));
+
+  return boardRows
+    .map((board) => ({
+      ...board,
+      latestPost: byBoard.get(board.id) ?? null,
+      isFavorite: favoriteIds.has(board.id),
+    }))
+    .sort((a, b) => {
+      // 즐겨찾기끼리, 나머지끼리는 원래 순서(displayOrder)를 유지해야 목록이 흔들리지 않는다.
+      if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+      return a.displayOrder - b.displayOrder || a.id - b.id;
+    });
+}
+
+/** 이 사용자가 즐겨찾기한 게시판 id 목록. */
+export async function getFavoriteBoardIds(userId: number): Promise<number[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({ boardId: boardFavorites.boardId })
+    .from(boardFavorites)
+    .where(eq(boardFavorites.userId, userId));
+  return rows.map((row) => row.boardId);
+}
+
+/**
+ * 즐겨찾기 토글. 켜진 상태면 끄고, 꺼진 상태면 켠다.
+ *
+ * 빠르게 두 번 눌러 INSERT가 겹치면 unique 제약에 걸리는데, 그건 이미 즐겨찾기가
+ * 된 상태라는 뜻이므로 에러로 올리지 않고 "켜짐"으로 처리한다.
+ */
+export async function toggleBoardFavorite(userId: number, boardId: number): Promise<{ favorited: boolean }> {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  const [existing] = await db
+    .select({ id: boardFavorites.id })
+    .from(boardFavorites)
+    .where(and(eq(boardFavorites.userId, userId), eq(boardFavorites.boardId, boardId)))
+    .limit(1);
+
+  if (existing) {
+    await db.delete(boardFavorites).where(eq(boardFavorites.id, existing.id));
+    return { favorited: false };
+  }
+
+  try {
+    await db.insert(boardFavorites).values({ userId, boardId });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ER_DUP_ENTRY") throw error;
+  }
+  return { favorited: true };
+}
+
+export async function getBoardById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(boards).where(eq(boards.id, id)).limit(1);
+  return result.length > 0 ? result[0] : undefined;
 }
 
 export async function getBoardBySlug(slug: string) {
@@ -521,16 +583,12 @@ const EXCERPT_MAX_CHARS = 120;
  * "좋아요 누른 글의 게시판", "내가 쓴 글의 게시판", "내가 댓글 단 글의 게시판"이
  * 모두 이 세 테이블에서 조인으로 나온다. (별도의 방문 로그는 저장하지 않는다.)
  */
-export async function getUserBoardActivity(userId: number): Promise<{
-  likedBoardIds: number[];
-  authoredBoardIds: number[];
-  commentedBoardIds: number[];
-}> {
+export async function getUserBoardActivity(userId: number): Promise<BoardActivity> {
   const db = await getDb();
-  const empty = { likedBoardIds: [], authoredBoardIds: [], commentedBoardIds: [] };
+  const empty = { likedBoardIds: [], authoredBoardIds: [], commentedBoardIds: [], favoritedBoardIds: [] };
   if (!db) return empty;
 
-  const [liked, authored, commented] = await Promise.all([
+  const [liked, authored, commented, favorited] = await Promise.all([
     db
       .select({ boardId: posts.boardId })
       .from(postLikes)
@@ -551,12 +609,18 @@ export async function getUserBoardActivity(userId: number): Promise<{
       .where(and(eq(comments.userId, userId), isNull(comments.deletedAt), isNull(posts.deletedAt)))
       .orderBy(desc(comments.createdAt))
       .limit(100),
+    // 즐겨찾기는 본인이 직접 고른 신호라 가장 높은 가중치로 들어간다 (_core/ranking.ts).
+    db
+      .select({ boardId: boardFavorites.boardId })
+      .from(boardFavorites)
+      .where(eq(boardFavorites.userId, userId)),
   ]);
 
   return {
     likedBoardIds: liked.map((r) => r.boardId),
     authoredBoardIds: authored.map((r) => r.boardId),
     commentedBoardIds: commented.map((r) => r.boardId),
+    favoritedBoardIds: favorited.map((r) => r.boardId),
   };
 }
 
@@ -566,7 +630,7 @@ export async function getUserBoardActivity(userId: number): Promise<{
  */
 export async function getRecommendedPosts(userId: number | null, limit: number = 5) {
   const db = await getDb();
-  if (!db) return [];
+  if (!db) return { personalized: false, items: [] };
 
   const since = new Date(Date.now() - RECOMMEND_WINDOW_DAYS * 24 * 60 * 60 * 1000);
 
@@ -595,23 +659,29 @@ export async function getRecommendedPosts(userId: number | null, limit: number =
     .orderBy(desc(posts.createdAt))
     .limit(RECOMMEND_CANDIDATE_LIMIT);
 
-  if (candidates.length === 0) return [];
+  if (candidates.length === 0) return { personalized: false, items: [] };
 
   let affinity: BoardAffinity = new Map();
+  let personalized = false;
   if (userId !== null) {
     const activity = await getUserBoardActivity(userId);
     // 활동이 적을 때 억지로 개인화하면 표본이 1~2건인 게시판이 추천을 독점한다.
+    // (즐겨찾기가 있으면 활동 수와 무관하게 켜진다 — hasEnoughActivity 참고)
     if (hasEnoughActivity(activity)) {
       affinity = buildBoardAffinity(activity);
+      personalized = affinity.size > 0;
     }
   }
 
   // 미리보기용으로 본문 첫 줄만 잘라 보낸다. 목록에 쓸 것이라 전문을 실어 보낼
   // 이유가 없고, 줄바꿈이 섞이면 한 줄 말줄임이 깨지므로 공백으로 눕혀둔다.
-  return rankPosts(candidates, { affinity, limit }).map(({ content, ...post }) => ({
+  const items = rankPosts(candidates, { affinity, limit }).map(({ content, ...post }) => ({
     ...post,
     excerpt: content.replace(/\s+/g, " ").trim().slice(0, EXCERPT_MAX_CHARS),
   }));
+
+  // 화면에서 "인기글"인지 "나를 위한 추천"인지 구분해 보여주기 위해 함께 알린다.
+  return { personalized, items };
 }
 
 /**
