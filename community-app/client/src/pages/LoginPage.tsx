@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc";
 import { useEffect, useState } from "react";
+import { Loader2, MapPin, Search as SearchIcon } from "lucide-react";
 import NotifyConsentFields, { EMPTY_NOTIFY_CONSENT } from "@/components/NotifyConsentFields";
 import { useLocation } from "wouter";
 import { toast } from "sonner";
@@ -76,6 +77,111 @@ function OAuthButtons() {
   );
 }
 
+/**
+ * 학교 검색.
+ *
+ * 아직 학교별로 서버를 나누지 않았다. 지금은 "어떤 학교가 있는지" 찾아보는 단계라,
+ * 학교를 고르면 준비 중이라고만 알린다 — 고르면 뭔가 될 것처럼 보이게 해놓고 아무 일도
+ * 안 일어나는 것보다 낫다.
+ *
+ * 학교 목록은 교육부 나이스 API에서 가져오므로 항상 최신이다(server/schools.ts).
+ */
+function SchoolSearch() {
+  const [input, setInput] = useState("");
+  const [query, setQuery] = useState("");
+
+  const { data, isLoading, error } = trpc.schools.search.useQuery(
+    { query, limit: 20 },
+    { enabled: query.length >= 2, retry: false }
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const next = input.trim();
+    if (next.length < 2) {
+      toast.error("두 글자 이상 입력해주세요");
+      return;
+    }
+    setQuery(next);
+  };
+
+  const schools = data?.schools ?? [];
+  const notConfigured = data?.configured === false;
+
+  return (
+    <div className="flex flex-col gap-3">
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <div className="relative flex-1">
+          <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: "var(--text-muted)" }} />
+          <Input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="학교 이름 검색 (예: 신흥고)"
+            aria-label="학교 이름 검색"
+            className="h-11 pl-10"
+          />
+        </div>
+        <Button type="submit" variant="outline" className="h-11 shrink-0">
+          검색
+        </Button>
+      </form>
+
+      {isLoading && query.length >= 2 && (
+        <div className="flex justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin" style={{ color: "var(--accent-color)" }} />
+        </div>
+      )}
+
+      {error && (
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          {error.message}
+        </p>
+      )}
+
+      {notConfigured && (
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          학교 검색은 준비 중입니다.
+        </p>
+      )}
+
+      {!isLoading && !error && !notConfigured && query.length >= 2 && schools.length === 0 && (
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+          ‘{query}’(으)로 찾은 고등학교가 없습니다.
+        </p>
+      )}
+
+      {schools.length > 0 && (
+        <ul
+          className="max-h-64 overflow-y-auto rounded-xl border"
+          style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-surface)" }}
+        >
+          {schools.map((school) => (
+            <li key={school.code}>
+              <button
+                type="button"
+                onClick={() =>
+                  toast("아직 준비 중이에요", {
+                    description: `${school.name}은(는) 아직 열리지 않았어요. 준비되면 알려드릴게요.`,
+                  })
+                }
+                className="flex w-full flex-col items-start gap-0.5 px-3 py-2.5 text-left transition-colors hover:bg-[var(--bg-surface-2)]"
+              >
+                <span className="text-sm font-semibold" style={{ color: "var(--text-strong)" }}>
+                  {school.name}
+                </span>
+                <span className="flex items-start gap-1 text-xs" style={{ color: "var(--text-muted)" }}>
+                  <MapPin className="mt-[1px] h-3 w-3 shrink-0" />
+                  <span>{school.address ?? school.region ?? "위치 정보 없음"}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const [, navigate] = useLocation();
   // 소셜 로그인은 서버에서 리다이렉트로 돌아오므로, 차단(가입 거절) 사유를
@@ -142,6 +248,21 @@ export default function LoginPage() {
         </div>
 
         <div className="flex flex-col gap-6">
+          {/* 학교 검색 — 로그인 수단보다 먼저 둔다. 지금은 우리 학교 하나뿐이지만,
+              "내 학교가 있나" 확인하는 게 로그인 전 가장 먼저 드는 궁금증이다. */}
+          <SchoolSearch />
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" style={{ borderColor: "var(--border-color)" }} />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-3" style={{ backgroundColor: "var(--bg-base)", color: "var(--text-muted)" }}>
+                우리 학교 커뮤니티 로그인
+              </span>
+            </div>
+          </div>
+
           <OAuthButtons />
 
           <div className="relative">

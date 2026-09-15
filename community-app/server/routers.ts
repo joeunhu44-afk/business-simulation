@@ -11,6 +11,7 @@ import { deleteUploadByUrl, deleteUploadsByUrl, putUpload, uploadScopeId } from 
 import { checkContent, BLOCKED_MESSAGE } from "./_core/moderation";
 import { enforceRateLimit } from "./_core/rateLimit";
 import { describeStorage } from "./_core/storageHealth";
+import { SchoolSearchUnavailableError, isSchoolSearchConfigured, searchSchools } from "./schools";
 
 const STUDENT_NAME_REGEX = /^\d{5} .+$/;
 const STUDENT_NAME_MESSAGE = "학번(5자리) 이름 형식으로 입력해주세요 (예: 20223 조은후)";
@@ -531,6 +532,74 @@ export const appRouter = router({
       }))
       .query(async ({ input, ctx }) => {
         return db.searchPosts(input.query, input.limit, input.offset, ctx.user?.id ?? null);
+      }),
+  }),
+
+  /**
+   * 통합 검색 — 게시판과 게시글을 한 번에 찾는다.
+   *
+   * "전체" 탭에서 요청을 두 번 보내지 않도록 한 프로시저에서 둘 다 돌려준다.
+   * type으로 한쪽만 고르면 나머지는 빈 배열이라 필요 없는 쿼리를 돌리지 않는다.
+   */
+  search: router({
+    all: publicProcedure
+      .input(z.object({
+        query: z.string().min(1).max(100),
+        type: z.enum(['all', 'boards', 'posts']).default('all'),
+        limit: z.number().min(1).max(50).default(20),
+        offset: z.number().min(0).default(0),
+      }))
+      .query(async ({ input, ctx }) => {
+        const keyword = input.query.trim();
+        if (!keyword) return { boards: [], posts: [] };
+
+        const wantBoards = input.type === 'all' || input.type === 'boards';
+        const wantPosts = input.type === 'all' || input.type === 'posts';
+
+        // "전체"에서는 게시판을 맛보기로만 보여주고 자리를 게시글에 내준다.
+        const boardLimit = input.type === 'boards' ? input.limit : 5;
+
+        const [boardResults, postResults] = await Promise.all([
+          wantBoards ? db.searchBoards(keyword, boardLimit) : Promise.resolve([]),
+          wantPosts
+            ? db.searchPosts(keyword, input.limit, input.offset, ctx.user?.id ?? null)
+            : Promise.resolve([]),
+        ]);
+
+        return { boards: boardResults, posts: postResults };
+      }),
+  }),
+
+  /**
+   * 학교 검색 (로그인 화면).
+   *
+   * 아직 학교별로 서버를 나누지 않았고, 지금은 "어떤 학교가 있는지" 찾아보는 용도다.
+   * 로그인 전에 쓰는 화면이라 publicProcedure이고, 외부 API를 부르므로 IP 기준으로
+   * 속도를 제한한다.
+   */
+  schools: router({
+    search: publicProcedure
+      .input(z.object({
+        query: z.string().min(2, '두 글자 이상 입력해주세요').max(50),
+        limit: z.number().min(1).max(50).default(20),
+      }))
+      .query(async ({ input, ctx }) => {
+        const clientKey = ctx.req.ip ?? ctx.req.socket?.remoteAddress ?? 'unknown';
+        enforceRateLimit('schoolSearch', clientKey);
+
+        try {
+          const schools = await searchSchools(input.query, input.limit);
+          return { configured: true, schools };
+        } catch (error) {
+          if (error instanceof SchoolSearchUnavailableError) {
+            // 아직 키를 안 넣은 상태와 일시적 장애를 화면에서 구분할 수 있게 알려준다.
+            if (!isSchoolSearchConfigured()) {
+              return { configured: false, schools: [] };
+            }
+            throw new TRPCError({ code: 'SERVICE_UNAVAILABLE', message: error.message });
+          }
+          throw error;
+        }
       }),
   }),
 

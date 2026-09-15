@@ -233,6 +233,22 @@ export default function Home() {
 
       {/* Main Content */}
       <div className="container pt-6 pb-4 sm:py-8">
+        {/* 홈 상단 검색 — 게시판과 게시글을 함께 찾는다. 헤더 아이콘이 빽빽한
+            모바일에서도 눌리도록 내비게이션 아래 한 줄을 통째로 내준다. */}
+        <form onSubmit={handleSearch} className="mb-6 flex gap-2">
+          <div className="relative flex-1">
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="게시판, 게시글 검색"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="게시판, 게시글 검색"
+              className="pl-10"
+            />
+          </div>
+          <Button type="submit" className="shrink-0">검색</Button>
+        </form>
+
         <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
           <div>
             {/* Ad Banner */}

@@ -64,4 +64,10 @@ export const ENV = {
 
   /** 배포 플랫폼이 알려주는 영구 디스크 마운트 경로. 없으면 영구 디스크가 없다는 뜻. */
   volumeMountPath: process.env.RAILWAY_VOLUME_MOUNT_PATH ?? "",
+
+  /**
+   * 나이스 교육정보 개방 포털(open.neis.go.kr) 인증키. 학교 검색에 쓴다.
+   * 비워두면 학교 검색이 동작하지 않고 UI에 준비 중이라고 안내한다.
+   */
+  neisApiKey: process.env.NEIS_API_KEY ?? "",
 };
