@@ -249,6 +249,20 @@ export async function getBoardsWithLatestPost(viewerId: number | null = null) {
 
   const byBoard = new Map(latestPosts.map((p) => [p.boardId, p]));
 
+  // 오늘 올라온 글 수. 게시판마다 세지 않고 한 번에 묶어서 센다.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayRows = await db
+    .select({ boardId: posts.boardId, count: sql<number>`COUNT(*)` })
+    .from(posts)
+    .where(and(
+      isNull(posts.deletedAt),
+      gt(posts.createdAt, startOfToday),
+      inArray(posts.boardId, boardRows.map((b) => b.id))
+    ))
+    .groupBy(posts.boardId);
+  const todayByBoard = new Map(todayRows.map((r) => [r.boardId, Number(r.count)]));
+
   // 즐겨찾기한 게시판은 목록 위로 올린다. 비로그인이면 빈 집합이라 순서가 그대로다.
   const favoriteIds = viewerId === null ? new Set<number>() : new Set(await getFavoriteBoardIds(viewerId));
 
@@ -257,6 +271,7 @@ export async function getBoardsWithLatestPost(viewerId: number | null = null) {
       ...board,
       latestPost: byBoard.get(board.id) ?? null,
       isFavorite: favoriteIds.has(board.id),
+      todayCount: todayByBoard.get(board.id) ?? 0,
     }))
     .sort((a, b) => {
       // 즐겨찾기끼리, 나머지끼리는 원래 순서(displayOrder)를 유지해야 목록이 흔들리지 않는다.
@@ -546,6 +561,32 @@ export async function incrementPostViewCount(id: number) {
  * 한글은 MySQL 기본 파서로 토큰화가 잘 안 되므로(공백 기준), MATCH AGAINST
  * 대신 LIKE 부분일치를 쓴다 — 게시판별 검색(getPostsByBoard)과 동일한 방식.
  */
+/**
+ * 게시판 검색. 이름과 설명에서 키워드를 찾는다.
+ *
+ * 게시판은 많아야 수십 개라 전문 검색까지 갈 필요가 없다. 비활성 게시판은 들어갈 수
+ * 없는 곳이므로 결과에서 뺀다.
+ */
+export async function searchBoards(query: string, limit: number = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({
+      id: boards.id,
+      name: boards.name,
+      slug: boards.slug,
+      description: boards.description,
+      displayOrder: boards.displayOrder,
+    })
+    .from(boards)
+    .where(and(
+      eq(boards.isActive, true),
+      or(like(boards.name, `%${query}%`), like(boards.description, `%${query}%`))
+    ))
+    .orderBy(asc(boards.displayOrder), asc(boards.id))
+    .limit(limit);
+}
+
 export async function searchPosts(query: string, limit: number = 20, offset: number = 0, viewerId: number | null = null) {
   const db = await getDb();
   if (!db) return [];

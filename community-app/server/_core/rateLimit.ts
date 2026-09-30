@@ -35,6 +35,9 @@ export const RATE_LIMITS = {
   message: { windowMs: 60_000, max: 30, message: "쪽지를 너무 빠르게 보내고 있어요. 잠시 후 다시 시도해주세요" },
   report: { windowMs: 60_000, max: 5, message: "신고를 너무 많이 보내고 있어요. 잠시 후 다시 시도해주세요" },
   inquiry: { windowMs: 300_000, max: 3, message: "문의를 너무 자주 보내고 있어요. 잠시 후 다시 시도해주세요" },
+  // 학교 검색은 로그인 전에도 쓸 수 있고 외부 API를 부르므로, IP 기준으로 넉넉히 막는다.
+  // 타이핑하며 여러 번 검색하는 건 자연스러우니 한도는 크게 잡는다.
+  schoolSearch: { windowMs: 60_000, max: 30, message: "검색을 너무 빠르게 하고 있어요. 잠시 후 다시 시도해주세요" },
 } as const satisfies Record<string, RateLimitRule>;
 
 export type RateLimitKind = keyof typeof RATE_LIMITS;
@@ -43,9 +46,14 @@ export type RateLimitKind = keyof typeof RATE_LIMITS;
  * 한도를 넘겼으면 TOO_MANY_REQUESTS를 던지고, 아니면 이번 시도를 기록한다.
  * 호출 즉시 기록하므로, 실제 작업이 실패해도 한 번 쓴 것으로 친다(재시도 폭주 방지).
  */
-export function enforceRateLimit(kind: RateLimitKind, userId: number, now: number = Date.now()): void {
+export function enforceRateLimit(
+  kind: RateLimitKind,
+  /** 회원번호, 또는 로그인 전 기능이면 IP 같은 문자열 식별자. */
+  subject: number | string,
+  now: number = Date.now()
+): void {
   const rule = RATE_LIMITS[kind];
-  const key = `${kind}:${userId}`;
+  const key = `${kind}:${subject}`;
   const times = prune(buckets.get(key) ?? [], rule.windowMs, now);
 
   if (times.length >= rule.max) {
