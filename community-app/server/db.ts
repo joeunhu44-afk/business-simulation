@@ -249,6 +249,20 @@ export async function getBoardsWithLatestPost(viewerId: number | null = null) {
 
   const byBoard = new Map(latestPosts.map((p) => [p.boardId, p]));
 
+  // 오늘 올라온 글 수. 게시판마다 세지 않고 한 번에 묶어서 센다.
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const todayRows = await db
+    .select({ boardId: posts.boardId, count: sql<number>`COUNT(*)` })
+    .from(posts)
+    .where(and(
+      isNull(posts.deletedAt),
+      gt(posts.createdAt, startOfToday),
+      inArray(posts.boardId, boardRows.map((b) => b.id))
+    ))
+    .groupBy(posts.boardId);
+  const todayByBoard = new Map(todayRows.map((r) => [r.boardId, Number(r.count)]));
+
   // 즐겨찾기한 게시판은 목록 위로 올린다. 비로그인이면 빈 집합이라 순서가 그대로다.
   const favoriteIds = viewerId === null ? new Set<number>() : new Set(await getFavoriteBoardIds(viewerId));
 
@@ -257,6 +271,7 @@ export async function getBoardsWithLatestPost(viewerId: number | null = null) {
       ...board,
       latestPost: byBoard.get(board.id) ?? null,
       isFavorite: favoriteIds.has(board.id),
+      todayCount: todayByBoard.get(board.id) ?? 0,
     }))
     .sort((a, b) => {
       // 즐겨찾기끼리, 나머지끼리는 원래 순서(displayOrder)를 유지해야 목록이 흔들리지 않는다.

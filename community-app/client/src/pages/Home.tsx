@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Loader2, ArrowRight, Search as SearchIcon, MessageCircle, MessageSquareText, Newspaper, Compass, Megaphone, Hash, UtensilsCrossed, Shield, ThumbsUp, Star } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { Link, useLocation } from "wouter";
-import { trpc } from "@/lib/trpc";
+import { trpc, type RouterOutput } from "@/lib/trpc";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
@@ -26,10 +26,12 @@ const QUICK_LINKS: {
   href: string;
   external?: boolean;
   iconClassName?: string;
+  /** 타일에 한 줄로 붙는 부연. 헤더 아이콘 버튼에서는 쓰지 않는다. */
+  hint?: string;
 }[] = [
-  { key: "inquiry", label: "문의하기", icon: MessageSquareText, href: "/inquiries", iconClassName: "accent-text" },
-  { key: "talk", label: "신흥고 홈페이지", icon: MessageCircle, href: "https://school.cbe.go.kr/shinheung-h/M01/", external: true },
-  { key: "meal", label: "급식표", icon: UtensilsCrossed, href: "https://school.cbe.go.kr/shinheung-h/M01030801", external: true },
+  { key: "inquiry", label: "문의하기", icon: MessageSquareText, href: "/inquiries", iconClassName: "accent-text", hint: "관리자에게 바로 전달" },
+  { key: "talk", label: "신흥고 홈페이지", icon: MessageCircle, href: "https://school.cbe.go.kr/shinheung-h/M01/", external: true, hint: "학교 공식" },
+  { key: "meal", label: "급식표", icon: UtensilsCrossed, href: "https://school.cbe.go.kr/shinheung-h/M01030801", external: true, hint: "학교 홈페이지" },
 ];
 
 const FEATURES = [
@@ -40,12 +42,6 @@ const FEATURES = [
   { title: "쪽지", desc: "1:1로 조용히 대화를 이어갈 수 있어요" },
   { title: "문의함", desc: "불편한 점은 관리자에게 바로 전달할 수 있어요" },
 ];
-
-/**
- * 추천 요약 블록을 게시판 목록 위에 둘지 아래에 둘지. 홈의 주인공은 게시판
- * 목록이므로 이 값 하나만 바꾸면 배치를 통째로 뒤집을 수 있게 해뒀다.
- */
-const RECOMMENDED_PLACEMENT: "above" | "below" = "above";
 
 export default function Home() {
   const { user, loading, isAuthenticated } = useAuth();
@@ -249,76 +245,31 @@ export default function Home() {
           <Button type="submit" className="shrink-0">검색</Button>
         </form>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
-          <div>
-            {/* Ad Banner */}
-            <AdBannerCarousel position="home_top" className="mb-8" />
+        {/* 공지는 카드 위계 밖이다 — 놓치면 안 되는 안내라 그리드 위에 전폭으로 둔다 */}
+        <AnnouncementsSection />
 
-            {/* Announcements — 공지가 없으면 여백까지 통째로 사라진다 */}
-            <AnnouncementsSection />
+        <AdBannerCarousel position="home_top" className="mb-6" />
 
-            {/* 추천 — 글이 부족하면 컴포넌트가 스스로 null을 반환해 영역째 사라진다 */}
-            {RECOMMENDED_PLACEMENT === "above" && (
-              <div className="mb-8">
-                <RecommendedSection />
-              </div>
-            )}
+        {/* 홈의 주인공은 왼쪽 게시판 카드 하나. 오른쪽은 딸린 기능들.
+            items-start가 없으면 오른쪽 카드가 왼쪽 높이에 맞춰 늘어난다. */}
+        <div className="grid items-start gap-6 lg:grid-cols-[1fr_320px]">
+          <BoardsCard
+            boards={visibleBoards}
+            isLoading={boardsLoading}
+            totalCount={boards?.length ?? 0}
+            favoriteCount={favoriteCount}
+            favoritesOnly={favoritesOnly}
+            onToggleFavoritesOnly={() => setFavoritesOnly((v) => !v)}
+          />
 
-            {/* Boards List — 홈의 주인공 */}
-            <div>
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <h2 className="section-heading text-2xl">게시판</h2>
-                {favoriteCount > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setFavoritesOnly((v) => !v)}
-                    aria-pressed={favoritesOnly}
-                    className="flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] transition-colors"
-                    style={
-                      favoritesOnly
-                        ? { borderColor: "var(--accent-color)", color: "var(--accent-color)", backgroundColor: "var(--accent-soft)" }
-                        : { borderColor: "var(--border-color)", color: "var(--text-muted)" }
-                    }
-                  >
-                    <Star
-                      className="h-3.5 w-3.5"
-                      fill={favoritesOnly ? "currentColor" : "none"}
-                    />
-                    즐겨찾기 {favoriteCount}
-                  </button>
-                )}
-              </div>
-              {boardsLoading ? (
-                <div className="cosmic-empty flex justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : visibleBoards && visibleBoards.length > 0 ? (
-                <div>
-                  {visibleBoards.map((board) => (
-                    <BoardRow key={board.id} board={board} latest={board.latestPost} />
-                  ))}
-                </div>
-              ) : (
-                <Card className="card-elevated p-12 text-center">
-                  <p className="text-muted-foreground">게시판이 없습니다.</p>
-                </Card>
-              )}
-            </div>
-
-            {RECOMMENDED_PLACEMENT === "below" && (
-              <div className="mt-8">
-                <RecommendedSection />
-              </div>
-            )}
-          </div>
-
-          {/* News Panel (top-right). 바로가기 카드는 md 미만에서 헤더 아이콘
-              버튼으로 대체되므로(위 nav 참고) 여기서는 숨긴다 — 안 그러면
-              lg 미만에서 게시판 목록 아래로 밀려나 같은 항목이 두 번 보인다. */}
+          {/* md 미만에서는 헤더 아이콘이 같은 곳으로 보내주므로 타일을 숨긴다
+              (안 그러면 같은 항목이 화면에 두 번 보인다). */}
           <div className="space-y-4">
             <NewsPanel />
-            <div className="hidden md:block">
-              <QuickLinksPanel />
+            <div className="hidden md:grid grid-cols-2 gap-3">
+              {QUICK_LINKS.map((link, index) => (
+                <QuickTile key={link.key} link={link} wide={index === 0} />
+              ))}
             </div>
           </div>
         </div>
@@ -326,6 +277,118 @@ export default function Home() {
 
       <SiteFooter />
     </div>
+  );
+}
+
+type BoardWithLatest = RouterOutput["boards"]["listWithLatest"][number];
+
+/**
+ * 게시판 카드 — 홈의 주인공.
+ *
+ * 게시판마다 카드를 하나씩 두지 않고 "게시판 기능" 전체를 카드 하나에 담는다.
+ * 게시판이 늘어나도 카드 수는 그대로고 행만 늘어난다. 추천도 이 안에 넣는다 —
+ * 추천 글은 결국 게시판 글이라 따로 떼면 같은 글이 화면에 두 번 뜬다.
+ */
+function BoardsCard({
+  boards,
+  isLoading,
+  totalCount,
+  favoriteCount,
+  favoritesOnly,
+  onToggleFavoritesOnly,
+}: {
+  boards: BoardWithLatest[] | undefined;
+  isLoading: boolean;
+  totalCount: number;
+  favoriteCount: number;
+  favoritesOnly: boolean;
+  onToggleFavoritesOnly: () => void;
+}) {
+  return (
+    <Card className="card-elevated overflow-hidden p-0">
+      <div className="flex items-center gap-2 px-4 py-3.5 sm:px-5">
+        <h2 className="section-heading text-xl">게시판</h2>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+          {favoriteCount > 0 && (
+            <button
+              type="button"
+              onClick={onToggleFavoritesOnly}
+              aria-pressed={favoritesOnly}
+              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition-colors"
+              style={
+                favoritesOnly
+                  ? { backgroundColor: "var(--accent-soft)", color: "var(--accent-color)" }
+                  : { backgroundColor: "var(--bg-surface-2)", color: "var(--text-normal)" }
+              }
+            >
+              <Star className="h-3 w-3" fill={favoritesOnly ? "currentColor" : "none"} />
+              즐겨찾기 {favoriteCount}
+            </button>
+          )}
+          <span
+            className="rounded-full px-2.5 py-1 text-[11.5px]"
+            style={{ backgroundColor: "var(--bg-surface-2)", color: "var(--text-muted)" }}
+          >
+            전체 {totalCount}
+          </span>
+        </div>
+      </div>
+
+      <RecommendedSection />
+
+      {isLoading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-7 w-7 animate-spin text-primary" />
+        </div>
+      ) : boards && boards.length > 0 ? (
+        <div>
+          {boards.map((board) => (
+            <BoardRow key={board.id} board={board} latest={board.latestPost} />
+          ))}
+        </div>
+      ) : (
+        <p className="px-4 py-12 text-center text-muted-foreground sm:px-5">
+          {favoritesOnly ? "즐겨찾기한 게시판이 없습니다." : "게시판이 없습니다."}
+        </p>
+      )}
+
+      {favoriteCount > 0 && !favoritesOnly && (
+        <p
+          className="border-t px-4 py-2.5 text-[11.5px] sm:px-5"
+          style={{ borderColor: "var(--border-color)", color: "var(--text-muted)" }}
+        >
+          즐겨찾기한 게시판이 위로 옵니다
+        </p>
+      )}
+    </Card>
+  );
+}
+
+/** 오른쪽 열의 작은 기능 타일. 첫 칸(문의하기)만 두 칸을 쓴다. */
+function QuickTile({ link, wide }: { link: (typeof QUICK_LINKS)[number]; wide?: boolean }) {
+  const { label, icon: Icon, href, external } = link;
+  const inner = (
+    <>
+      <span
+        className="flex h-7 w-7 items-center justify-center rounded-lg"
+        style={{ backgroundColor: "var(--accent-soft)" }}
+      >
+        <Icon className="h-[15px] w-[15px]" style={{ color: "var(--accent-color)" }} />
+      </span>
+      <span className="text-[13px] font-semibold text-foreground">{label}</span>
+      {link.hint && <span className="text-[11.5px] text-muted-foreground">{link.hint}</span>}
+    </>
+  );
+  const className = `card-elevated flex flex-col gap-2 rounded-xl p-3 transition-shadow hover:shadow-md ${wide ? "col-span-2" : ""}`;
+
+  return external ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" className={className}>
+      {inner}
+    </a>
+  ) : (
+    <Link href={href} className={className}>
+      {inner}
+    </Link>
   );
 }
 
@@ -355,7 +418,7 @@ function RecommendedSection() {
   return (
     // 게시판 목록의 곁다리 요약임을 드러내는 옅은 톤 블록. 제목도 accent 바가 붙는
     // section-heading이 아니라 작은 라벨을 써서, 아래 "게시판"보다 한 단계 낮게 둔다.
-    <div className="rounded-xl bg-[var(--bg-surface-2)] px-3 py-3 sm:px-4">
+    <div className="px-4 pb-3 sm:px-5">
       <div className="mb-1.5 flex items-baseline justify-between gap-2">
         <h2 className="text-[12px] font-semibold uppercase tracking-wide text-muted-foreground">
           {personalized ? "회원님을 위한 추천" : "지금 인기있는 글"}
@@ -386,16 +449,19 @@ function RecommendedRow({
   post: {
     id: number;
     title: string;
-    excerpt: string;
     boardName: string;
-    likeCount: number;
     commentCount: number;
-    createdAt: string | Date;
   };
   rank: number;
 }) {
   return (
-    <Link href={`/post/${post.id}`} className="list-row items-baseline gap-2 -mx-1 px-1 py-2">
+    // 카드 안의 요약이라 한 줄로 끝낸다. 본문 미리보기를 넣으면 아래 게시판 목록보다
+    // 덩치가 커져서 "주인공은 게시판"이라는 위계가 뒤집힌다.
+    <Link
+      href={`/post/${post.id}`}
+      className="mb-1 flex items-center gap-2 rounded-lg px-2.5 py-2 transition-colors last:mb-0 hover:brightness-[.97]"
+      style={{ backgroundColor: "var(--bg-surface-2)" }}
+    >
       <span
         aria-hidden="true"
         className="w-3 shrink-0 text-center font-sans text-[12px] font-bold tabular-nums"
@@ -403,65 +469,13 @@ function RecommendedRow({
       >
         {rank}
       </span>
-
-      <span className="min-w-0 flex-1">
-        <span className="block truncate font-sans text-[13px] font-semibold leading-5 text-foreground">
-          {post.title}
-        </span>
-        {post.excerpt && (
-          <span className="block truncate text-[12px] leading-5 text-muted-foreground">
-            {post.excerpt}
-          </span>
-        )}
-        <span className="flex items-center gap-1 text-[11px] leading-4 text-muted-foreground">
-          <span className="truncate">{post.boardName}</span>
-          <span aria-hidden="true">·</span>
-          <span className="shrink-0 whitespace-nowrap">
-            {formatDistanceToNow(new Date(post.createdAt), { locale: ko, addSuffix: true })}
-          </span>
-          <span aria-hidden="true">·</span>
-          <span className="shrink-0 whitespace-nowrap">추천 {post.likeCount}</span>
-          <span aria-hidden="true">·</span>
-          <span className="shrink-0 whitespace-nowrap">댓글 {post.commentCount}</span>
-        </span>
+      <span className="min-w-0 flex-1 truncate font-sans text-[13px] font-medium text-foreground">
+        {post.title}
+      </span>
+      <span className="shrink-0 text-[11px] text-muted-foreground">
+        {post.boardName} · 댓글 {post.commentCount}
       </span>
     </Link>
-  );
-}
-
-function QuickLinksPanel() {
-  return (
-    <Card className="card-elevated p-4">
-      <h3 className="panel-header font-semibold text-xs text-muted-foreground uppercase tracking-wide mb-3">
-        <span className="panel-icon"><Compass className="h-3.5 w-3.5" /></span>
-        바로가기
-      </h3>
-      <div className="space-y-1">
-        {QUICK_LINKS.map(({ key, label, icon: Icon, href, external, iconClassName }) =>
-          external ? (
-            <a
-              key={key}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
-            >
-              <Icon className={`h-4 w-4 text-muted-foreground shrink-0 ${iconClassName || ""}`} />
-              {label}
-            </a>
-          ) : (
-            <Link
-              key={key}
-              href={href}
-              className="flex items-center gap-2.5 rounded-lg px-2 py-2 -mx-2 text-sm font-medium hover:bg-secondary transition-colors"
-            >
-              <Icon className={`h-4 w-4 text-muted-foreground shrink-0 ${iconClassName || ""}`} />
-              {label}
-            </Link>
-          )
-        )}
-      </div>
-    </Card>
   );
 }
 
@@ -475,7 +489,7 @@ function BoardRow({
   board,
   latest,
 }: {
-  board: { id: number; slug: string; name: string; description: string | null; isFavorite: boolean };
+  board: { id: number; slug: string; name: string; description: string | null; isFavorite: boolean; todayCount: number };
   /** 최신 글은 목록 쿼리에서 함께 받아온다 (행마다 따로 조회하지 않는다). */
   latest: { title: string; likeCount: number; commentCount: number } | null;
 }) {
@@ -523,7 +537,8 @@ function BoardRow({
     // 폭만큼 쓰고 말줄임). 홈의 주인공이므로 탭 영역(py-4)은 넉넉하게 유지한다.
     <Link
       href={`/board/${board.slug}`}
-      className="list-row items-center gap-3 -mx-2 px-2 py-4"
+      className="flex items-center gap-3 border-t px-4 py-3.5 transition-colors hover:brightness-[.98] sm:px-5"
+      style={{ borderColor: "var(--border-color)" }}
     >
       <Hash className="h-[18px] w-[18px] shrink-0 text-muted-foreground/70" />
       <div className="min-w-0 flex-1 flex items-baseline gap-2">
@@ -532,12 +547,13 @@ function BoardRow({
           {latest ? latest.title : board.description}
         </span>
       </div>
-      {latest && (
-        <span className="flex items-center gap-1.5 shrink-0 text-[12px] text-muted-foreground">
-          <span className="inline-flex items-center gap-0.5"><ThumbsUp className="h-3 w-3" />{latest.likeCount}</span>
-          <span className="inline-flex items-center gap-0.5"><MessageCircle className="h-3 w-3" />{latest.commentCount}</span>
-        </span>
-      )}
+      {/* 활동성은 최신 글의 반응 수보다 "오늘 몇 개 올라왔나"가 더 잘 보여준다 */}
+      <span
+        className="shrink-0 text-[12px] font-semibold tabular-nums"
+        style={{ color: board.todayCount > 0 ? "var(--accent-color)" : "var(--text-muted)" }}
+      >
+        오늘 {board.todayCount}
+      </span>
       {isAuthenticated && (
         <button
           type="button"
