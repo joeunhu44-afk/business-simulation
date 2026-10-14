@@ -16,7 +16,7 @@ import path from "node:path";
 import * as db from "../db";
 import { ENV } from "./env";
 import { verifySessionToken } from "./auth/session";
-import { storageGetSignedUrl } from "../storage";
+import { storageGetSignedUrl, storageHas } from "../storage";
 
 /** 서명 URL 유효 시간. 짧을수록 안전하지만, 너무 짧으면 이미지가 로드되다 만료된다. */
 const SIGNED_URL_TTL_SECONDS = 300;
@@ -55,17 +55,29 @@ export function registerMediaRoutes(app: Express) {
       return;
     }
 
+    // R2를 켜기 전에 올라온 사진들은 아직 볼륨에만 있다. 버킷에 없는 키는 아래
+    // 로컬 디스크 경로로 넘겨서, 전환 중에도 예전 사진이 계속 보이게 한다.
     if (usingObjectStorage()) {
+      let inBucket = false;
       try {
-        const signed = await storageGetSignedUrl(key, SIGNED_URL_TTL_SECONDS);
-        // 캐시에 남아 계속 열리면 통제가 무의미해지므로 재검증을 강제한다.
-        res.setHeader("Cache-Control", "private, no-store");
-        res.redirect(302, signed);
+        inBucket = await storageHas(key);
       } catch (error) {
-        console.warn("[Media] 서명 URL 발급 실패:", key, error);
-        res.status(404).send("Not found");
+        console.warn("[Media] 버킷 조회 실패, 로컬 디스크로 넘어갑니다:", key, error);
       }
-      return;
+
+      if (inBucket) {
+        try {
+          const signed = await storageGetSignedUrl(key, SIGNED_URL_TTL_SECONDS);
+          // 캐시에 남아 계속 열리면 통제가 무의미해지므로 재검증을 강제한다.
+          res.setHeader("Cache-Control", "private, no-store");
+          res.redirect(302, signed);
+          return;
+        } catch (error) {
+          console.warn("[Media] 서명 URL 발급 실패:", key, error);
+          res.status(404).send("Not found");
+          return;
+        }
+      }
     }
 
     // 로컬 디스크: ".." 등으로 업로드 디렉터리 밖을 읽지 못하게 경로를 검증한다.

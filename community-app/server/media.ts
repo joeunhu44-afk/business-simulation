@@ -45,9 +45,11 @@ export async function deleteUploadByUrl(url: string | null | undefined): Promise
     // 앱 경유 주소(/uploads/<key>)가 기본이고, 예전에 저장된 R2 공개 URL도 함께 인식한다.
     const key = localStorageKeyFromUrl(url) ?? storageKeyFromUrl(url);
     if (!key) return;
+
+    // R2를 켠 뒤에도 예전 파일은 볼륨에 남아 있다. 주소만으로는 어느 쪽인지 알 수 없으니
+    // 양쪽 다 지운다 — 둘 다 없는 키에는 아무 일도 하지 않는다.
     if (usingObjectStorage()) {
       await storageDelete(key);
-      return;
     }
     await localStorageDelete(key);
   } catch (error) {
