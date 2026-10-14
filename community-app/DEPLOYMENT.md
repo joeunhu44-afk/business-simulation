@@ -80,17 +80,35 @@ Railway를 쓰면 MySQL 플러그인을 추가하는 것만으로 `DATABASE_URL`
 한계: Volume은 서비스 인스턴스 한 대에 붙습니다. 나중에 서버를 여러 대로 늘리거나
 이미지 트래픽이 많아지면 B로 옮기는 게 좋습니다.
 
-### B. Cloudflare R2 (확장성 — 트래픽 비용 없음)
+### B. Cloudflare R2 (트래픽 비용 0원 — 사진이 많아지면 이쪽)
 
-1. https://dash.cloudflare.com → R2 → 버킷 생성
-2. **버킷은 비공개로 둡니다.** Public Access를 켜면 안 됩니다 — 이 앱은 로그인한
-   사용자에게만 짧게 유효한 서명 URL을 발급해 사진을 보여주는데, 버킷이 공개되어
-   있으면 주소만 아는 사람이 그 통제를 우회할 수 있습니다.
-3. "R2 API 토큰 관리"에서 토큰 생성 → Access Key ID/Secret을
-   `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`에 입력
-4. 버킷 개요의 "S3 API" endpoint(`https://<account_id>.r2.cloudflarestorage.com`)를
-   `S3_ENDPOINT`에 입력
-5. `S3_BUCKET`에 버킷 이름, `S3_REGION`은 `auto`
+R2는 **egress(내보내기) 요금이 없습니다.** 사진을 아무리 많이 봐도 트래픽 비용이 안 붙습니다.
+Railway 볼륨을 쓰면 사진 바이트가 전부 Railway를 거쳐 나가서 트래픽 요금이 붙는데, R2를 켜면
+앱은 짧은 리다이렉트만 보내고 실제 파일은 R2가 내보냅니다.
+
+1. https://dash.cloudflare.com → R2 → 버킷 생성 (이름은 자유, 예: `community-uploads`)
+2. **버킷은 비공개로 둡니다. Public Access를 켜지 마세요.**
+   이 앱은 로그인한 사용자에게만 5분짜리 서명 URL을 발급해 사진을 보여줍니다.
+   버킷을 공개하면 주소만 아는 사람이 그 통제를 그대로 우회합니다.
+3. "R2 API 토큰 관리"에서 토큰 생성 (권한: Object Read & Write)
+4. Railway → Variables에 네 개를 넣습니다:
+
+   | 변수 | 값 |
+   |---|---|
+   | `S3_ENDPOINT` | `https://<account_id>.r2.cloudflarestorage.com` |
+   | `S3_BUCKET` | 버킷 이름 |
+   | `S3_ACCESS_KEY_ID` | 토큰의 Access Key ID |
+   | `S3_SECRET_ACCESS_KEY` | 토큰의 Secret Access Key |
+
+   `S3_REGION`은 `auto`가 기본값이라 생략해도 됩니다.
+   **`S3_PUBLIC_URL`은 넣지 마세요** — 비공개 버킷에는 공개 주소가 없습니다.
+
+5. 저장하면 자동 재배포됩니다. 관리자 패널 상단에
+   `오브젝트 스토리지(<버킷명>)에 저장합니다` 라고 나오면 켜진 겁니다.
+
+**볼륨은 지우지 마세요.** R2를 켜기 전에 올라온 사진은 아직 볼륨에만 있습니다.
+앱은 버킷에 없는 파일을 볼륨에서 찾아 서빙하므로 예전 사진도 계속 보입니다.
+새로 올리는 사진부터 R2로 갑니다. 볼륨을 떼면 예전 사진이 사라집니다.
 
 AWS S3를 쓰려면 `S3_ENDPOINT`를 비우고(`server/storage.ts`의 `S3Client` 생성부를
 리전 기반으로 소폭 수정) 나머지를 AWS 값으로 채우면 됩니다.

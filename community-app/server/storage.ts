@@ -4,6 +4,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -44,10 +45,12 @@ function appendHashSuffix(relKey: string): string {
   return `${relKey.slice(0, lastDot)}_${hash}${relKey.slice(lastDot)}`;
 }
 
-function publicUrlFor(key: string): string {
-  if (!ENV.s3.publicUrl) {
-    throw new Error("Storage config missing: set S3_PUBLIC_URL");
-  }
+/**
+ * 공개 URL. 버킷을 비공개로 두면 S3_PUBLIC_URL이 없는 게 정상이므로 null을 돌려준다.
+ * (이 앱은 앱을 거친 서명 URL로만 파일을 내보내므로 공개 URL이 없어도 된다.)
+ */
+function publicUrlFor(key: string): string | null {
+  if (!ENV.s3.publicUrl) return null;
   return `${ENV.s3.publicUrl.replace(/\/+$/, "")}/${key}`;
 }
 
@@ -59,7 +62,7 @@ export async function storagePut(
   relKey: string,
   data: Buffer | Uint8Array | string,
   contentType = "application/octet-stream"
-): Promise<{ key: string; url: string }> {
+): Promise<{ key: string; url: string | null }> {
   if (!ENV.s3.bucket) {
     throw new Error("Storage config missing: set S3_BUCKET");
   }
@@ -78,8 +81,8 @@ export async function storagePut(
   return { key, url: publicUrlFor(key) };
 }
 
-/** 이미 저장된 파일의 공개 URL을 반환한다 (버킷이 공개인 경우). */
-export function storageGet(relKey: string): { key: string; url: string } {
+/** 이미 저장된 파일의 공개 URL을 반환한다 (버킷이 공개인 경우에만 url이 채워진다). */
+export function storageGet(relKey: string): { key: string; url: string | null } {
   const key = normalizeKey(relKey);
   return { key, url: publicUrlFor(key) };
 }
@@ -97,6 +100,25 @@ export async function storageGetSignedUrl(
   const key = normalizeKey(relKey);
   const command = new GetObjectCommand({ Bucket: ENV.s3.bucket, Key: key });
   return getSignedUrl(getClient(), command, { expiresIn: expiresInSeconds });
+}
+
+/**
+ * 버킷에 이 키가 실제로 있는지 확인한다.
+ *
+ * 서명 URL은 객체가 없어도 발급되기 때문에, 없는 키로 리다이렉트하면 사용자는
+ * 깨진 이미지만 보게 된다. 볼륨에 있던 예전 파일을 계속 서빙하려면 먼저 물어봐야 한다.
+ */
+export async function storageHas(relKey: string): Promise<boolean> {
+  const key = normalizeKey(relKey);
+  try {
+    await getClient().send(new HeadObjectCommand({ Bucket: ENV.s3.bucket, Key: key }));
+    return true;
+  } catch (error) {
+    const status = (error as { $metadata?: { httpStatusCode?: number } }).$metadata?.httpStatusCode;
+    if (status === 404 || status === 403) return false;
+    // 설정 오류나 장애는 "없음"으로 삼키면 안 된다 — 호출부가 판단하게 올린다.
+    throw error;
+  }
 }
 
 /**
